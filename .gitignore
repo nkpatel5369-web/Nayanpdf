@@ -1,0 +1,15 @@
+node_modules/
+dist/
+out/
+release/
+runtime/
+.vite/
+*.log
+__pycache__/
+*.pyc
+.pytest_cache/
+engine/tests/_out/
+engine/tests/_fixtures/
+test-results/
+.DS_Store
+*.tmp
