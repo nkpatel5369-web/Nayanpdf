@@ -13,7 +13,8 @@ import sys
 import pymupdf
 import pytest
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+# NAYANPDF_ENGINE_DIR lets the suite run against an installed copy of the engine.
+sys.path.insert(0, os.environ.get("NAYANPDF_ENGINE_DIR") or os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from nayanpdf_engine.registry import Context  # noqa: E402
 from nayanpdf_engine.server import _load_ops  # noqa: E402
@@ -90,10 +91,12 @@ def _financial_docx(path: str):
 
 
 def _soffice_convert(src: str, outdir: str) -> str:
+    import pathlib
+
     exe = tools.soffice_exe()
-    profile = os.path.join(outdir, ".lo-profile")
-    subprocess.run([exe, f"-env:UserInstallation=file://{profile}", "--headless", "--convert-to", "pdf",
-                    "--outdir", outdir, src], check=True, capture_output=True, timeout=180)
+    profile = pathlib.Path(outdir, ".lo-profile").resolve().as_uri()
+    subprocess.run([exe, f"-env:UserInstallation={profile}", "--headless", "--convert-to", "pdf",
+                    "--outdir", outdir, src], check=True, capture_output=True, timeout=300)
     return os.path.join(outdir, os.path.splitext(os.path.basename(src))[0] + ".pdf")
 
 

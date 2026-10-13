@@ -132,7 +132,7 @@ function createWindow() {
     show: false,
     backgroundColor: "#0f172a",
     autoHideMenuBar: true,
-    icon: join(__dirname, "..", "..", "build", "icon.png"),
+    icon: app.isPackaged ? join(process.resourcesPath, "icon.png") : join(__dirname, "..", "..", "build", "icon.png"),
     webPreferences: {
       preload: preloadPath(),
       contextIsolation: true,
@@ -247,19 +247,40 @@ function cleanupOldTemp() {
   }
 }
 
-// Used by automated UI smoke tests (CI): loads the UI, captures a screenshot,
-// queries the engine through the same IPC path, then exits.
+// Used by automated acceptance tests (CI): loads the UI, captures screenshots,
+// runs the engine self-test through the packaged app's own resource paths and,
+// when a PDF was passed on the command line, checks that it is displayed.
 async function runSmoke() {
   const out = process.env.NAYANPDF_SMOKE_OUT || join(app.getPath("temp"), "nayanpdf-smoke");
   const { mkdirSync, writeFileSync } = await import("node:fs");
   mkdirSync(out, { recursive: true });
-  const result: any = { started: new Date().toISOString() };
+  const result: any = { started: new Date().toISOString(), packaged: app.isPackaged };
+  const hadDoc = pendingOpen.length > 0 || process.argv.some((a) => a.toLowerCase().endsWith(".pdf"));
   try {
-    await new Promise((r) => setTimeout(r, 4000));
-    const img = await mainWindow!.webContents.capturePage();
-    writeFileSync(join(out, "home.png"), img.toPNG());
+    await new Promise((r) => setTimeout(r, 5000));
+    writeFileSync(join(out, "home.png"), (await mainWindow!.webContents.capturePage()).toPNG());
     result.title = mainWindow!.getTitle();
     result.ok = true;
+    const { EngineProcess } = await import("./engine");
+    const p = new EngineProcess("smoke");
+    try {
+      result.engine = await p.call("selftest.run", { quick: true });
+    } catch (e: any) {
+      result.engine = { ok: false, error: e.message };
+    } finally {
+      p.stop();
+    }
+    if (hadDoc) {
+      let pages = 0;
+      for (let i = 0; i < 30 && pages === 0; i++) {
+        await new Promise((r) => setTimeout(r, 1000));
+        pages = await mainWindow!.webContents.executeJavaScript("document.querySelectorAll('.pdfViewer .page canvas').length");
+      }
+      await new Promise((r) => setTimeout(r, 1500));
+      writeFileSync(join(out, "document.png"), (await mainWindow!.webContents.capturePage()).toPNG());
+      const tabs = await mainWindow!.webContents.executeJavaScript("Array.from(document.querySelectorAll('.tab .name')).map(e => e.textContent)");
+      result.document = { ok: pages > 0, detail: `${pages} rendered page canvas(es); tabs: ${JSON.stringify(tabs)}` };
+    }
   } catch (e: any) {
     result.ok = false;
     result.error = e.message;

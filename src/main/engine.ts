@@ -1,5 +1,6 @@
 // Local processing engine processes (bundled Python). Communication is over
 // stdin/stdout only - no ports, no sockets, no network.
+import { app } from "electron";
 import { ChildProcessWithoutNullStreams, spawn } from "node:child_process";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
@@ -49,6 +50,7 @@ export function engineEnv(jobTmp: string): NodeJS.ProcessEnv {
     PYTHONUTF8: "1",
     NAYANPDF_JOB_TMP: jobTmp,
     NAYANPDF_RESOURCES: t.resources,
+    NAYANPDF_LO_PROFILES: join(app.getPath("userData"), "office-profiles"),
   };
   if (t.tesseract) env.NAYANPDF_TESSERACT = t.tesseract;
   if (t.tessdata) env.NAYANPDF_TESSDATA = t.tessdata;

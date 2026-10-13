@@ -1,0 +1,113 @@
+name: Windows installer
+
+on:
+  push:
+    branches: ["claude/**", "main"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: windows-installer-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-verify:
+    runs-on: windows-latest
+    timeout-minutes: 180
+    env:
+      PYTHONUTF8: "1"
+      ELECTRON_BUILDER_CACHE: ${{ github.workspace }}\.cache\electron-builder
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Build tools
+        run: python -m pip install --disable-pip-version-check pefile
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Cache third-party downloads
+        uses: actions/cache@v4
+        with:
+          path: runtime/cache
+          key: runtime-cache-${{ hashFiles('scripts/build_runtime_win.py', 'engine/requirements-win.txt') }}
+
+      - name: Assemble offline runtime (Python, Tesseract, Ghostscript, LibreOffice)
+        run: python scripts/build_runtime_win.py
+
+      - name: Type check and build the application
+        run: |
+          npm run typecheck
+          npm run build
+
+      - name: Engine tests on Windows with the bundled runtime (before packaging)
+        shell: pwsh
+        run: |
+          python -m pip install --disable-pip-version-check --target "$env:RUNNER_TEMP\testdeps" pytest reportlab
+          $rt = "runtime\win"
+          $env:NAYANPDF_TESSERACT = (Resolve-Path "$rt\tesseract\tesseract.exe").Path
+          $env:NAYANPDF_TESSDATA  = (Resolve-Path "$rt\tesseract\tessdata").Path
+          $env:NAYANPDF_SOFFICE   = (Resolve-Path "$rt\libreoffice\program\soffice.exe").Path
+          $env:NAYANPDF_GS        = (Resolve-Path "$rt\ghostscript\bin\gswin64c.exe").Path
+          $env:NAYANPDF_GS_ICC    = (Resolve-Path "$rt\ghostscript\iccprofiles\srgb.icc").Path
+          $env:PYTHONPATH = "$env:RUNNER_TEMP\testdeps"
+          New-Item -ItemType Directory -Force -Path acceptance | Out-Null
+          & "$rt\python\python.exe" -X utf8 -m pytest engine\tests -q -p no:cacheprovider --junitxml acceptance\engine-tests-runtime.xml 2>&1 | Tee-Object acceptance\engine-tests-runtime.txt
+          if ($LASTEXITCODE -ne 0) { throw "engine tests failed" }
+
+      - name: Build NayanPDF_Setup.exe
+        run: npx electron-builder --win nsis --x64 --publish never
+
+      - name: Installer facts
+        shell: pwsh
+        run: |
+          $f = Get-Item release\NayanPDF_Setup.exe
+          $h = (Get-FileHash $f -Algorithm SHA256).Hash
+          "NayanPDF_Setup.exe  $([math]::Round($f.Length/1MB,1)) MB  SHA-256 $h" | Tee-Object acceptance\installer.txt
+          $h | Out-File -Encoding ascii release\NayanPDF_Setup.exe.sha256
+
+      - name: Acceptance test (install, offline operation, UI, uninstall, reinstall)
+        shell: pwsh
+        run: ./scripts/win-acceptance.ps1 -Installer release\NayanPDF_Setup.exe -ReportDir acceptance -TestDeps "$env:RUNNER_TEMP\testdeps"
+
+      - name: Upload installer
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NayanPDF_Setup
+          path: |
+            release/NayanPDF_Setup.exe
+            release/NayanPDF_Setup.exe.sha256
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Upload test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acceptance-report
+          path: |
+            acceptance/**
+            runtime/win/MANIFEST.json
+          if-no-files-found: warn
+
+      - name: Publish pre-release with the installer
+        if: success() && github.event_name == 'push'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "v1.0.0-build.${{ github.run_number }}"
+          $notes = "Automated build of ${{ github.sha }}.`n`nAll acceptance checks passed on windows-latest (see the acceptance-report artifact of run ${{ github.run_id }}).`n`n" + (Get-Content acceptance\installer.txt -Raw)
+          gh release create $tag release\NayanPDF_Setup.exe release\NayanPDF_Setup.exe.sha256 acceptance\report.md --target ${{ github.sha }} --prerelease --title "NayanPDF $tag" --notes $notes

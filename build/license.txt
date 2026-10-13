@@ -1,0 +1,22 @@
+NayanPDF - offline PDF editor and document toolkit
+
+NayanPDF is free software: you can redistribute it and/or modify it under the
+terms of the GNU Affero General Public License version 3 (AGPL-3.0) as
+published by the Free Software Foundation. It is distributed WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+A PARTICULAR PURPOSE.
+
+NayanPDF bundles these components, each under its own licence (full texts are
+installed in resources\assets\licenses):
+  - MuPDF / PyMuPDF (AGPL-3.0)          - Ghostscript (AGPL-3.0)
+  - LibreOffice (MPL-2.0)               - Tesseract OCR and language data (Apache-2.0)
+  - qpdf / pikepdf (Apache-2.0 / MPL-2.0) - pdf2docx, python-docx, openpyxl, python-pptx, pyHanko (MIT)
+  - PDF.js (Apache-2.0)                 - Electron and Chromium (MIT / BSD and others)
+  - CPython (PSF), NumPy, OpenCV, Pillow, lxml, cryptography (permissive licences)
+
+Privacy: NayanPDF processes every document on this computer. It has no
+account, no activation, no telemetry and no automatic update checks, and it
+does not connect to the internet.
+
+Conversion and OCR results are produced automatically and can contain
+errors. Check important figures against the source document.

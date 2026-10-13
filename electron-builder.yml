@@ -1,0 +1,77 @@
+appId: in.nayanpdf.desktop
+productName: NayanPDF
+executableName: NayanPDF
+copyright: Copyright (c) 2026 NayanPDF contributors
+directories:
+  output: release
+  buildResources: build
+files:
+  - dist/**/*
+  - package.json
+  - "!**/*.map"
+asar: true
+compression: maximum
+extraResources:
+  - from: engine
+    to: engine
+    filter:
+      - run_engine.py
+      - nayanpdf_engine/**/*
+      - "!**/__pycache__/**"
+  - from: runtime/win/python
+    to: python
+  - from: runtime/win/tesseract
+    to: tesseract
+  - from: runtime/win/ghostscript
+    to: ghostscript
+  - from: runtime/win/libreoffice
+    to: libreoffice
+  - from: runtime/win/assets
+    to: assets
+  - from: runtime/win/MANIFEST.json
+    to: MANIFEST.json
+  - from: build/icon.png
+    to: icon.png
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: build/icon.ico
+  legalTrademarks: NayanPDF
+  requestedExecutionLevel: asInvoker
+  signAndEditExecutable: true
+  verifyUpdateCodeSignature: false
+nsis:
+  oneClick: false
+  perMachine: false
+  allowElevation: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: false
+  createStartMenuShortcut: true
+  shortcutName: NayanPDF
+  menuCategory: false
+  artifactName: NayanPDF_Setup.exe
+  uninstallDisplayName: NayanPDF
+  deleteAppDataOnUninstall: false
+  include: build/installer.nsh
+  license: build/license.txt
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  installerHeaderIcon: build/icon.ico
+  differentialPackage: false
+  runAfterFinish: true
+fileAssociations:
+  - ext: pdf
+    name: NayanPDF.Document
+    description: PDF Document
+    role: Editor
+publish: null
+electronFuses:
+  runAsNode: false
+  enableCookieEncryption: true
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  enableEmbeddedAsarIntegrityValidation: true
+  onlyLoadAppFromAsar: true
+  grantFileProtocolExtraPrivileges: false

@@ -1073,23 +1073,64 @@ def office_to_pdf_file(ctx, src: str, target_tmp: str, singlePageSheets: bool = 
         raise EngineError(UNSUPPORTED_FORMAT, f"{ext or 'This file type'} is not a supported Office document.")
     work = os.path.join(ctx.tmpdir, "lo")
     os.makedirs(work, exist_ok=True)
-    profile = os.path.join(ctx.tmpdir, "lo-profile")
-    os.makedirs(profile, exist_ok=True)
+    profile, release = _lo_profile(ctx)
     # Copy the source to an ASCII-safe name (LibreOffice is fragile with some paths).
     tmp_src = os.path.join(work, "input" + ext)
     shutil.copyfile(os_path(src), tmp_src)
     filt = "pdf"
     if ext in (".xls", ".xlsx", ".ods", ".csv", ".xlsm", ".xlt", ".xltx") and singlePageSheets:
         filt = 'pdf:calc_pdf_Export:{"SinglePageSheets":{"type":"boolean","value":"true"}}'
-    profile_url = "file:///" + profile.replace("\\", "/").lstrip("/")
+    import pathlib
+
+    profile_url = pathlib.Path(profile).resolve().as_uri()
     args = [exe, f"-env:UserInstallation={profile_url}", "--headless", "--norestore", "--nologo",
             "--nodefault", "--nolockcheck", "--convert-to", filt, "--outdir", work, tmp_src]
-    res = tools.run(args, timeout=900, env={"SAL_USE_VCLPLUGIN": "svp"} if os.name != "nt" else None)
+    try:
+        res = tools.run(args, timeout=900, env={"SAL_USE_VCLPLUGIN": "svp"} if os.name != "nt" else None)
+    finally:
+        release()
     produced = os.path.join(work, "input.pdf")
     if not os.path.exists(produced) or os.path.getsize(produced) == 0:
         msg = (res.stderr or b"").decode("utf-8", "replace")[-300:]
         raise EngineError("OPERATION_FAILED", f"LibreOffice could not convert {os.path.basename(src)}. {msg}".strip())
     shutil.move(produced, target_tmp)
+
+
+def _lo_profile(ctx):
+    """A reusable LibreOffice user profile (creating one takes several seconds).
+
+    Profiles live under NAYANPDF_LO_PROFILES (set by the app to its data folder);
+    a lock file per slot keeps concurrent conversions from sharing a profile."""
+    import time
+
+    base = os.environ.get("NAYANPDF_LO_PROFILES")
+    if not base:
+        p = os.path.join(ctx.tmpdir, "lo-profile")
+        os.makedirs(p, exist_ok=True)
+        return p, lambda: None
+    os.makedirs(base, exist_ok=True)
+    for slot in range(8):
+        lock = os.path.join(base, f"slot{slot}.lock")
+        try:
+            if os.path.exists(lock) and time.time() - os.path.getmtime(lock) > 3600:
+                os.remove(lock)  # stale lock from a crashed conversion
+            fd = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            os.close(fd)
+        except OSError:
+            continue
+        prof = os.path.join(base, f"slot{slot}")
+        os.makedirs(prof, exist_ok=True)
+
+        def release(lock=lock):
+            try:
+                os.remove(lock)
+            except OSError:
+                pass
+
+        return prof, release
+    p = os.path.join(ctx.tmpdir, "lo-profile")
+    os.makedirs(p, exist_ok=True)
+    return p, lambda: None
 
 
 @method("convert.officeToPdf")

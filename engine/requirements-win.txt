@@ -1,0 +1,20 @@
+# Runtime dependencies bundled into the Windows installer (CPython 3.13, win_amd64).
+pymupdf==1.28.2
+pymupdf-fonts==1.0.5
+pdf2docx==0.5.13
+python-docx==1.2.0
+openpyxl==3.1.5
+python-pptx==1.0.2
+XlsxWriter==3.2.9
+pikepdf==10.17.0
+pyhanko==0.37.0
+pyhanko-certvalidator==0.32.1
+python-pkcs11==0.10.0
+cryptography==50.0.2
+pillow==12.3.0
+numpy==2.5.4
+opencv-python-headless==5.0.0.93
+lxml==6.1.3
+fonttools==4.66.1
+fire==0.7.1
+tzdata==2026.5
