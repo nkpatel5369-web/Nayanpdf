@@ -1,0 +1,39 @@
+{
+  "name": "nayanpdf",
+  "productName": "NayanPDF",
+  "version": "1.0.0",
+  "description": "NayanPDF - offline PDF editor, converter and document toolkit for Windows",
+  "author": "NayanPDF",
+  "license": "AGPL-3.0-or-later",
+  "private": true,
+  "main": "dist/main/main.js",
+  "scripts": {
+    "build:assets": "node scripts/copy-pdfjs-assets.mjs",
+    "build:renderer": "vite build",
+    "build:main": "node scripts/build-main.mjs",
+    "build": "npm run build:assets && npm run build:renderer && npm run build:main",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "dev": "npm run build && electron . --dev",
+    "start": "electron .",
+    "test:engine": "python -m pytest engine/tests -q",
+    "test:ui": "node scripts/ui-smoke.mjs",
+    "fetch-runtime:win": "node scripts/fetch-runtime-win.mjs",
+    "dist:win": "npm run build && electron-builder --win nsis --x64 --publish never"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "electron": "43.7.9",
+    "electron-builder": "26.15.3",
+    "esbuild": "^0.25.0",
+    "lucide-react": "0.577.0",
+    "pdfjs-dist": "5.7.284",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "typescript": "~5.9.2",
+    "vite": "^7.1.0",
+    "zustand": "^5.0.8"
+  }
+}

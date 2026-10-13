@@ -80,6 +80,14 @@ def _union(rects):
     return r
 
 
+def _rel(page, r) -> list[float]:
+    """Rect relative to the displayed page (0..1), for drawing on page images."""
+    v = pymupdf.Rect(r) * page.rotation_matrix
+    v.normalize()
+    W, H = page.rect.width or 1, page.rect.height or 1
+    return [round(v.x0 / W, 5), round(v.y0 / H, 5), round(v.x1 / W, 5), round(v.y1 / H, 5)]
+
+
 def _word_diffs(pa, pb):
     wa = pa.get_text("words", sort=True)
     wb = pb.get_text("words", sort=True)
@@ -94,7 +102,8 @@ def _word_diffs(pa, pb):
         rb = _line_rects([w[:4] for w in wb[j1:j2]]) if j2 > j1 else []
         kind = {"replace": "modified", "delete": "removed", "insert": "added"}[tag]
         out.append({"type": kind, "textA": " ".join(sa[i1:i2]), "textB": " ".join(sb[j1:j2]),
-                    "rectsA": [fitz_to_pdf_rect(pa, r) for r in ra], "rectsB": [fitz_to_pdf_rect(pb, r) for r in rb]})
+                    "rectsA": [fitz_to_pdf_rect(pa, r) for r in ra], "rectsB": [fitz_to_pdf_rect(pb, r) for r in rb],
+                    "relA": [_rel(pa, r) for r in ra], "relB": [_rel(pb, r) for r in rb]})
     return out
 
 
@@ -145,7 +154,8 @@ def _visual_diffs(pa, pb, dpi: int = 60, threshold: int = 40):
     for x0, y0, x1, y1 in regions[:200]:
         r = pymupdf.Rect(x0 * scale, y0 * scale, x1 * scale, y1 * scale) * pa.derotation_matrix
         r.normalize()
-        out.append({"type": "visual", "rectsA": [fitz_to_pdf_rect(pa, r)], "rectsB": [fitz_to_pdf_rect(pb, r)]})
+        out.append({"type": "visual", "rectsA": [fitz_to_pdf_rect(pa, r)], "rectsB": [fitz_to_pdf_rect(pb, r)],
+                    "relA": [_rel(pa, r)], "relB": [_rel(pb, r)]})
     return out, False
 
 

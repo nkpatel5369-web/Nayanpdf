@@ -13,3 +13,4 @@ engine/tests/_fixtures/
 test-results/
 .DS_Store
 *.tmp
+src/renderer/public/pdfjs/

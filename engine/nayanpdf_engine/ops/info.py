@@ -8,6 +8,7 @@ import pymupdf
 
 from ..errors import EngineError, PASSWORD_INVALID, PASSWORD_REQUIRED
 from ..registry import method
+from ..util.geometry import fitz_to_pdf_rect
 from ..util.io import file_size, os_path, require_file
 from ..util.pdf import (
     PERM_BITS,
@@ -124,10 +125,11 @@ def page_sizes(ctx, path: str, password: str | None = None):
         doc.close()
 
 
-def _span_dict(s) -> dict:
+def _span_dict(s, page=None) -> dict:
     return {
         "text": s["text"],
         "bbox": list(s["bbox"]),
+        "pdfBbox": fitz_to_pdf_rect(page, s["bbox"]) if page is not None else None,
         "origin": list(s["origin"]),
         "font": s["font"],
         "size": round(s["size"], 2),
@@ -154,16 +156,17 @@ def text_lines(ctx, path: str, page: int, password: str | None = None):
                 continue
             lines = []
             for li, ln in enumerate(b["lines"]):
-                spans = [_span_dict(s) for s in ln["spans"] if s["text"].strip() != "" or len(ln["spans"]) == 1]
+                spans = [_span_dict(s, p) for s in ln["spans"] if s["text"].strip() != "" or len(ln["spans"]) == 1]
                 if not spans:
                     continue
                 text = "".join(s["text"] for s in ln["spans"])
                 if not text.strip():
                     continue
-                lines.append({"id": f"{bi}-{li}", "bbox": list(ln["bbox"]), "dir": list(ln["dir"]),
+                lines.append({"id": f"{bi}-{li}", "bbox": list(ln["bbox"]), "pdfBbox": fitz_to_pdf_rect(p, ln["bbox"]),
+                              "editable": abs(ln["dir"][1]) < 0.01 and ln["dir"][0] > 0, "dir": list(ln["dir"]),
                               "wmode": ln["wmode"], "text": text, "spans": spans})
             if lines:
-                blocks.append({"id": str(bi), "bbox": list(b["bbox"]), "lines": lines})
+                blocks.append({"id": str(bi), "bbox": list(b["bbox"]), "pdfBbox": fitz_to_pdf_rect(p, b["bbox"]), "lines": lines})
         return {"page": page, "width": p.rect.width, "height": p.rect.height, "rotation": p.rotation,
                 "blocks": blocks, "hasText": bool(blocks)}
     finally:
