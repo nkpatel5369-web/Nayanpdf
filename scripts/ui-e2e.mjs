@@ -8,6 +8,7 @@ import { _electron as electron } from "playwright-core";
 import { existsSync, mkdirSync, rmSync, writeFileSync, copyFileSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
 import { execFileSync } from "node:child_process";
 import { createServer } from "node:http";
 
@@ -44,7 +45,9 @@ const src = join(work, "financial.pdf");
 setDialogs({});
 
 const app = await electron.launch({
-  executablePath: join(root, "node_modules", "electron", "dist", IS_WIN ? "electron.exe" : "electron"),
+  // Resolved through the electron package: since Electron 43 the binary is
+  // downloaded on first use rather than at npm install time.
+  executablePath: createRequire(import.meta.url)("electron"),
   // The Chromium sandbox cannot run as root in a Linux container; Windows keeps it.
   args: [...(IS_WIN ? [] : ["--no-sandbox"]), root, src],
   env: { ...process.env, NAYANPDF_PYTHON: PY, NAYANPDF_TEST_DIALOGS: dialogFile, NAYANPDF_TEST_USERDATA: join(out, "profile"), ELECTRON_DISABLE_SECURITY_WARNINGS: "1" },

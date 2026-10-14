@@ -72,7 +72,7 @@ jobs:
           DEBUG: "pw:browser*"
           ELECTRON_ENABLE_LOGGING: "1"
         run: |
-          Get-Item node_modules\electron\dist\electron.exe | Format-List FullName, Length
+          node -e "console.log(require('electron'))"
           $rt = (Resolve-Path "runtime\win").Path
           $env:NAYANPDF_PYTHON    = "$rt\python\python.exe"
           $env:NAYANPDF_TESSERACT = "$rt\tesseract\tesseract.exe"
