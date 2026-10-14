@@ -62,15 +62,22 @@ def _osd_rotation(exe: str, img: str) -> int:
 
 
 def _run_tesseract(exe: str, img: str, base: str, lang: str, dpi: int, psm: int, want_pdf: bool) -> dict:
-    args = [exe, img, base, "-l", lang, "--dpi", str(dpi), "--psm", str(psm)]
+    # Output formats are requested as parameters, not as config-file names, so OCR
+    # does not depend on Tesseract's optional "configs" folder being present.
+    args = [exe, img, base, "-l", lang, "--dpi", str(dpi), "--psm", str(psm), "-c", "tessedit_create_tsv=1"]
     if want_pdf:
-        args += ["-c", "textonly_pdf=1", "pdf"]
-    args += ["tsv"]
+        args += ["-c", "tessedit_create_pdf=1", "-c", "textonly_pdf=1"]
     res = tools.run(args, timeout=900, env=_tess_env())
+    err = res.stderr.decode("utf-8", "replace").strip()
     if res.returncode != 0:
-        raise EngineError("OPERATION_FAILED", "Tesseract failed: " + res.stderr.decode("utf-8", "replace")[-300:])
-    words = []
+        raise EngineError("OPERATION_FAILED", "Tesseract failed: " + err[-300:])
     tsv_path = base + ".tsv"
+    # Never report OCR as done if Tesseract did not write what was asked for.
+    missing = [p for p in ([tsv_path] + ([base + ".pdf"] if want_pdf else [])) if not os.path.exists(p) or os.path.getsize(p) == 0]
+    if missing:
+        raise EngineError("OPERATION_FAILED", "Tesseract produced no output (" + ", ".join(os.path.basename(m) for m in missing)
+                          + "). " + err[-300:])
+    words = []
     if os.path.exists(tsv_path):
         with open(tsv_path, encoding="utf-8", errors="replace") as fh:
             rd = csv.DictReader(fh, delimiter="\t", quoting=csv.QUOTE_NONE)

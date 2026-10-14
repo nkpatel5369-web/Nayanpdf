@@ -371,3 +371,21 @@ def test_office_conversion_never_fetches_linked_content(ctx, tmp_path, monkeypat
     finally:
         srv.shutdown()
     assert hits == [], f"conversion contacted the network: {hits}"
+
+
+@needs_tesseract
+def test_ocr_with_language_files_only(fx, ctx, tmp_path, monkeypatch):
+    """The installer ships tessdata with only the .traineddata files. OCR must not
+    depend on Tesseract's optional configs folder (this failed on Windows once)."""
+    import shutil
+    from nayanpdf_engine.util import tools
+
+    src = tools.tessdata_dir()
+    td = tmp_path / "tessdata"
+    td.mkdir()
+    shutil.copy(os.path.join(src, "eng.traineddata"), td / "eng.traineddata")
+    monkeypatch.setenv("NAYANPDF_TESSDATA", str(td))
+    r = ocr.run(ctx, fx["scanned"], out("scanned_ocr_minimal.pdf"), languages=["eng"], pages="1", autoRotate=False)
+    d = pymupdf.open(r["output"])
+    assert d[0].search_for("Revenue"), "OCR text not searchable with a minimal tessdata folder"
+    d.close()

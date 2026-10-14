@@ -248,6 +248,15 @@ def build_tesseract():
         shutil.copy2(f, dst / f.name)
     td = dst / "tessdata"
     td.mkdir()
+    # Tesseract's own support files (output-format configs, PDF glyph font) from the
+    # conda package, when it ships them. The engine does not rely on them.
+    for share in (env / "Library" / "share" / "tessdata", env / "share" / "tessdata"):
+        if share.is_dir():
+            for item in ("configs", "tessconfigs"):
+                if (share / item).is_dir():
+                    shutil.copytree(share / item, td / item, dirs_exist_ok=True)
+            if (share / "pdf.ttf").is_file():
+                shutil.copy2(share / "pdf.ttf", td / "pdf.ttf")
     for lang, digest in TESSDATA.items():
         download(TESSDATA_URL.format(lang), td / f"{lang}.traineddata", digest)
     pkgs = []
