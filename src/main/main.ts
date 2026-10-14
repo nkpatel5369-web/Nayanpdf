@@ -293,6 +293,22 @@ async function runSmoke() {
       writeFileSync(join(out, "document.png"), (await mainWindow!.webContents.capturePage()).toPNG());
       const tabs = await mainWindow!.webContents.executeJavaScript("Array.from(document.querySelectorAll('.tab .name')).map(e => e.textContent)");
       result.document = { ok: pages > 0, detail: `${pages} rendered page canvas(es); tabs: ${JSON.stringify(tabs)}` };
+      // Edit the open document through the same guarded path the UI uses (access
+      // checks, temp revisions, edit worker), then undo. Nothing is saved.
+      const id = docs.sessionIds()[0];
+      if (id) {
+        try {
+          await docs.applyEdit(id, "pages.rotate", { pages: "1", angle: 90 }, "Self-check: rotate");
+          const r = await docs.applyEdit(id, "annot.apply", { ops: [{ op: "add", page: 1, kind: "note", point: [72, 72], contents: "self-check" }] }, "Self-check: note");
+          docs.undo(id);
+          docs.undo(id);
+          result.edit = { ok: r.state.revisions === 3, detail: `${r.state.revisions - 1} edits applied as temporary revisions and undone` };
+        } catch (e: any) {
+          result.edit = { ok: false, detail: e.message };
+        }
+      } else {
+        result.edit = { ok: false, detail: "no open document session" };
+      }
     }
   } catch (e: any) {
     result.ok = false;

@@ -190,10 +190,12 @@ try {
     await page.click('button:has-text("Apply changes")');
     await page.click('.modal-foot button:has-text("Apply")');
     await waitIdle();
-    await page.waitForTimeout(1500);
-    const n1 = await page.locator(".org-item").count();
+    // The change must reach the document itself, not just the on-screen plan.
+    await page.waitForSelector(".modal", { state: "detached", timeout: 60000 });
+    await page.waitForFunction((n) => document.querySelectorAll(".doc-pane.active .pdfViewer .page").length === n, n0 - 1, { timeout: 60000 });
+    const n1 = await page.locator(".doc-pane.active .pdfViewer .page").count();
     await shot("05-organize");
-    record("Organize pages: delete a page and apply", n1 === n0 - 1, `${n0} -> ${n1} pages`);
+    record("Organize pages: delete a page and apply", n1 === n0 - 1, `${n0} -> ${n1} pages in the document`);
   });
 
   await step("Redact a PAN pattern permanently", async () => {

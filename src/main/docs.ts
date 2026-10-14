@@ -263,6 +263,11 @@ export function currentPath(id: string): { path: string; password?: string } {
   return { path: s.revisions[s.index], password: s.password };
 }
 
+/** Open session ids (used by the packaged-app self-check). */
+export function sessionIds(): string[] {
+  return [...sessions.keys()];
+}
+
 export function sessionState(id: string): DocState {
   return state(get(id));
 }

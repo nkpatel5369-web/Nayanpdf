@@ -7,19 +7,36 @@
 // they opened. Every path inside an engine request is checked against this
 // registry before the request is forwarded.
 import { existsSync, realpathSync, statSync } from "node:fs";
-import { dirname, isAbsolute, normalize, resolve, sep } from "node:path";
+import { basename, dirname, isAbsolute, join, normalize, resolve, sep } from "node:path";
 import { appTempRoot } from "./paths";
 
 const IS_WIN = process.platform === "win32";
 
 function canon(p: string): string {
-  let r = resolve(normalize(p));
-  try {
-    if (existsSync(r)) r = realpathSync.native(r);
-  } catch {
-    /* keep resolved */
+  // Resolve the longest part of the path that exists (this expands Windows 8.3
+  // short names such as C:\Users\NAYANP~1 and symbolic links), then re-append
+  // the parts that do not exist yet. Otherwise a new output file would keep the
+  // short form while its existing folder is expanded, and a legitimate write
+  // into the app's own temp folder would be refused.
+  const r = resolve(normalize(p));
+  const missing: string[] = [];
+  let cur = r;
+  let out = r;
+  for (;;) {
+    try {
+      if (existsSync(cur)) {
+        out = join(realpathSync.native(cur), ...missing.reverse());
+        break;
+      }
+    } catch {
+      break;
+    }
+    const parent = dirname(cur);
+    if (parent === cur) break;
+    missing.push(basename(cur));
+    cur = parent;
   }
-  return IS_WIN ? r.toLowerCase() : r;
+  return IS_WIN ? out.toLowerCase() : out;
 }
 
 class AccessRegistry {

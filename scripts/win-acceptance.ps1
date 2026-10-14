@@ -143,6 +143,7 @@ function Run-App([string]$label, [string[]]$argsList) {
     Record "${label}: UI launched and rendered" ([bool]$s.ok) "title=$($s.title)"
     if ($s.engine) { Record "${label}: engine reached from packaged app" ([bool]$s.engine.ok) "$(@($s.engine.results).Count) checks" }
     if ($s.document) { Record "${label}: PDF opened and displayed" ([bool]$s.document.ok) $s.document.detail }
+    if ($s.edit) { Record "${label}: document edited (temporary revisions)" ([bool]$s.edit.ok) $s.edit.detail }
   } else {
     Record "${label}: UI launched and rendered" $false "no smoke.json"
   }
