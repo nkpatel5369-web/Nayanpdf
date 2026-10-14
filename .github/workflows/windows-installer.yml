@@ -3,6 +3,11 @@ name: Windows installer
 on:
   push:
     branches: ["claude/**", "main"]
+    paths-ignore:
+      - "docs/**"
+      - "README.md"
+      - "scripts/ui-e2e.mjs"
+      - ".github/workflows/ui-windows.yml"
   workflow_dispatch:
 
 permissions:
@@ -65,6 +70,13 @@ jobs:
           New-Item -ItemType Directory -Force -Path acceptance | Out-Null
           & "$rt\python\python.exe" -X utf8 -m pytest engine\tests -q -p no:cacheprovider --junitxml acceptance\engine-tests-runtime.xml 2>&1 | Tee-Object acceptance\engine-tests-runtime.txt
           if ($LASTEXITCODE -ne 0) { throw "engine tests failed" }
+
+      - name: Desktop resolution for UI tests (best effort)
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          Set-DisplayResolution -Width 1920 -Height 1080 -Force
+          Get-CimInstance Win32_VideoController | Select-Object CurrentHorizontalResolution, CurrentVerticalResolution | Format-Table
 
       - name: UI end-to-end test on Windows (development build, bundled runtime)
         shell: pwsh

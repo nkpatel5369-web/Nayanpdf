@@ -66,7 +66,20 @@ const step = async (name, fn) => {
   try {
     await fn();
   } catch (e) {
-    record(name, false, String(e.message || e).split("\n")[0]);
+    const msg = String(e.message || e);
+    record(name, false, msg.split("\n")[0]);
+    if (process.env.CI || process.env.UI_DEBUG) {
+      // Enough to diagnose a failure from the CI log alone: Playwright's call log
+      // (it names any element intercepting the click) and what the app shows.
+      console.log(msg.split("\n").slice(1, 14).map((l) => "    " + l).join("\n"));
+      const state = await page.evaluate(() => ({
+        view: document.querySelector(".rail-btn.active")?.textContent || "document",
+        modals: [...document.querySelectorAll(".modal")].map((m) => (m.querySelector("h2")?.textContent || m.textContent || "").slice(0, 100)),
+        toasts: [...document.querySelectorAll(".toast")].map((t) => (t.textContent || "").slice(0, 200)),
+        busy: !!document.querySelector(".busy-veil"),
+      })).catch((err) => String(err));
+      console.log("    app state: " + JSON.stringify(state));
+    }
     await shot(`fail-${name.replace(/\W+/g, "_")}`).catch(() => undefined);
   }
 };

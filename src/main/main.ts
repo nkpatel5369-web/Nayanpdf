@@ -1,5 +1,5 @@
 // NayanPDF main process.
-import { app, BrowserWindow, dialog, Menu, protocol, session, shell } from "electron";
+import { app, BrowserWindow, dialog, Menu, protocol, screen, session, shell } from "electron";
 import { existsSync, readdirSync, rmSync, statSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { extname, join, normalize, resolve, sep } from "node:path";
@@ -128,9 +128,13 @@ function lockDownDefaultSession() {
 }
 
 function createWindow() {
+  // Fit the screen: laptops at 1366x768 (or CI desktops at 1024x768) get a
+  // maximised window instead of one larger than the display.
+  const wa = screen.getPrimaryDisplay().workAreaSize;
+  const fits = wa.width >= 1440 && wa.height >= 920;
   mainWindow = new BrowserWindow({
-    width: 1440,
-    height: 920,
+    width: Math.min(1440, wa.width),
+    height: Math.min(920, wa.height),
     minWidth: 1000,
     minHeight: 640,
     title: "NayanPDF",
@@ -150,7 +154,10 @@ function createWindow() {
       devTools: !app.isPackaged,
     },
   });
-  mainWindow.once("ready-to-show", () => mainWindow?.show());
+  mainWindow.once("ready-to-show", () => {
+    if (!fits) mainWindow?.maximize();
+    mainWindow?.show();
+  });
   const url = process.env.NAYANPDF_DEV_URL || "app://nayan/index.html";
   mainWindow.loadURL(url);
   mainWindow.webContents.on("did-finish-load", () => {

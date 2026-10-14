@@ -66,11 +66,15 @@ jobs:
           & "$rt\python\python.exe" -X utf8 -m pytest engine\tests -q -p no:cacheprovider -k test_probe
           if ($LASTEXITCODE -ne 0) { throw "fixture generation failed" }
 
+      - name: Desktop resolution for UI tests (best effort)
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          Set-DisplayResolution -Width 1920 -Height 1080 -Force
+          Get-CimInstance Win32_VideoController | Select-Object CurrentHorizontalResolution, CurrentVerticalResolution | Format-Table
+
       - name: UI end-to-end test
         shell: pwsh
-        env:
-          DEBUG: "pw:browser*"
-          ELECTRON_ENABLE_LOGGING: "1"
         run: |
           node -e "console.log(require('electron'))"
           $rt = (Resolve-Path "runtime\win").Path
