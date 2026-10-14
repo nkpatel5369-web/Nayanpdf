@@ -7,21 +7,21 @@ Status of every feature in the NayanPDF brief, using the five statuses the brief
 - **E:** engine test in `engine/tests/` (pytest, synthetic documents, output files reopened and inspected).
 - **U:** scenario in the UI end-to-end test `scripts/ui-e2e.mjs`, which drives the real Electron application, its main process and engine (see `docs/TEST_REPORT.md`).
 
-**Platform caveat.** Every test recorded here was executed on the Linux development build, which runs the same engine and UI code as the Windows build. The Windows-specific steps (installer, installed runtime, offline acceptance on Windows, uninstall/reinstall) are automated in `.github/workflows/windows-installer.yml` but **have not yet run**, because this session could not push to GitHub. Until that pipeline has run green, treat Windows behaviour as built but not verified.
+**Platforms.** The evidence codes refer to tests run on the Linux development build. The same engine tests (103) and the same 25 UI scenarios have also been run and passed on Windows (GitHub Actions, Windows Server 2025), against the bundled Windows runtime, and the installed application passed the 62-point Windows acceptance test. Windows 10/11 desktop editions and standard (non-administrator) accounts have not been tested.
 
 ## Status summary
 
 | Status | Register lines |
 |---|---|
-| Fully implemented and tested | 161 |
-| Implemented with limitations | 47 |
+| Fully implemented and tested | 165 |
+| Implemented with limitations | 45 |
 | Not implemented | 4 |
 | Requires optional dependency | 0 |
-| Requires paid licence | 0 |
+| Requires paid licence | 1 |
 
 Counts are register lines; a few features appear in more than one section because the brief lists them more than once. The four "Not implemented" lines are: in-place editing of rotated/vertical text, revocation checking and trusted timestamps (both need the internet), execution of form scripts (deliberately never run), and printing several documents in one action.
 
-No feature needs a paid licence or a separately installed component: everything the register lists ships inside `NayanPDF_Setup.exe`.
+No processing feature needs a paid licence or a separately installed component: everything ships inside `NayanPDF_Setup.exe`. The one paid item is a code-signing certificate, which only removes the SmartScreen warning.
 
 ## 1. Home dashboard and workspace (brief §7)
 
@@ -346,8 +346,11 @@ NayanPDF edits the page content stream itself. It does not lay white boxes over 
 
 | Feature | Status | Evidence / limitation |
 |---|---|---|
-| `NayanPDF_Setup.exe`, 64-bit, self-contained, no downloads | Implemented with limitations | A local build exists **without LibreOffice** (209 MB); the complete build with LibreOffice is produced by the Windows CI pipeline, which has not yet run |
-| Per-user install, no administrator rights; directory choice | Implemented with limitations | NSIS configuration; not yet installed on Windows |
-| Start Menu shortcut, optional desktop shortcut, icon, version info, uninstall entry | Implemented with limitations | Configured and checked by `scripts/win-acceptance.ps1` (pending CI) |
-| Uninstall keeps user documents; removes app files, shortcuts and temp | Implemented with limitations | As above |
-| Installed executable named `NayanPDF.exe` | Implemented with limitations | Confirmed in the local build output (`release/win-unpacked/NayanPDF.exe`); not yet installed |
+| `NayanPDF_Setup.exe`, 64-bit, self-contained, nothing downloaded during or after installation | Fully implemented and tested | Windows acceptance test: installed copy passes its offline self-test (all nine engines including LibreOffice, Tesseract and Ghostscript) and the full engine test suite with outbound traffic blocked |
+| Installs to the user's profile without requesting administrator rights | Implemented with limitations | Per-user installer that does not request elevation; on CI it ran under an administrator account, so a standard-account install has not been executed |
+| Choice of installation folder | Implemented with limitations | Offered on the installer's folder page; the automated test uses the silent default |
+| Start Menu shortcut, icon, version information, uninstall registration | Fully implemented and tested | Windows acceptance test |
+| Optional desktop shortcut | Implemented with limitations | Check box on the installer's last page; not exercised by the silent test |
+| Uninstall removes program, shortcut and registration; keeps user documents and settings | Fully implemented and tested | Windows acceptance test, followed by a successful reinstall |
+| Installed executable named `NayanPDF.exe` | Fully implemented and tested | Windows acceptance test |
+| Code signing of the installer and executable | Requires paid licence | Needs a purchased code-signing certificate; until then Windows SmartScreen warns on first run |

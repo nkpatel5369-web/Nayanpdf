@@ -11,11 +11,9 @@ A fully offline PDF editor and document toolkit for Windows 10 and 11 (64-bit). 
 
 ## Current delivery status
 
-Read this before relying on the software.
-
-- **Application:** complete and tested on the Linux development build (102 engine tests and 25 end-to-end UI scenarios pass, including with networking disabled).
-- **Windows installer:** `NayanPDF_Setup.exe` is produced by the GitHub Actions workflow `.github/workflows/windows-installer.yml`, which assembles the Windows runtime (Python, Tesseract, Ghostscript, LibreOffice), builds the installer, then installs it on a clean Windows machine and runs the offline acceptance test before publishing it as a pre-release. **That workflow has not yet run**, because the build session did not have permission to push to the repository. A local build of the installer without LibreOffice exists in the build environment; it has not been installed on Windows.
-- Until the Windows pipeline has run green, Windows behaviour is built but not verified.
+- **Windows installer:** built, installed and tested on a clean Windows machine by `.github/workflows/windows-installer.yml`. Every successful build is published as a GitHub pre-release (`v1.0.0-build.N`) with `NayanPDF_Setup.exe`, its SHA-256 and the acceptance report. Use the newest pre-release.
+- **Evidence on Windows:** the 103 engine tests pass against the bundled runtime and again against the installed copy with outbound traffic blocked; the 62-point acceptance test covering install, offline self-test, app launch with zero network connections, uninstall and reinstall passes; and the 25-scenario UI test passes.
+- **Not yet verified:** installation under a standard (non-administrator) Windows account, and Windows 10 or Windows 11 desktop editions specifically. The CI machine is Windows Server 2025 (Windows 11 kernel 10.0.26100).
 
 ## 1. Installing
 
@@ -85,7 +83,7 @@ Use Windows Settings → Apps → Installed apps → NayanPDF → Uninstall (Win
 
 ## 4. Known limitations
 
-- **Windows verification pending.** See "Current delivery status".
+- **Windows coverage:** tested on Windows Server 2025 in CI; not yet on a Windows 10 or 11 desktop or under a standard user account.
 - **Editing existing text** depends on how the PDF was made. Text is edited in its original font when the embedded font contains the needed characters; otherwise a similar font is substituted and NayanPDF tells you. Rotated or vertical text, text drawn as outlines and scanned pages cannot be edited in place (OCR or Convert to Word are offered instead). Long replacements are not reflowed into following lines; use paragraph mode or convert to Word for heavy rewording. Resizing an existing paragraph box is not yet available in the editor.
 - **Bold/italic** on edited text uses a substitute font family, because PDFs rarely embed the bold variant.
 - **PDF to Word/PowerPoint** quality depends on the source layout; complex multi-column pages may need tidying.
@@ -159,7 +157,7 @@ npm start              # runs the app; set NAYANPDF_PYTHON to your Python if it 
 ### Tests
 
 ```
-python -m pytest engine/tests -q        # engine: 102 tests on synthetic documents
+python -m pytest engine/tests -q        # engine: 103 tests on synthetic documents
 node scripts/ui-e2e.mjs                 # UI end-to-end: 25 scenarios (Linux: run under xvfb-run)
 ```
 

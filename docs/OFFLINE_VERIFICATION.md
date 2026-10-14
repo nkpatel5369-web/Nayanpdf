@@ -6,7 +6,7 @@ What was done to establish that NayanPDF works without an internet connection an
 
 - Every processing feature has been executed with **no network available at all** (Linux network namespace, no route to any host): 102 of 102 engine tests passed, covering OCR, Office conversion, PDF/A, digital signing and verification, redaction, compression and every page operation. The full 25-scenario UI test also passed three times in a row under the same conditions.
 - Three channels by which a desktop PDF tool can leak traffic without the user noticing have been closed and each is covered by an automated test that fails if the protection is removed: remote images in Office files, remote resources in HTML, and background requests from the user interface.
-- **Not yet done:** the same checks on Windows against the installed `NayanPDF_Setup.exe`. They are scripted (`scripts/win-acceptance.ps1`) and run automatically in the Windows build pipeline, which has not been able to run because this session could not push to GitHub.
+- On Windows, the **installed** application was tested with Windows Firewall blocking all outbound traffic for NayanPDF and every bundled engine: its self-test and the full 103-test engine suite passed, and while the app ran and displayed a document no NayanPDF process opened a single connection to a non-local address.
 
 ## 1. How the application is built to stay offline
 
@@ -68,17 +68,20 @@ The complete 25-scenario UI test (§2.4) was also run three times in a row insid
 
 Some bundled third-party libraries contain network code they never use in NayanPDF (for example aiohttp inside pyHanko's dependency tree and libcurl linked into Tesseract). They are listed in `docs/DEPENDENCIES.md`; the checks above show they are not exercised.
 
-## 3. Windows acceptance test (scripted, not yet executed)
+## 3. Windows acceptance test (executed)
 
-`scripts/win-acceptance.ps1`, run by `.github/workflows/windows-installer.yml` on a clean `windows-latest` machine, performs the brief's §29 acceptance procedure:
+`scripts/win-acceptance.ps1`, run by `.github/workflows/windows-installer.yml` on a clean GitHub Actions machine (Windows Server 2025, x64), performs the brief's §29 acceptance procedure. Result for build 7 (14 October 2026): **63 of 63 checks passed** (build 3: 62 of 62, before the edit check was added).
 
-1. Silent per-user install of `NayanPDF_Setup.exe`; checks files, Start Menu shortcut, uninstall registration and version.
-2. Adds Windows Firewall rules that **block all outbound traffic** for `NayanPDF.exe`, the bundled Python, Tesseract, LibreOffice and Ghostscript.
-3. Runs the built-in self-test and the full engine test suite against the **installed** runtime.
-4. Launches the installed application on a test PDF, takes screenshots, and samples every TCP connection owned by NayanPDF's processes for the duration; any connection to a non-loopback address fails the test.
-5. Uninstalls (checking that user documents survive and shortcuts are removed), then reinstalls.
+| Step | Result |
+|---|---|
+| Silent per-user install; files, Start Menu shortcut, uninstall registration, version information | Pass |
+| Windows Firewall rules blocking all outbound traffic for `NayanPDF.exe`, the bundled Python, Tesseract, LibreOffice and Ghostscript (10 program rules) | Applied |
+| Built-in self-test of the installed engines with traffic blocked: PDF engine, page operations, compression, qpdf, Office writers, digital-signature engine, OCR (eng, hin, guj), LibreOffice conversion, Ghostscript | 9 / 9 pass |
+| Full engine test suite against the installed runtime, traffic blocked | 103 / 103 pass |
+| Installed app launched (home screen, then with a PDF, which it edits and undoes); every TCP connection owned by its processes sampled throughout | Rendered and edited; **0 remote endpoints** observed in both launches |
+| Uninstall (user document and settings must survive), then reinstall and repeat the offline self-test | Pass |
 
-Separately, the pipeline runs the 25-scenario UI test on Windows against the development build with the bundled Windows runtime. Results are published as `acceptance/report.md` with the installer. **Until that run exists, Windows offline behaviour is designed and statically verified but not demonstrated.**
+Separately, the 25-scenario UI test passed on Windows against the development build with the bundled Windows runtime.
 
 ## 4. How you can verify it yourself on Windows
 
