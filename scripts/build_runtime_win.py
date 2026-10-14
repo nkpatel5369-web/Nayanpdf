@@ -314,13 +314,24 @@ def latest_libreoffice() -> str:
 
 
 def verify_authenticode(path: Path, publisher_hint: str):
-    ps = ["powershell", "-NoProfile", "-Command",
-          f"$s = Get-AuthenticodeSignature -LiteralPath '{path}'; Write-Output ($s.Status.ToString() + '|' + $s.SignerCertificate.Subject)"]
-    out = subprocess.run(ps, capture_output=True, text=True).stdout.strip()
+    lit = str(path).replace("'", "''")
+    script = (f"$s = Get-AuthenticodeSignature -LiteralPath '{lit}'; "
+              "Write-Output ($s.Status.ToString() + '|' + $s.SignerCertificate.Subject)")
+    # Prefer PowerShell 7. Windows PowerShell 5.1 started from a PowerShell 7 session
+    # inherits PSModulePath and then cannot load its own security module, so it gets
+    # a clean module path when it is the only option.
+    env = dict(os.environ)
+    exe = shutil.which("pwsh")
+    if not exe:
+        exe = "powershell"
+        env.pop("PSModulePath", None)
+    res = subprocess.run([exe, "-NoProfile", "-NonInteractive", "-Command", script],
+                         capture_output=True, text=True, env=env)
+    out = res.stdout.strip()
     log("authenticode", path.name, out)
     status, _, subject = out.partition("|")
     if status != "Valid" or publisher_hint.lower() not in subject.lower():
-        raise SystemExit(f"Authenticode verification failed for {path.name}: {out}")
+        raise SystemExit(f"Authenticode verification failed for {path.name}: {out or '(no output)'} {res.stderr.strip()[-500:]}")
     return subject
 
 
