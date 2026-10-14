@@ -9,6 +9,7 @@ import { existsSync, mkdirSync, rmSync, writeFileSync, copyFileSync, statSync } 
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
+import { createServer } from "node:http";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const IS_WIN = process.platform === "win32";
@@ -52,6 +53,8 @@ const app = await electron.launch({
 app.process().stdout.on("data", (d) => process.stdout.write(String(d).split("\n").filter((l) => l.startsWith("[testhook]")).map((l) => "  " + l + "\n").join("")));
 const page = await app.firstWindow();
 page.setDefaultTimeout(30000);
+page.on("pageerror", (e) => console.log("  [renderer error]", e.message));
+page.on("console", (m) => { if (m.type() === "error" || m.text().startsWith("[e2e-debug]")) console.log("  [renderer console]", m.text()); });
 await page.setViewportSize({ width: 1440, height: 900 }).catch(() => undefined);
 const shot = async (name) => page.screenshot({ path: join(out, `${name}.png`) });
 const only = process.env.UI_ONLY ? new RegExp(process.env.UI_ONLY, "i") : null;
@@ -291,6 +294,7 @@ try {
     await toolPage("Merge PDFs");
     setDialogs({ openFiles: [join(work, "a.pdf"), join(work, "b.pdf")] });
     await page.click('button:has-text("Add PDFs")');
+    if (process.env.UI_DEBUG) for (let i = 0; i < 12; i++) { console.log("  rows", await page.locator(".file-row").count(), await page.locator(".file-row img.thumb").count()); await page.waitForTimeout(500); }
     await page.waitForSelector(".file-row:nth-child(2) img.thumb");
     await page.fill('.field:has-text("Output file name") input', "merged_ab");
     const res = await runAndWait("Merge");
@@ -357,6 +361,29 @@ try {
     res = await runAndWait("Convert");
     const okP = existsSync(join(work, "financial.pptx"));
     record("Convert PDF to Word and PowerPoint", okW && okP, `docx=${okW} pptx=${okP}`);
+  });
+
+  await step("HTML to PDF renders offline and never fetches remote resources", async () => {
+    // A local server stands in for "the internet": the page links an image and a
+    // stylesheet on it. The conversion must succeed without a single request.
+    const hits = [];
+    const srv = createServer((req, res) => { hits.push(req.url); res.writeHead(200, { "Content-Type": "image/png" }); res.end(); });
+    await new Promise((r) => srv.listen(0, "127.0.0.1", r));
+    const base = `http://127.0.0.1:${srv.address().port}`;
+    writeFileSync(join(work, "report.html"), `<!doctype html><html><head><link rel="stylesheet" href="${base}/style.css"></head><body><h1>Quarterly report</h1><p>Revenue 1,25,000.00</p><img src="${base}/pixel.png" width="40" height="40"></body></html>`);
+    try {
+      await page.click('.rail-btn:has-text("Convert")');
+      await page.click('.seg button:has-text("Other formats to PDF")');
+      await page.click('.tool-card:has-text("HTML page")');
+      setDialogs({ openFiles: [join(work, "report.html")] });
+      await page.click('button:has-text("Choose file")');
+      await page.click('button.primary:has-text("Create PDF")');
+      await page.waitForSelector('.toast:has-text("HTML converted"), .toast:has-text("Conversion failed")', { timeout: 120000 });
+      const t = existsSync(join(work, "report.pdf")) ? pdfText(join(work, "report.pdf")) : "";
+      record("HTML to PDF renders offline and never fetches remote resources", /Quarterly report/.test(t) && hits.length === 0, `text ok=${/Quarterly report/.test(t)}, requests to remote host: ${hits.length}`);
+    } finally {
+      srv.close();
+    }
   });
 
   await step("Watermark with live preview applied to open document", async () => {

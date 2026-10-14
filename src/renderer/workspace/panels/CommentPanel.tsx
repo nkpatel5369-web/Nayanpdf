@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ArrowUpRight, Circle, Highlighter, Layers, Minus, MousePointer2, PenLine, Square, Stamp, StickyNote, Strikethrough, Trash2, Type, Underline, MessageSquareText, Signature } from "lucide-react";
+import { ArrowUpRight, Circle, Highlighter, Layers, Minus, MousePointer2, PenLine, Square, Stamp, StickyNote, Strikethrough, Trash2, Type, Underline, MessageSquareText, Signature, Waves } from "lucide-react";
 import { useWs } from "../context";
 import { ColorPicker, Field, Notice } from "../../components/ui";
 import { api } from "../../api";
@@ -10,6 +10,7 @@ const TOOLS = [
   { id: "highlight", label: "Highlight", icon: Highlighter },
   { id: "underline", label: "Underline", icon: Underline },
   { id: "strikeout", label: "Strikethrough", icon: Strikethrough },
+  { id: "squiggly", label: "Squiggly", icon: Waves },
   { id: "note", label: "Sticky note", icon: StickyNote },
   { id: "freetext", label: "Text comment", icon: Type },
   { id: "callout", label: "Callout", icon: MessageSquareText },

@@ -16,10 +16,12 @@ export function PageThumb(props: { pdf: any; page: number; width: number; rotati
   }, []);
 
   useEffect(() => {
-    if (!visible || !props.pdf) return;
+    // After pages are deleted the list can briefly hold numbers past the new end.
+    if (!visible || !props.pdf || props.page > props.pdf.numPages) return;
     let task: any = null;
     let alive = true;
-    props.pdf.getPage(props.page).then((page: any) => {
+    props.pdf.getPage(props.page).catch(() => null).then((page: any) => {
+      if (!page) return;
       if (!alive) return;
       const rot = ((page.rotate || 0) + (props.rotation || 0) + (props.extraRotate || 0)) % 360;
       const vp1 = page.getViewport({ scale: 1, rotation: rot });

@@ -281,3 +281,93 @@ def test_ocr_plain_text_extraction(fx, ctx):
     r = ocr.text(ctx, fx["scanned"], out("scanned_ocr.txt"), pages="1")
     txt = open(r["output"], encoding="utf-8").read()
     assert "Revenue" in txt
+
+
+@needs_tesseract
+def test_ocr_turns_sideways_scan_upright(fx, ctx):
+    from nayanpdf_engine.util import tools
+    if not os.path.exists(os.path.join(tools.tessdata_dir() or "", "osd.traineddata")):
+        pytest.skip("orientation data (osd) not installed")
+    # A scan fed into the scanner sideways: the page image is rotated 90 degrees.
+    from PIL import Image
+    src = pymupdf.open(fx["scanned"])
+    pix = src[0].get_pixmap(dpi=200)
+    src.close()
+    img = Image.frombytes("RGB", (pix.width, pix.height), pix.samples).rotate(90, expand=True)
+    png = out("sideways.png")
+    img.save(png)
+    side = pymupdf.open()
+    pg = side.new_page(width=img.width * 72 / 200, height=img.height * 72 / 200)
+    pg.insert_image(pg.rect, filename=png)
+    side_pdf = out("sideways.pdf")
+    side.save(side_pdf)
+    side.close()
+    r = ocr.run(ctx, side_pdf, out("sideways_ocr.pdf"), languages=["eng"])
+    assert r.get("rotated"), r
+    d = pymupdf.open(r["output"])
+    assert d[0].search_for("Revenue"), "text on the corrected page is not searchable"
+    d.close()
+
+
+@needs_soffice
+def test_office_conversion_never_fetches_linked_content(ctx, tmp_path, monkeypatch):
+    """Office files can reference images or data by URL. Converting them must not
+    contact the network: a local HTTP server stands in for the remote host and
+    must receive no request."""
+    import http.server
+    import io
+    import threading
+
+    import docx
+    import openpyxl
+    from docx.opc.constants import RELATIONSHIP_TYPE as RT
+    from PIL import Image
+
+    hits = []
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):  # noqa: N802
+            hits.append(self.path)
+            buf = io.BytesIO()
+            Image.new("RGB", (40, 40), (200, 0, 0)).save(buf, "PNG")
+            self.send_response(200)
+            self.send_header("Content-Type", "image/png")
+            self.end_headers()
+            self.wfile.write(buf.getvalue())
+
+        def log_message(self, *args):
+            pass
+
+    srv = http.server.HTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    base = f"http://127.0.0.1:{srv.server_port}"
+    monkeypatch.setenv("NAYANPDF_LO_PROFILES", str(tmp_path / "profiles"))
+    try:
+        # Word file whose picture is linked to a URL instead of embedded.
+        d = docx.Document()
+        d.add_paragraph("Linked image test")
+        buf = io.BytesIO()
+        Image.new("RGB", (40, 40), (0, 0, 200)).save(buf, "PNG")
+        buf.seek(0)
+        d.add_picture(buf)
+        rid = d.part.relate_to(base + "/tracker.png", RT.IMAGE, is_external=True)
+        ns = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}"
+        for blip in d.element.body.iter("{http://schemas.openxmlformats.org/drawingml/2006/main}blip"):
+            blip.attrib.pop(ns + "embed", None)
+            blip.set(ns + "link", rid)
+        src_docx = str(tmp_path / "linked.docx")
+        d.save(src_docx)
+        r = convert.office_to_pdf(ctx, src_docx, str(tmp_path / "linked.pdf"))
+        assert "Linked image test" in page_texts(r["output"])[0]
+
+        # Excel file with a formula that would download data when recalculated.
+        wb = openpyxl.Workbook()
+        wb.active["A1"] = "Rate"
+        wb.active["B1"] = f'=WEBSERVICE("{base}/rate")'
+        src_xlsx = str(tmp_path / "webservice.xlsx")
+        wb.save(src_xlsx)
+        r = convert.office_to_pdf(ctx, src_xlsx, str(tmp_path / "webservice.pdf"))
+        assert "Rate" in page_texts(r["output"])[0]
+    finally:
+        srv.shutdown()
+    assert hits == [], f"conversion contacted the network: {hits}"

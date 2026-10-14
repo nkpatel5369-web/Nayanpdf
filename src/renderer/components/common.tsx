@@ -284,16 +284,23 @@ export function FileList(props: {
   const [drag, setDrag] = useState<number | null>(null);
   const filesRef = useRef(props.files);
   filesRef.current = props.files;
+  // Every change goes through commit(), which updates the ref immediately. The
+  // asynchronous probes below must build on the latest list even if React has not
+  // re-rendered yet; reading a stale list here used to drop newly added files.
+  const commit = (next: FileEntry[]) => {
+    filesRef.current = next;
+    props.onChange(next);
+  };
 
   const add = async (paths: string[]) => {
     const existing = new Set(filesRef.current.map((f) => f.path));
     const fresh = paths.filter((p) => !existing.has(p));
     let next = [...filesRef.current, ...fresh.map((p) => ({ path: p }))];
     if (props.max) next = next.slice(-props.max);
-    props.onChange(next);
+    commit(next);
     for (const p of fresh) {
       const info = await probeFile(p);
-      props.onChange(filesRef.current.map((f) => (f.path === p ? { ...f, ...info } : f)));
+      commit(filesRef.current.map((f) => (f.path === p ? { ...f, ...info } : f)));
     }
   };
 
@@ -308,15 +315,15 @@ export function FileList(props: {
       return;
     }
     const t = await api.query("pages.thumbnail", { path: f.path, page: 1, width: 68, password: pw });
-    props.onChange(filesRef.current.map((x) => (x.path === f.path ? { ...x, password: pw, locked: false, pages: p.pages, thumb: "data:image/png;base64," + t.png } : x)));
+    commit(filesRef.current.map((x) => (x.path === f.path ? { ...x, password: pw, locked: false, pages: p.pages, thumb: "data:image/png;base64," + t.png } : x)));
   };
 
   const move = (from: number, to: number) => {
     if (to < 0 || to >= props.files.length) return;
-    const n = props.files.slice();
+    const n = filesRef.current.slice();
     const [it] = n.splice(from, 1);
     n.splice(to, 0, it);
-    props.onChange(n);
+    commit(n);
   };
 
   return (
@@ -342,7 +349,7 @@ export function FileList(props: {
             </div>
             {props.pageSelection && f.pages && (
               <input className="input sm" style={{ width: 110 }} placeholder="All pages" title="Pages to include, e.g. 1-3, 5" value={f.pageSel || ""}
-                onChange={(e) => props.onChange(props.files.map((x) => (x.path === f.path ? { ...x, pageSel: e.target.value } : x)))} />
+                onChange={(e) => commit(filesRef.current.map((x) => (x.path === f.path ? { ...x, pageSel: e.target.value } : x)))} />
             )}
             {f.locked && (
               <button className="btn sm" onClick={() => unlock(f)}>
@@ -355,7 +362,7 @@ export function FileList(props: {
                 <button className="icon-btn" title="Move down" onClick={() => move(i, i + 1)}><ArrowDown size={15} /></button>
               </>
             )}
-            <button className="icon-btn" title="Remove" onClick={() => props.onChange(props.files.filter((x) => x.path !== f.path))}>
+            <button className="icon-btn" title="Remove" onClick={() => commit(filesRef.current.filter((x) => x.path !== f.path))}>
               <Trash2 size={15} />
             </button>
           </div>

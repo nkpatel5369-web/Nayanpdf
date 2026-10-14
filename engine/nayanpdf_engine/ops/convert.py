@@ -1074,6 +1074,7 @@ def office_to_pdf_file(ctx, src: str, target_tmp: str, singlePageSheets: bool = 
     work = os.path.join(ctx.tmpdir, "lo")
     os.makedirs(work, exist_ok=True)
     profile, release = _lo_profile(ctx)
+    _lo_seed_profile(profile)
     # Copy the source to an ASCII-safe name (LibreOffice is fragile with some paths).
     tmp_src = os.path.join(work, "input" + ext)
     shutil.copyfile(os_path(src), tmp_src)
@@ -1094,6 +1095,44 @@ def office_to_pdf_file(ctx, src: str, target_tmp: str, singlePageSheets: bool = 
         msg = (res.stderr or b"").decode("utf-8", "replace")[-300:]
         raise EngineError("OPERATION_FAILED", f"LibreOffice could not convert {os.path.basename(src)}. {msg}".strip())
     shutil.move(produced, target_tmp)
+
+
+# LibreOffice settings written into every private profile NayanPDF uses: never fetch
+# linked content (images or data referenced by URL), never update links, no update
+# check, and macros never run. Unknown paths are ignored by LibreOffice.
+_LO_ITEMS = [
+    ("/org.openoffice.Office.Common/Security/Scripting", "BlockUntrustedRefererLinks", "boolean", "true"),
+    ("/org.openoffice.Office.Common/Security/Scripting", "MacroSecurityLevel", "int", "3"),
+    ("/org.openoffice.Office.Common/Security/Scripting", "DisableMacrosExecution", "boolean", "true"),
+    ("/org.openoffice.Office.Writer/Content/Update", "Link", "int", "2"),
+    ("/org.openoffice.Office.Calc/Content/Update", "Link", "int", "2"),
+    ("/org.openoffice.Office.Calc/Formula/Load", "OOXMLRecalcMode", "int", "1"),
+    ("/org.openoffice.Office.Jobs/Jobs/org.openoffice.Office.Jobs:Job['UpdateCheck']/Arguments", "AutoCheckEnabled", "boolean", "false"),
+    ("/org.openoffice.Office.Common/Misc", "CollectUsageInformation", "boolean", "false"),
+]
+
+
+def _lo_seed_profile(profile: str):
+    user = os.path.join(profile, "user")
+    os.makedirs(user, exist_ok=True)
+    xcu = os.path.join(user, "registrymodifications.xcu")
+    items = "".join(f'<item oor:path="{path}"><prop oor:name="{name}" oor:op="fuse"><value>{val}</value></prop></item>\n'
+                    for path, name, _t, val in _LO_ITEMS)
+    try:
+        current = open(xcu, encoding="utf-8").read() if os.path.exists(xcu) else ""
+    except OSError:
+        current = ""
+    if current and all(f'oor:name="{name}"' in current for _p, name, _t, _v in _LO_ITEMS) \
+            and "BlockUntrustedRefererLinks" in current:
+        return
+    if current and "</oor:items>" in current:
+        text = current.replace("</oor:items>", items + "</oor:items>", 1)
+    else:
+        text = ('<?xml version="1.0" encoding="UTF-8"?>\n'
+                '<oor:items xmlns:oor="http://openoffice.org/2001/registry" xmlns:xs="http://www.w3.org/2001/XMLSchema" '
+                'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">\n' + items + "</oor:items>\n")
+    with open(xcu, "w", encoding="utf-8") as f:
+        f.write(text)
 
 
 def _lo_profile(ctx):
