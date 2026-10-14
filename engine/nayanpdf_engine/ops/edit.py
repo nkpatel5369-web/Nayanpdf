@@ -461,7 +461,7 @@ def edit_text(ctx, path: str, output: str, page: int, rect, newText: str, passwo
 
     if ops:
         append_content(pg, "".join(ops))
-    if mode == "line" and fit == "none" and writer.width(text_for_writer) > target_width * 1.02 and target_width > 0:
+    if mode == "line" and fit == "none" and target_width > 0 and writer.width(text_for_writer) > target_width + max(3.0, target_width * 0.08):
         ctx.warn("The new text is wider than the original. It may overlap neighbouring content; consider 'Shrink to fit'.")
     if warnings_font:
         ctx.warn(warnings_font)
@@ -749,6 +749,23 @@ def edit_image(ctx, path: str, output: str, page: int, rect, action: str, newRec
         new_ops = new_ops[:idx] + insert + new_ops[idx + 1:]
     pg = pdf.pages[page - 1]
     pg.obj.Contents = pdf.make_stream(pikepdf.unparse_content_stream(new_ops))
+    data_removed = None
+    if action in ("delete", "replace") and name != "inline":
+        # Drop the image from this page's resources when nothing on the page still
+        # draws it, so its pixels are not left behind in the saved file. A copy of the
+        # resource dictionary is written to this page only; other pages that share
+        # the image keep it.
+        still_used = any(str(o) == "Do" and ops_ and str(ops_[0]) == name for ops_, o in new_ops)
+        res = pg.obj.get("/Resources")
+        data_removed = False
+        if not still_used and res is not None and "/XObject" in res:
+            new_xo = pikepdf.Dictionary({k: v for k, v in res.XObject.items() if k != name})
+            new_res = pikepdf.Dictionary({k: v for k, v in res.items()})
+            new_res.XObject = new_xo
+            pg.obj.Resources = new_res
+            data_removed = True
+    elif action in ("delete", "replace"):
+        data_removed = True  # inline image data lives in the content stream itself
     tmp = ctx.tmp_path(".pdf")
     was_encrypted = pdf.is_encrypted
     pdf.save(tmp, encryption=True if was_encrypted else False)
@@ -764,12 +781,17 @@ def edit_image(ctx, path: str, output: str, page: int, rect, action: str, newRec
         p2 = doc[page - 1]
         box = pymupdf.Rect(old_bb) * p2.transformation_matrix
         box.normalize()
-        p2.insert_image(box, stream=_image_bytes(imagePath), keep_proportion=False)
+        # The new picture is fitted inside the old frame without distortion.
+        p2.insert_image(box, stream=_image_bytes(imagePath), keep_proportion=True)
     out = OutputFile(ctx, output, overwrite, sources=[path])
-    save_doc(doc, out.temp, garbage=1)
+    save_doc(doc, out.temp, garbage=3)
     doc.close()
     final = out.commit(validate_pdf(expected_pages=n, password=password))
-    return {"output": final, "action": action, "oldRect": [old_bb.x0, old_bb.y0, old_bb.x1, old_bb.y1]}
+    if data_removed is False:
+        ctx.warn("The image is no longer shown on this page, but its data is still stored in the file because "
+                 "another part of the document uses it. Use Redact if the picture must be removed completely.")
+    return {"output": final, "action": action, "oldRect": [old_bb.x0, old_bb.y0, old_bb.x1, old_bb.y1],
+            "imageDataRemoved": data_removed}
 
 
 @method("edit.listImages")

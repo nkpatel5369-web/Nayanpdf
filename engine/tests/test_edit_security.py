@@ -117,9 +117,40 @@ def test_move_resize_delete_existing_image(fx, ctx):
     nr = imgs2[0]["rect"]
     assert all(abs(a - b) < 0.6 for a, b in zip(nr, [50, 50, 150, 125])), nr
     r = edit.edit_image(ctx, r["output"], out("img_deleted.pdf"), 1, nr, "delete")
+    assert r["imageDataRemoved"] is True
     d = pymupdf.open(r["output"])
     assert not d[0].get_image_info()
+    assert not any(d.xref_get_key(x, "Subtype")[1] == "/Image" for x in range(1, d.xref_length()))
     assert "A page 1" in d[0].get_text()
+    d.close()
+
+
+def test_delete_existing_text_line(fx, ctx):
+    rect = _line(fx["c"], 2, "Marker C-002")
+    r = edit.edit_text(ctx, fx["c"], out("c_line_deleted.pdf"), 2, rect, "")
+    t = page_texts(r["output"])[1]
+    assert "C-002" not in t and "C page 2" in t
+
+
+def test_replace_existing_image(fx, ctx):
+    src = out("img_src2.pdf")
+    edit.insert_image(ctx, fx["a"], src, 1, [100, 300, 300, 400], fx["jpg"])
+    r0 = edit.list_images(ctx, src, 1)["images"][0]["rect"]
+    r = edit.edit_image(ctx, src, out("img_replaced.pdf"), 1, r0, "replace", imagePath=fx["png"])
+    assert r["imageDataRemoved"] is True
+    imgs = edit.list_images(ctx, r["output"], 1)["images"]
+    assert len(imgs) == 1
+    nb, ob = imgs[0]["rect"], r0
+    # Fitted inside the old frame (2:1 logo in a 4:3 frame), proportions kept.
+    assert nb[0] >= ob[0] - 0.6 and nb[2] <= ob[2] + 0.6 and nb[1] >= ob[1] - 0.6 and nb[3] <= ob[3] + 0.6
+    assert abs((nb[2] - nb[0]) / (nb[3] - nb[1]) - 2.0) < 0.05
+    d = pymupdf.open(r["output"])
+    # Only the new picture is stored; the old photo's data is gone from the file.
+    sizes = [(d.extract_image(x[0])["width"], d.extract_image(x[0])["height"]) for x in d[0].get_images()]
+    assert sizes == [(400, 200)], sizes
+    dims = [(int(d.xref_get_key(x, "Width")[1]), int(d.xref_get_key(x, "Height")[1]))
+            for x in range(1, d.xref_length()) if d.xref_get_key(x, "Subtype")[1] == "/Image"]
+    assert (1200, 900) not in dims, dims  # (the logo's transparency mask is a separate image object)
     d.close()
 
 

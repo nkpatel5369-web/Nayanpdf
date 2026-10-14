@@ -274,3 +274,10 @@ def test_scanned_to_excel_with_ocr(fx, ctx):
     wb = openpyxl.load_workbook(r["output"])
     flat = [str(v) for ws in wb.worksheets[1:] for row in ws.iter_rows(values_only=True) for v in row if v is not None]
     assert any("Revenue" in v for v in flat)
+
+
+@needs_tesseract
+def test_ocr_plain_text_extraction(fx, ctx):
+    r = ocr.text(ctx, fx["scanned"], out("scanned_ocr.txt"), pages="1")
+    txt = open(r["output"], encoding="utf-8").read()
+    assert "Revenue" in txt

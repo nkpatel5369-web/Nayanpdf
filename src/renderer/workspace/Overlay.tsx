@@ -300,7 +300,7 @@ function TextLines({ ctx }: { ctx: PageCtx }) {
         const isSel = sel?.id === u.id;
         const style: React.CSSProperties = { ...css, transform: isSel && moving ? `translate(${moving.dx}px, ${moving.dy}px)` : undefined };
         return (
-          <div key={u.id} className={"ov-line" + (isSel ? " sel" : "")} style={{ ...style, cursor: isSel ? "move" : u.editable ? "text" : "not-allowed" }} title={u.editable ? "Click to edit, drag to move" : "Rotated text cannot be edited in place"}
+          <div key={u.id} data-text={u.text} className={"ov-line" + (isSel ? " sel" : "")} style={{ ...style, cursor: isSel ? "move" : u.editable ? "text" : "not-allowed" }} title={u.editable ? "Click to edit, drag to move" : "Rotated text cannot be edited in place"}
             onMouseDown={(e) => startMove(e, u)}
             onClick={(e) => { e.stopPropagation(); if (u.editable && !moving) setSel(u); }} />
         );

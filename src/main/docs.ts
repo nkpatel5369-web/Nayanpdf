@@ -15,6 +15,7 @@ import { EngineError, enginePool } from "./engine";
 import { appTempRoot } from "./paths";
 import { addRecent, getSettings } from "./store";
 import { cleanupDir } from "./jobs";
+import { testAnswer } from "./testhooks";
 
 interface Session {
   id: string;
@@ -219,7 +220,8 @@ export async function saveAs(win: BrowserWindow, id: string): Promise<{ state: D
   const base = s.savedPath || s.originalPath;
   const stem = basename(base, extname(base));
   const suggested = join(getSettings().defaultOutputDir || dirname(base), s.savedPath ? basename(base) : `${stem}_edited.pdf`);
-  const r = await dialog.showSaveDialog(win, {
+  const t = testAnswer("saveAs");
+  const r = t.hit ? { canceled: !t.value, filePath: t.value as string } : await dialog.showSaveDialog(win, {
     title: "Save PDF as",
     defaultPath: suggested,
     filters: [{ name: "PDF documents", extensions: ["pdf"] }],

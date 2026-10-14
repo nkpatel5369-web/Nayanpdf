@@ -66,7 +66,17 @@ export function toolPaths(): ToolPaths {
       resources: join(r, "assets"),
     };
   }
-  return { resources: join(r, "resources") };
+  // Development and automated tests: tools come from PATH, or from explicit
+  // NAYANPDF_* variables (used by CI to point at the assembled Windows runtime).
+  const e = process.env;
+  return {
+    tesseract: firstExisting([e.NAYANPDF_TESSERACT]),
+    tessdata: firstExisting([e.NAYANPDF_TESSDATA]),
+    soffice: firstExisting([e.NAYANPDF_SOFFICE]),
+    ghostscript: firstExisting([e.NAYANPDF_GS]),
+    gsIcc: firstExisting([e.NAYANPDF_GS_ICC]),
+    resources: join(r, "resources"),
+  };
 }
 
 let tmpRoot: string | undefined;

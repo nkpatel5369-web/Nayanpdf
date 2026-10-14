@@ -147,7 +147,7 @@ export function App() {
           {view.kind === "batch" && <BatchView />}
           {view.kind === "settings" && <SettingsView />}
           {docOrder.map((id) => (
-            <div key={id} style={{ display: view.kind === "doc" && view.sessionId === id ? "block" : "none", height: "100%" }}>
+            <div key={id} className={"doc-pane" + (view.kind === "doc" && view.sessionId === id ? " active" : "")} style={{ display: view.kind === "doc" && view.sessionId === id ? "block" : "none", height: "100%" }}>
               <DocumentView sessionId={id} active={view.kind === "doc" && view.sessionId === id} />
             </div>
           ))}

@@ -101,6 +101,7 @@ export const Viewer = forwardRef<ViewerHandle, Props>(function Viewer(props, ref
       annotationMode: pdfjsLib.AnnotationMode.ENABLE,
       removePageBorders: false,
       maxCanvasPixels: 2 ** 25,
+      imageResourcesPath: base + "images/",
     } as any);
     linkService.setViewer(viewer);
     viewerRef.current = viewer;
@@ -111,7 +112,9 @@ export const Viewer = forwardRef<ViewerHandle, Props>(function Viewer(props, ref
     (linkService as any).externalLinkEnabled = false;
     eventBus.on("pagesinit", () => {
       const keep = keepRef.current;
-      viewer.currentScaleValue = keep?.scale || "page-width";
+      const hidden = (containerRef.current?.clientWidth || 0) < 50;
+      const numeric = keep?.scale && !isNaN(Number(keep.scale)) ? Number(keep.scale) : null;
+      viewer.currentScaleValue = hidden || !keep?.scale || (numeric !== null && numeric <= 0.05) ? "page-width" : keep.scale;
       if (keep?.page) viewer.currentPageNumber = Math.min(keep.page, viewer.pagesCount);
       ensureHosts();
       setPagesVersion((x) => x + 1);
@@ -130,7 +133,17 @@ export const Viewer = forwardRef<ViewerHandle, Props>(function Viewer(props, ref
     eventBus.on("pagechanging", (e: any) => props.onPageChange?.(e.pageNumber));
     eventBus.on("updatefindmatchescount", (e: any) => props.onFindCount?.(e.matchesCount.current, e.matchesCount.total));
     eventBus.on("updatefindcontrolstate", (e: any) => e.matchesCount && props.onFindCount?.(e.matchesCount.current, e.matchesCount.total));
+    // Re-fit when the viewer becomes visible or is resized (it is hidden in Pages mode).
+    const ro = new ResizeObserver(() => {
+      const c = containerRef.current;
+      if (!c || c.clientWidth < 50 || !pdfRef.current) return;
+      const val = viewer.currentScaleValue;
+      if (["page-width", "page-fit", "auto", "page-actual"].includes(val)) viewer.currentScaleValue = val;
+      else if (!(viewer.currentScale > 0.05)) viewer.currentScaleValue = "page-width";
+    });
+    ro.observe(containerRef.current!);
     return () => {
+      ro.disconnect();
       viewer.cleanup?.();
       pdfRef.current?.destroy?.();
     };

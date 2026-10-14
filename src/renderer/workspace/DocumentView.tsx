@@ -91,7 +91,7 @@ export function DocumentView({ sessionId, active }: { sessionId: string; active:
         const pw = await usePrompt.getState().ask(state?.name || "", false, "This document restricts this operation. Enter the permissions (owner) password to continue.");
         if (pw) toast({ kind: "info", title: "Re-open the document with the owner password", body: "Close this tab and open the file again, entering the owner password when asked." });
       } else {
-        toast({ kind: "error", title: `${label} failed`, body: errorText(e) + (e.details?.report ? "\n(Verification report attached in log)" : "") });
+        toast({ kind: "error", title: `${label} failed`, body: errorText(e) + describeReport(e.details?.report) });
       }
       return null;
     } finally {
@@ -212,8 +212,8 @@ export function DocumentView({ sessionId, active }: { sessionId: string; active:
           <div className="sep" />
           <div className="mode-tabs">
             {MODES.map((m) => (
-              <button key={m.id} className={mode === m.id ? "on" : ""} onClick={() => setMode(m.id)}>
-                <m.icon size={15} /> {m.label}
+              <button key={m.id} className={mode === m.id ? "on" : ""} title={m.label} onClick={() => setMode(m.id)}>
+                <m.icon size={15} /> <span className="ml">{m.label}</span>
               </button>
             ))}
           </div>
@@ -232,7 +232,7 @@ export function DocumentView({ sessionId, active }: { sessionId: string; active:
               <span className="zoom-label">{scaleText}</span>
               <button className="icon-btn" title="Zoom in (Ctrl++)" onClick={() => viewerRef.current?.zoomIn()}><ZoomIn size={17} /></button>
               <button className="icon-btn" title="Fit width (Ctrl+0)" onClick={() => viewerRef.current?.setScale("page-width")}><MoveHorizontal size={17} /></button>
-              <button className="icon-btn" title="Fit page" onClick={() => viewerRef.current?.setScale("page-fit")}><Maximize size={16} /></button>
+              <button className="icon-btn hide-narrow" title="Fit page" onClick={() => viewerRef.current?.setScale("page-fit")}><Maximize size={16} /></button>
               <button className="icon-btn" title="Rotate view (does not change the file)" onClick={() => viewerRef.current?.rotate(90)}><RotateCw size={16} /></button>
               <button className={"icon-btn" + (findOpen ? " active" : "")} title="Search (Ctrl+F)" onClick={() => { setFindOpen(!findOpen); setTimeout(() => findInputRef.current?.focus(), 0); }}><Search size={17} /></button>
               <div className="sep" />
@@ -310,6 +310,23 @@ export function DocumentView({ sessionId, active }: { sessionId: string; active:
       {dialog === "protect" && <ProtectDialog onClose={() => setDialog(null)} />}
     </WsContext.Provider>
   );
+}
+
+function describeReport(r: any): string {
+  if (!r) return "";
+  const parts: string[] = [];
+  const byText = new Map<string, Set<number>>();
+  for (const f of r.textFound || []) {
+    if (!byText.has(f.text)) byText.set(f.text, new Set());
+    byText.get(f.text)!.add(f.page);
+  }
+  for (const [t, pages] of byText) parts.push(`"${t}" is still present on page(s) ${[...pages].join(", ")} (for example inside other text that was not marked)`);
+  if (r.annotationsFound?.length) parts.push("it appears in comments");
+  if (r.metadataFound?.length) parts.push("it appears in the document properties");
+  if (r.bookmarksFound?.length) parts.push("it appears in bookmarks");
+  if (r.streamsFound) parts.push(`it remains in ${r.streamsFound} internal object(s)`);
+  if (r.areasNotCovered?.length) parts.push(`${r.areasNotCovered.length} area(s) did not render as covered`);
+  return parts.length ? "\n" + parts.join("; ") + ". Mark the remaining occurrences (or a larger area) and apply again." : "";
 }
 
 function ToolsMenu(props: { onPick: (id: string) => void; sessionId: string }) {
@@ -409,13 +426,13 @@ function StampDialog({ onClose }: { onClose: () => void }) {
     <Modal wide title="Watermark, header & footer, page numbers" onClose={onClose} footer={
       <><button className="btn" onClick={onClose}>Cancel</button><button className="btn primary" disabled={!spec} onClick={async () => { const r = await ws.apply(spec!.method, spec!.params, "Add " + spec!.method.split(".")[1]); if (r) onClose(); }}>Apply</button></>
     }>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 18 }}>
-        <StampForm onChange={setSpec} />
-        <div>
+      <div className="stamp-grid" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 280px", gap: 18 }}>
+        <div style={{ minWidth: 0 }}><StampForm onChange={setSpec} /></div>
+        <div style={{ minWidth: 0 }}>
           <div className="label">Preview of page {ws.page}</div>
-          <div style={{ background: "var(--viewer-bg)", borderRadius: 10, padding: 10, minHeight: 300, display: "grid", placeItems: "center" }}>
+          <div style={{ background: "var(--viewer-bg)", borderRadius: 10, padding: 10, minHeight: 300, display: "grid", placeItems: "center", overflow: "hidden" }}>
             {loading && <Spinner />}
-            {!loading && preview && <img src={"data:image/png;base64," + preview} style={{ maxWidth: "100%", boxShadow: "var(--shadow)" }} />}
+            {!loading && preview && <img src={"data:image/png;base64," + preview} style={{ maxWidth: "100%", maxHeight: 420, height: "auto", objectFit: "contain", boxShadow: "var(--shadow)" }} />}
             {!loading && !preview && <span className="subtle">No preview</span>}
           </div>
         </div>

@@ -7,7 +7,7 @@ import { Check, Field, Notice, ProgressBar, Seg, Spinner } from "../components/u
 import { StampForm, StampSpec } from "../components/StampForm";
 import { LANG_NAMES } from "./tools/BasicTools";
 
-type Op = "compress" | "ocr" | "word" | "excel" | "ppt" | "images" | "text" | "stamp" | "metaRemove" | "extract" | "protect" | "pdfa" | "officeToPdf" | "imagesToPdf";
+type Op = "compress" | "ocr" | "word" | "excel" | "ppt" | "images" | "text" | "stamp" | "metaRemove" | "extract" | "split" | "protect" | "pdfa" | "officeToPdf" | "imagesToPdf";
 
 const OPS: { id: Op; label: string; suffix: string; ext: string; input: "pdf" | "office" | "images" }[] = [
   { id: "compress", label: "Compress", suffix: "_compressed", ext: "pdf", input: "pdf" },
@@ -20,6 +20,7 @@ const OPS: { id: Op; label: string; suffix: string; ext: string; input: "pdf" | 
   { id: "stamp", label: "Watermark / numbers / Bates", suffix: "_stamped", ext: "pdf", input: "pdf" },
   { id: "metaRemove", label: "Remove metadata", suffix: "_clean", ext: "pdf", input: "pdf" },
   { id: "extract", label: "Extract pages", suffix: "_pages", ext: "pdf", input: "pdf" },
+  { id: "split", label: "Split every N pages", suffix: "_split", ext: "", input: "pdf" },
   { id: "protect", label: "Add password", suffix: "_protected", ext: "pdf", input: "pdf" },
   { id: "pdfa", label: "Convert to PDF/A", suffix: "_pdfa", ext: "pdf", input: "pdf" },
   { id: "officeToPdf", label: "Office files to PDF", suffix: "", ext: "pdf", input: "office" },
@@ -49,6 +50,7 @@ export function BatchView() {
   const [preset, setPreset] = useState<string>(settings.compressionPreset);
   const [langs, setLangs] = useState<string[]>(settings.ocrLanguages);
   const [pages, setPages] = useState("1");
+  const [every, setEvery] = useState(1);
   const [pw, setPw] = useState("");
   const [stamp, setStamp] = useState<StampSpec | null>(null);
   const [batchId, setBatchId] = useState<string | null>(null);
@@ -121,6 +123,7 @@ export function BatchView() {
           break;
         case "metaRemove": method = "meta.remove"; params = { ...params, removeXmp: true, output: outFor(p, "pdf") }; break;
         case "extract": method = "pages.extract"; params = { ...params, pages, output: outFor(p, "pdf") }; break;
+        case "split": method = "pages.split"; params = { ...params, mode: "every", every, outputDir: outFor(p, ""), nameTemplate: `${stem(p)}_{part}` }; break;
         case "protect": method = "security.encrypt"; params = { ...params, userPassword: pw, ownerPassword: pw, encryption: "AES-256", output: outFor(p, "pdf") }; break;
         case "pdfa": method = "util.pdfa"; params = { ...params, level: "2b", output: outFor(p, "pdf") }; break;
         case "officeToPdf": method = "convert.officeToPdf"; params = { ...params, output: outFor(p, "pdf") }; break;
@@ -227,6 +230,7 @@ export function BatchView() {
             )}
             {op === "word" && <Field label="Style"><Seg value={wordMode} onChange={setWordMode} options={[{ value: "layout", label: "Keep layout" }, { value: "flow", label: "Easy editing" }]} /></Field>}
             {op === "images" && <Field label="Format"><select className="input" value={imgFmt} onChange={(e) => setImgFmt(e.target.value as any)}><option value="png">PNG</option><option value="jpg">JPEG</option><option value="tiff">TIFF</option><option value="webp">WebP</option><option value="bmp">BMP</option></select></Field>}
+            {op === "split" && <Field label="Pages per output file" hint="Each source gets its own folder of parts."><input className="input" type="number" min={1} value={every} onChange={(e) => setEvery(Math.max(1, parseInt(e.target.value) || 1))} /></Field>}
             {op === "extract" && <Field label="Pages to extract from each file" hint="e.g. 1   or 1-2, last"><input className="input" value={pages} onChange={(e) => setPages(e.target.value)} /></Field>}
             {op === "protect" && <Field label="Password (same for all files, min 4)"><input className="input" type="password" value={pw} onChange={(e) => setPw(e.target.value)} /></Field>}
             {op === "stamp" && <StampForm onChange={setStamp} />}
@@ -243,7 +247,7 @@ export function BatchView() {
             </Field>
             <div className="subtle">Running {settings.batchConcurrency} file(s) at a time (Settings).</div>
             <button className="btn primary lg" style={{ width: "100%", marginTop: 12 }} disabled={!ready} onClick={start}>
-              <Play size={16} /> Start {rows.length ? `(${rows.filter((r) => !r.jobId || jobMap[r.jobId]?.status !== "succeeded").length} files)` : ""}
+              <Play size={16} /> Start {(() => { const n = rows.filter((r) => !r.jobId || jobMap[r.jobId]?.status !== "succeeded").length; return rows.length ? `(${n} file${n === 1 ? "" : "s"})` : ""; })()}
             </button>
           </div>
         </div>

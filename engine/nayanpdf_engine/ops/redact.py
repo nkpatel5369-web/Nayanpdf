@@ -28,7 +28,8 @@ from ..util.io import OutputFile, validate_pdf
 from ..util.pdf import doc_is_signed, hex_to_rgb, open_pdf, parse_pages
 
 PATTERNS = {
-    "pan": (r"\b[A-Z]{5}[0-9]{4}[A-Z]\b", "PAN (India)"),
+    # Also matches a PAN embedded in a GSTIN (27ABCDE1234F1Z5), which discloses it too.
+    "pan": (r"(?<![A-Z])[A-Z]{5}[0-9]{4}[A-Z](?![A-Z])", "PAN (India)"),
     "gstin": (r"\b\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]\b", "GSTIN (India)"),
     "aadhaar": (r"\b\d{4}[ -]?\d{4}[ -]?\d{4}\b", "Aadhaar-like 12-digit number"),
     "ifsc": (r"\b[A-Z]{4}0[A-Z0-9]{6}\b", "IFSC code"),

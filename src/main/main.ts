@@ -11,6 +11,11 @@ import { registerIpc } from "./ipc";
 import { log } from "./log";
 import { appTempBase, appTempRoot, preloadPath, rendererDir } from "./paths";
 import { getSettings } from "./store";
+import { testAnswer } from "./testhooks";
+
+// Automated UI tests use a throw-away profile so they never touch a real user's
+// settings or saved signatures. Ignored by the installed (packaged) application.
+if (!app.isPackaged && process.env.NAYANPDF_TEST_USERDATA) app.setPath("userData", process.env.NAYANPDF_TEST_USERDATA);
 
 // ---------------------------------------------------------------- hardening
 // Linux test containers run as root, where Chromium's sandbox cannot start; this
@@ -157,7 +162,8 @@ function createWindow() {
     const dirty = docs.dirtySessions();
     if (dirty.length && !(mainWindow as any).__forceClose) {
       e.preventDefault();
-      const r = await dialog.showMessageBox(mainWindow!, {
+      const t = testAnswer("closeConfirm");
+      const r = t.hit ? { response: t.value as number } : await dialog.showMessageBox(mainWindow!, {
         type: "warning",
         buttons: ["Discard changes and exit", "Cancel"],
         defaultId: 1,

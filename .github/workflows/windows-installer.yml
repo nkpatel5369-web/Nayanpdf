@@ -66,6 +66,23 @@ jobs:
           & "$rt\python\python.exe" -X utf8 -m pytest engine\tests -q -p no:cacheprovider --junitxml acceptance\engine-tests-runtime.xml 2>&1 | Tee-Object acceptance\engine-tests-runtime.txt
           if ($LASTEXITCODE -ne 0) { throw "engine tests failed" }
 
+      - name: UI end-to-end test on Windows (development build, bundled runtime)
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          $rt = Resolve-Path "runtime\win"
+          $env:NAYANPDF_PYTHON    = "$rt\python\python.exe"
+          $env:NAYANPDF_TESSERACT = "$rt\tesseract\tesseract.exe"
+          $env:NAYANPDF_TESSDATA  = "$rt\tesseract\tessdata"
+          $env:NAYANPDF_SOFFICE   = "$rt\libreoffice\program\soffice.exe"
+          $env:NAYANPDF_GS        = "$rt\ghostscript\bin\gswin64c.exe"
+          $env:NAYANPDF_GS_ICC    = "$rt\ghostscript\iccprofiles\srgb.icc"
+          node scripts/ui-e2e.mjs 2>&1 | Tee-Object acceptance\ui-e2e.txt
+          $code = $LASTEXITCODE
+          Remove-Item -Recurse -Force test-results\ui\work -ErrorAction SilentlyContinue
+          Copy-Item -Recurse -Force test-results\ui acceptance\ui-e2e
+          if ($code -ne 0) { throw "UI end-to-end test failed" }
+
       - name: Build NayanPDF_Setup.exe
         run: npx electron-builder --win nsis --x64 --publish never
 

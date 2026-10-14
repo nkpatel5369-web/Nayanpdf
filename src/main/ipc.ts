@@ -13,6 +13,7 @@ import { log } from "./log";
 import { htmlToPdf, printDocument } from "./output";
 import { appTempBase, appTempRoot } from "./paths";
 import * as store from "./store";
+import { testAnswer } from "./testhooks";
 
 const FILTERS: Record<string, Electron.FileFilter[]> = {
   pdf: [{ name: "PDF documents", extensions: ["pdf"] }],
@@ -103,6 +104,11 @@ const handlers: Record<string, Handler> = {
   "dialog:openFiles": async (e, payload) => {
     const p = obj(payload);
     const kind = typeof p.kind === "string" && FILTERS[p.kind] ? p.kind : "pdf";
+    const t = testAnswer("openFiles");
+    if (t.hit) {
+      (t.value as string[]).forEach((f) => access.allowInput(f));
+      return t.value;
+    }
     const r = await dialog.showOpenDialog(win(e), {
       title: p.title || "Open",
       properties: p.multi ? ["openFile", "multiSelections"] : ["openFile"],
@@ -114,6 +120,11 @@ const handlers: Record<string, Handler> = {
   },
   "dialog:openFolder": async (e, payload) => {
     const p = obj(payload);
+    const t = testAnswer("openFolder");
+    if (t.hit) {
+      access.allowOutputDir(t.value);
+      return t.value;
+    }
     const r = await dialog.showOpenDialog(win(e), { title: p.title || "Choose folder", properties: ["openDirectory", "createDirectory"] });
     if (r.canceled || !r.filePaths[0]) return null;
     access.allowOutputDir(r.filePaths[0]);
@@ -121,6 +132,12 @@ const handlers: Record<string, Handler> = {
   },
   "dialog:pickOutputDir": async (e, payload) => {
     const p = obj(payload);
+    const t = testAnswer("pickOutputDir");
+    if (t.hit) {
+      access.allowOutputDir(t.value);
+      if (p.setDefault) store.setDefaultOutputDir(t.value);
+      return t.value;
+    }
     const r = await dialog.showOpenDialog(win(e), { title: "Choose output folder", properties: ["openDirectory", "createDirectory"] });
     if (r.canceled || !r.filePaths[0]) return null;
     access.allowOutputDir(r.filePaths[0]);
@@ -131,6 +148,11 @@ const handlers: Record<string, Handler> = {
     const p = obj(payload);
     const kind = typeof p.kind === "string" && FILTERS[p.kind] ? p.kind : undefined;
     const ext = typeof p.extension === "string" ? p.extension.replace(/^\./, "") : "pdf";
+    const t = testAnswer("saveFile");
+    if (t.hit) {
+      access.allowOutputDir(dirname(t.value));
+      return t.value;
+    }
     const r = await dialog.showSaveDialog(win(e), {
       title: p.title || "Save as",
       defaultPath: typeof p.defaultPath === "string" ? p.defaultPath : undefined,
@@ -316,6 +338,8 @@ const handlers: Record<string, Handler> = {
   "window:confirm": async (e, payload) => {
     const p = obj(payload);
     const buttons: string[] = Array.isArray(p.buttons) && p.buttons.length ? p.buttons.map(String).slice(0, 3) : ["OK", "Cancel"];
+    const t = testAnswer("confirm");
+    if (t.hit) return t.value;
     const r = await dialog.showMessageBox(win(e), {
       type: p.type === "warning" ? "warning" : "question",
       title: String(p.title || "NayanPDF"),

@@ -13,5 +13,6 @@ cpSync(resolve(src, "build/pdf.worker.min.mjs"), resolve(dst, "pdf.worker.min.mj
 for (const d of ["cmaps", "standard_fonts", "wasm", "iccs"]) {
   if (existsSync(resolve(src, d))) cpSync(resolve(src, d), resolve(dst, d), { recursive: true });
 }
+cpSync(resolve(src, "web/images"), resolve(dst, "images"), { recursive: true });
 cpSync(resolve(src, "LICENSE"), resolve(dst, "LICENSE"));
 console.log("PDF.js assets copied to", dst);
