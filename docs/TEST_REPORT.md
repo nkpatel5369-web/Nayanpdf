@@ -12,7 +12,7 @@ What was tested, how, the results, the defects the tests found, and what has not
 | UI end-to-end test with networking disabled | Linux, network namespace with loopback only | **25 / 25 passed in each of 3 consecutive runs** |
 | Office linked-content leak test, sensitivity check | Linux | Leak detected with protection removed; none with protection |
 | Windows runtime assembly, installer build, engine tests on the bundled Windows runtime, UI test on Windows, install / offline / uninstall / reinstall acceptance | Windows CI (`.github/workflows/windows-installer.yml`) | **Not run** — the session could not push to GitHub (HTTP 403) |
-| Local installer build without LibreOffice | Linux + Wine | Built (`NayanPDF_Setup.exe`, 209 MB); **not installed or run** |
+| Local installer build without LibreOffice | Linux + Wine | Built from this commit's code (`NayanPDF_Setup.exe`, 209,472,689 bytes, SHA-256 `f8867f2eb109df734e27a0aa2fba2dc204139030241f2b2413b45d8a4685437e`); **not installed or run** |
 
 ## 2. Test environment
 
