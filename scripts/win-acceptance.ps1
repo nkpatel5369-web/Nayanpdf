@@ -61,7 +61,21 @@ function Verify-Install([string]$label) {
   if (Test-Path $exe) {
     $vi = (Get-Item $exe).VersionInfo
     Record "${label}: executable version info" ($vi.ProductName -eq "NayanPDF") "ProductName=$($vi.ProductName) FileVersion=$($vi.FileVersion)" $false
+    Check-Fuses $label $exe
   }
+}
+
+# Electron fuses are switches compiled into NayanPDF.exe at packaging time.
+# Read them back from the installed file rather than trusting the build config.
+function Check-Fuses([string]$label, [string]$exe) {
+  $tool = Join-Path $RepoRoot "node_modules\@electron\fuses\dist\bin.js"
+  if (-not (Test-Path $tool)) { Record "${label}: Electron fuses read back" $false "fuse reader not available" $false; return }
+  try { $out = (& node $tool read --app $exe 2>&1 | Out-String) } catch { $out = "$_" }
+  $want = [ordered]@{ RunAsNode = "Disabled"; EnableNodeOptionsEnvironmentVariable = "Disabled"; EnableNodeCliInspectArguments = "Disabled";
+                      EnableEmbeddedAsarIntegrityValidation = "Enabled"; OnlyLoadAppFromAsar = "Enabled"; GrantFileProtocolExtraPrivileges = "Disabled" }
+  $bad = @($want.Keys | Where-Object { $out -notmatch "$_ is $($want[$_])" })
+  $detail = if ($bad.Count) { "not as expected: $($bad -join ', ')" } else { ($want.Keys | ForEach-Object { "$_ $($want[$_])" }) -join "; " }
+  Record "${label}: Electron fuses read back" ($bad.Count -eq 0) $detail $false
 }
 
 function Block-Network {
@@ -126,6 +140,7 @@ function Run-App([string]$label, [string[]]$argsList) {
   $exe = Join-Path $InstallDir "NayanPDF.exe"
   $p = Start-Process -FilePath $exe -ArgumentList $argsList -PassThru
   $conns = @()
+  $listen = @()
   $deadline = (Get-Date).AddSeconds(150)
   while (-not $p.HasExited -and (Get-Date) -lt $deadline) {
     $ids = @($p.Id) + @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object { $_.ParentProcessId -eq $p.Id } | Select-Object -ExpandProperty ProcessId)
@@ -133,6 +148,8 @@ function Run-App([string]$label, [string[]]$argsList) {
     $ids += $kids
     $c = Get-NetTCPConnection -ErrorAction SilentlyContinue | Where-Object { $ids -contains $_.OwningProcess -and $_.RemoteAddress -notmatch '^(127\.|::1|0\.0\.0\.0|::$)' -and $_.State -ne 'Listen' }
     if ($c) { $conns += $c | Select-Object OwningProcess, RemoteAddress, RemotePort, State }
+    $l = Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $ids -contains $_.OwningProcess }
+    if ($l) { $listen += $l | Select-Object OwningProcess, LocalAddress, LocalPort }
     Start-Sleep -Milliseconds 400
   }
   if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force; Record "${label}: app exited by itself" $false "killed after timeout" }
@@ -150,6 +167,9 @@ function Run-App([string]$label, [string[]]$argsList) {
   $uniq = $conns | Sort-Object RemoteAddress, RemotePort -Unique
   ($uniq | ConvertTo-Json) | Out-File -Encoding utf8 (Join-Path $out "network.json")
   Record "${label}: no outbound network connections" (@($uniq).Count -eq 0) "$(@($uniq).Count) remote endpoint(s) observed"
+  $ports = @($listen | Sort-Object LocalAddress, LocalPort -Unique)
+  ($ports | ConvertTo-Json) | Out-File -Encoding utf8 (Join-Path $out "listening.json")
+  Record "${label}: no listening TCP ports" ($ports.Count -eq 0) "$($ports.Count) listening port(s) observed$(if ($ports.Count) { ': ' + (($ports | ForEach-Object { "$($_.LocalAddress):$($_.LocalPort)" }) -join ', ') })" $false
 }
 
 # ------------------------------------------------------------------ run
