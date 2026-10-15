@@ -12,7 +12,7 @@ A fully offline PDF editor and document toolkit for Windows 10 and 11 (64-bit). 
 ## Current delivery status
 
 - **Windows installer:** built, installed and tested on a clean Windows machine by `.github/workflows/windows-installer.yml`. Every successful build is published as a GitHub pre-release (`v1.0.0-build.N`) with `NayanPDF_Setup.exe`, its SHA-256 and the acceptance report. Use the newest pre-release.
-- **Evidence on Windows:** the 103 engine tests pass against the bundled runtime and again against the installed copy with outbound traffic blocked; the 62-point acceptance test covering install, offline self-test, app launch with zero network connections, uninstall and reinstall passes; and the 25-scenario UI test passes.
+- **Evidence on Windows (build 10):** the 105 engine tests pass against the bundled runtime and again against the installed copy with outbound traffic blocked; the 67-point acceptance test covering install, the security switches compiled into `NayanPDF.exe`, offline self-test, app launch with zero network connections and zero listening ports, uninstall and reinstall passes; and the 28-scenario UI test, including text selection, markup and printing, passes.
 - **Not yet verified:** installation under a standard (non-administrator) Windows account, and Windows 10 or Windows 11 desktop editions specifically. The CI machine is Windows Server 2025 (Windows 11 kernel 10.0.26100).
 
 ## 1. Installing
@@ -38,13 +38,23 @@ The toolbar switches between modes:
 
 | Mode | What it does |
 |---|---|
-| View | Read, search (Ctrl+F), zoom, rotate the view, print (Ctrl+P) |
+| View | Read, search (Ctrl+F), zoom, rotate the view, print (Ctrl+P). Select text by dragging (or double-click a word, Ctrl+A for the page): a small toolbar offers Copy, Highlight, Underline, Strikethrough, Squiggly, Note and Redact; right-click gives the same actions plus zoom, rotate and print |
 | Edit | Click a line of existing text to change it in place (original font where possible); drag to move it; select images to move, resize, replace or delete; add text and images; find and replace |
-| Comment | Highlight, underline, strike out, notes, text boxes, callouts, lines, arrows, shapes, freehand, stamps, initials; flatten |
+| Comment | Highlight, underline, strike out or squiggly: choose the tool and drag across the text, as in Acrobat (marks follow the text line by line). Notes, text boxes, callouts, lines, arrows, shapes, freehand, stamps, initials; flatten |
 | Pages | Thumbnails: drag to reorder, rotate, delete, duplicate, insert blank pages or pages from another PDF, extract |
 | Forms | Fill text fields, check boxes, radio buttons, lists; flatten |
 | Redact | Mark text, areas or patterns (PAN, GSTIN, Aadhaar, IFSC, account and card numbers, e-mail, phone, dates); review; apply permanently with verification |
 | Sign | Draw, type or import a signature image and place it; or apply a certificate-based digital signature (.pfx file or USB token) and verify signatures |
+
+### Printing
+
+Ctrl+P (or the printer button, or right-click → Print) opens NayanPDF's print dialog, laid out like Acrobat's:
+
+- **Printer** (your Windows default or any installed printer; NayanPDF remembers your choice), **copies** and collate, **black and white**.
+- **Pages to print:** all, current page or a range such as `1-3, 5, 8-`, with odd/even pages only and reverse order.
+- **Page sizing & handling:** Fit, Actual size, Shrink oversized pages, Custom scale (%), or Multiple pages per sheet (2, 4, 6, 9 or 16, horizontal or vertical order, optional page border).
+- **Orientation** (auto/portrait/landscape), **paper size** (A4, A3, A5, Letter, Legal), **print on both sides** (long or short edge), **comments & forms** (document and markups, document only, form fields only) and **quality** (150/300/600 dpi).
+- A **preview** shows each sheet exactly as it will print. **Print** sends it straight to the chosen printer. For printer-specific options (paper tray, stapling, colour profiles) use **Printer settings (Windows dialog)…**, which opens the Windows dialog with the same layout.
 
 Every change creates a revision you can undo (Ctrl+Z) and redo (Ctrl+Y). **Nothing touches your original file until you save.** Save As (Ctrl+Shift+S) writes a new file; Save (Ctrl+S) on the original asks for confirmation first.
 
@@ -67,7 +77,7 @@ Results go next to the source file unless you choose another folder (or set a de
 
 ### Keyboard shortcuts
 
-Ctrl+O open, Ctrl+S save, Ctrl+Shift+S save as, Ctrl+P print, Ctrl+F search, Ctrl+Z undo, Ctrl+Y or Ctrl+Shift+Z redo, Ctrl+Plus / Ctrl+Minus zoom, Ctrl+0 fit width, Ctrl+W close tab. Shortcuts are ignored while you are typing in a text field.
+Ctrl+O open, Ctrl+S save, Ctrl+Shift+S save as, Ctrl+P print, Ctrl+F search, Ctrl+A select the page's text, Ctrl+C copy, Ctrl+Z undo, Ctrl+Y or Ctrl+Shift+Z redo, Ctrl+Plus / Ctrl+Minus zoom, Ctrl+0 fit width, Ctrl+W close tab. Shortcuts are ignored while you are typing in a text field.
 
 ### Where NayanPDF keeps its data
 
@@ -93,7 +103,7 @@ Use Windows Settings → Apps → Installed apps → NayanPDF → Uninstall (Win
 - **Digital signatures:** revocation (CRL/OCSP) is not checked and trusted timestamps are not added, because both require the internet. USB tokens / smart cards (PKCS#11) are supported in code but were not tested with real hardware; the token vendor's driver must be installed.
 - **Form scripts** (JavaScript in PDFs) are never executed; calculated fields are not recalculated.
 - **PDF/A** is not formally validated (veraPDF needs Java and is not bundled).
-- **Printing** sends page images at the chosen resolution (150/300/600 dpi). Printing several documents in one action is not available.
+- **Printing** sends pages as images at the chosen resolution (150/300/600 dpi), which is sharp on paper but means the printer does not receive the PDF's text as text. Printer-specific options are set through the optional Windows dialog. Printing several documents in one action is not available.
 - **OCR languages bundled:** English, Hindi, Gujarati (plus orientation detection). Other Tesseract languages can be added offline by copying `.traineddata` files into `<install folder>\resources\tesseract\tessdata`.
 - **Code signing:** the installer and executable are not signed (no paid certificate), so SmartScreen warns on first run.
 - **Licence:** NayanPDF is AGPL-3.0 because it bundles MuPDF and Ghostscript under their AGPL terms. Free for personal use; if you distribute it, you must also offer its source (see `docs/DEPENDENCIES.md`).
@@ -157,8 +167,8 @@ npm start              # runs the app; set NAYANPDF_PYTHON to your Python if it 
 ### Tests
 
 ```
-python -m pytest engine/tests -q        # engine: 103 tests on synthetic documents
-node scripts/ui-e2e.mjs                 # UI end-to-end: 25 scenarios (Linux: run under xvfb-run)
+python -m pytest engine/tests -q        # engine: 105 tests on synthetic documents
+node scripts/ui-e2e.mjs                 # UI end-to-end: 28 scenarios (Linux: run under xvfb-run)
 ```
 
 The engine tests generate their own fixtures (financial statements, bank statements spanning pages, scans, forms, encrypted and damaged files) under `engine/tests/_fixtures`; no real client document is used. The UI test needs the engine fixtures, so run the engine tests first. It drives the real application and writes screenshots and `results.json` to `test-results/ui`.

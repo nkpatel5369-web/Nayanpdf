@@ -6,16 +6,17 @@ What was tested, how, the results, the defects the tests found, and what has not
 
 | Test set | Where executed | Result |
 |---|---|---|
-| Engine test suite (pytest, synthetic documents) | Linux development build | **103 / 103 passed** |
-| Engine test suite with networking disabled | Linux, empty network namespace | **102 / 102 passed** (run before the 103rd test was added) |
-| UI end-to-end test (real Electron app, 25 scenarios) | Linux development build (xvfb) | **25 / 25 passed**; see §4 for run history |
-| UI end-to-end test with networking disabled | Linux, network namespace with loopback only | **25 / 25 passed in each of 3 consecutive runs** |
+| Engine test suite (pytest, synthetic documents) | Linux development build | **105 / 105 passed** |
+| Engine test suite with networking disabled | Linux, empty network namespace | **105 / 105 passed** (15 October 2026) |
+| UI end-to-end test (real Electron app, 28 scenarios) | Linux development build (xvfb) | **28 / 28 passed**; see §4 for run history |
+| UI end-to-end test with networking disabled | Linux, network namespace with loopback only | **28 / 28 passed** (15 October 2026); the earlier 25-scenario version passed 3 consecutive runs |
+| Any outbound attempt by any app process (recording proxy) | Linux | **0** (the check detects the spell-check download that existed before the fix) |
 | Office linked-content leak test, sensitivity check | Linux | Leak detected with protection removed; none with protection |
 | Windows runtime assembly (Python, Tesseract, Ghostscript, LibreOffice; hashes and publisher signatures verified) | Windows CI | Pass |
-| Engine test suite against the bundled Windows runtime | Windows CI | **103 / 103 passed** |
-| UI end-to-end test on Windows (25 scenarios) | Windows CI | **25 / 25 passed** |
-| Installer build (`NayanPDF_Setup.exe`, 419.3 MB, includes LibreOffice; build 7 SHA-256 `9BAD6219956A3F2BF223B1D29FD6C601215F006585C278A4473426683947B69F`) | Windows CI | Pass |
-| Acceptance: install, offline self-test, full engine suite on the installed copy with outbound traffic blocked, app launch and document display with network monitoring, uninstall, reinstall | Windows CI | **63 / 63 checks passed** (build 7, which adds a check that the installed app edits a document); build 3 passed 62 / 62 before that check existed |
+| Engine test suite against the bundled Windows runtime | Windows CI | **105 / 105 passed** (build 10) |
+| UI end-to-end test on Windows (28 scenarios) | Windows CI | **28 / 28 passed** in build 10 and in the separate UI run that followed the last test change; see §4 for the two earlier Windows runs that did not pass |
+| Installer build (`NayanPDF_Setup.exe`, 419.3 MB, includes LibreOffice; build 10 SHA-256 `047DB4370D01950B638A99B5AE8E5AAE44055BECD97C9AA6421A44771CA3AD44`) | Windows CI | Pass |
+| Acceptance: install, Electron fuses read back from the installed exe, offline self-test, full engine suite on the installed copy with outbound traffic blocked, app launch and document display with network and listening-port monitoring, uninstall, reinstall | Windows CI | **67 / 67 checks passed** (build 10); build 7 passed 63 / 63 and build 3 62 / 62 before the later checks were added |
 
 Windows CI is GitHub Actions `windows-latest`: Windows Server 2025, kernel 10.0.26100, x64. Results are published with each pre-release (`report.md`).
 
@@ -42,11 +43,11 @@ Command: `python -m pytest engine/tests -q`. Every test opens the output file ag
 |---|---|---|---|
 | `test_pages.py` | 19 | 19 | Opening ordinary, 300-page, scanned, encrypted, malformed, truncated and non-PDF files; probe; merge three PDFs (count and order); merge with page selection; split 20 pages into four files of five (contents checked); split modes; reorder, rotate, blank pages; interleave; delete, extract, reverse, duplicate; insert and replace; no overwrite of existing output; refusal to replace the source; special characters and long paths |
 | `test_convert.py` | 47 | 47 | Number parsing (10 conversion cases, 12 identifier cases that must stay text, Dr/Cr, dates); compression presets, image-heavy file with measured sizes, larger output reported, target size; PDF to Word (layout and flow), Excel (financial values cell by cell, multi-page table), CSV, PowerPoint (image, hybrid, editable), images (PNG, JPEG, TIFF, BMP, WebP; size and file names), text, HTML, Markdown; Word, Excel and PowerPoint to PDF; images and text to PDF; mixed assembly; OCR searchable PDF, skip text pages, scanned table to Excel, plain-text OCR, sideways scan turned upright, OCR with only the language files present; Office files with remote links never fetched |
-| `test_edit_security.py` | 25 | 25 | Edit text in the original font; missing glyphs substituted and reported; move and paragraph mode; scanned page refused; find and replace; delete a text line; insert text and image; move, resize, delete and replace existing images (old image data removed from the file); 12 annotation types added, updated, deleted, flattened; watermark, header/footer, page numbers, Bates, background; stamps upright on rotated pages; AES encryption with permissions and authorised decryption; no bypass without owner password; inspection and integrity; redaction of text and of an OCR text layer, with verification, and refusal when verification fails; metadata edit and removal; form fill and flatten; comparison (text, page, metadata, visual image change); signature image placement; certificate signing, verification and tamper detection; warning before changing a signed document |
-| `test_utilities_server.py` | 12 | 12 | Repair; linearise; PDF/A with basic checks; bookmarks and page labels; attachments; image extraction; blank-page detection; page-size standardisation and crop; print preparation respects the print permission; engine protocol, events and error codes; batch continues after an invalid file; source files byte-identical after every operation |
-| **Total** | **103** | **103** | |
+| `test_edit_security.py` | 26 | 26 | Edit text in the original font; missing glyphs substituted and reported; move and paragraph mode; scanned page refused; find and replace; delete a text line; insert text and image; move, resize, delete and replace existing images (old image data removed from the file); 12 annotation types added, updated, deleted, flattened; highlight from a text selection snapped to the selected characters, one quad per line; watermark, header/footer, page numbers, Bates, background; stamps upright on rotated pages; AES encryption with permissions and authorised decryption; no bypass without owner password; inspection and integrity; redaction of text and of an OCR text layer, with verification, and refusal when verification fails; metadata edit and removal; form fill and flatten; comparison (text, page, metadata, visual image change); signature image placement; certificate signing, verification and tamper detection; warning before changing a signed document |
+| `test_utilities_server.py` | 13 | 13 | Repair; linearise; PDF/A with basic checks; bookmarks and page labels; attachments; image extraction; blank-page detection; page-size standardisation and crop; print preparation respects the print permission; print with comments, without comments, and with form fields only; engine protocol, events and error codes; batch continues after an invalid file; source files byte-identical after every operation |
+| **Total** | **105** | **105** | |
 
-The first 102 of these tests were also run inside a Linux network namespace with no usable network interface: **102 passed** (see `docs/OFFLINE_VERIFICATION.md`). All 103 passed on Windows, both against the bundled runtime and against the installed copy with outbound traffic blocked.
+All 105 were also run inside a Linux network namespace with no usable network interface: **105 passed** (see `docs/OFFLINE_VERIFICATION.md`). All 105 passed on Windows in build 10, both against the bundled runtime and against the installed copy with outbound traffic blocked.
 
 ## 4. UI end-to-end test
 
@@ -59,28 +60,33 @@ The first 102 of these tests were also run inside a Linux network namespace with
 | 3 | Search within the document | Ctrl+F finds and counts matches | Pass |
 | 4 | Edit existing text in place | New value in the page content stream | Pass |
 | 5 | Undo and redo | Revision toggles back and forth | Pass |
-| 6 | Highlight and sticky note | Two comments listed | Pass |
-| 7 | Save As leaves the original untouched | New file has the edit and annotations; original byte-identical | Pass |
-| 8 | Organize pages: delete and apply | 7 → 6 pages | Pass |
-| 9 | Redact a PAN pattern permanently | PAN (including inside a GSTIN) absent from the viewer and the saved file; engine verification passed | Pass |
-| 10 | Create a typed signature and place it | Signature image embedded in the saved file | Pass |
-| 11 | Fill a PDF form | Saved field value read back | Pass |
-| 12 | Compress tool reports measured sizes | Original, compressed, saved and reduction % shown (12.8 KB → 4.7 KB, 63.1 %) | Pass |
-| 13 | Convert PDF to Excel | XLSX produced | Pass |
-| 14 | Batch with an invalid file | 2 succeeded, 1 failed, queue continued | Pass |
-| 15 | Merge tool | 5 pages, A before B | Pass (see defect 13) |
-| 16 | Split tool | 20 pages into 4 files | Pass |
-| 17 | OCR tool | Recognised text present in output | Pass |
-| 18 | Protect tool | Output needs a password; the password opens it | Pass |
-| 19 | Compare tool | 13 differences listed and navigable | Pass |
-| 20 | Convert to Word and PowerPoint | DOCX and PPTX produced | Pass |
-| 21 | HTML to PDF offline | PDF has the page text; 0 requests to the remote host referenced by the page | Pass |
-| 22 | Watermark with live preview | Preview rendered; watermark text in the page | Pass |
-| 23 | Digital signature with a new certificate | Certificate created in the app; signed file verified intact and valid | Pass |
-| 24 | Settings and dark theme | Theme switched | Pass |
-| 25 | No network requests by the renderer | 0 requests outside local schemes | Pass |
+| 6 | Highlight (drag across text) and sticky note | Two comments listed | Pass |
+| 7 | Select text in View mode, copy it, strike it through | Selection toolbar appears; clipboard holds the selected text; strike-through created | Pass |
+| 8 | Right-click a selected word and underline it | Context menu with the selection actions; underline created | Pass |
+| 9 | Save As leaves the original untouched | New file has the edit and annotations, with the strike-through and underline exactly on the selected text; original byte-identical | Pass |
+| 10 | Organize pages: delete and apply | The document itself goes from 7 to 6 pages | Pass |
+| 11 | Redact a PAN pattern permanently | PAN (including inside a GSTIN) absent from the viewer and the saved file; engine verification passed | Pass |
+| 12 | Create a typed signature and place it | Signature image embedded in the saved file | Pass |
+| 13 | Fill a PDF form | Saved field value read back | Pass |
+| 14 | Compress tool reports measured sizes | Original, compressed, saved and reduction % shown | Pass |
+| 15 | Convert PDF to Excel | XLSX produced | Pass |
+| 16 | Batch with an invalid file | 2 succeeded, 1 failed, queue continued | Pass |
+| 17 | Merge tool | 5 pages, A before B | Pass (see defect 13) |
+| 18 | Split tool | 20 pages into 4 files | Pass |
+| 19 | OCR tool | Recognised text present in output | Pass |
+| 20 | Protect tool | Output needs a password; the password opens it | Pass |
+| 21 | Compare tool | 13 differences listed and navigable | Pass |
+| 22 | Convert to Word and PowerPoint | DOCX and PPTX produced | Pass |
+| 23 | HTML to PDF offline | PDF has the page text; 0 requests to the remote host referenced by the page | Pass |
+| 24 | Watermark with live preview | Preview rendered; watermark text in the page | Pass |
+| 25 | Digital signature with a new certificate | Certificate created in the app; signed file verified intact and valid | Pass |
+| 26 | Print with the Acrobat-style dialog | Printer chosen, pages 1-5 odd only, 2 per sheet, black and white: the produced sheets are 2 landscape sheets with 2 + 1 pages and no colour | Pass |
+| 27 | Settings and dark theme | Theme switched | Pass |
+| 28 | No network requests by the app | 0 page requests; on Linux 0 attempts by any app process through a recording proxy | Pass |
 
-**Run history.** The suite was run repeatedly while it was being extended. Scenario 15 (Merge) failed in 3 of 8 complete runs before the fix for defect 13, and scenario 19 (Compare) failed in the same runs only because it uses the merged file as input. After the fix: 3 consecutive complete runs with networking disabled, 25 / 25 each, plus the final networked run on the release build (§1).
+**Run history.** The suite was run repeatedly while it was being extended. The Merge scenario (now 17) failed in 3 of 8 complete runs before the fix for defect 13, and the Compare scenario (now 21) failed in the same runs only because it uses the merged file as input. After the fix: 3 consecutive complete runs with networking disabled, 25 / 25 each.
+
+On Windows, after scenarios 7, 8 and 26 were added: run 5 passed 27 / 28 (Convert read the previous result, defect 27); run 6 passed 26 / 28 (the selection scenario measured the title while the page was being re-rendered and got no position, and the Save As check that looks for that strike-through failed with it; fixed in the test by waiting for the text to settle). Build 10 and the following UI run: 28 / 28. On Linux the 28-scenario suite passed both with and without network access.
 
 Screenshots of every scenario are written to `test-results/ui/` (not committed).
 
@@ -108,6 +114,13 @@ Screenshots of every scenario are written to `test-results/ui/` (not committed).
 | 18 | Main window larger than small screens (fixed 1440×920) | Windows CI desktop at 1024×768 | Window sized to the screen and maximised when it does not fit |
 | 19 | Build: publisher-signature check failed on GitHub's Windows runners (Windows PowerShell module path) | Windows CI | Uses PowerShell 7 where available; reports PowerShell's own error |
 | 20 | UI test could not start Electron on a fresh machine (Electron 43 downloads its binary on first use); the Organize scenario could pass without the change reaching the document | Windows CI | Test resolves Electron through its package; Organize now checks the document's page count |
+| 21 | **Text could not be selected at all**, so nothing could be copied, and highlighting/strike-through worked only by drawing a box. The app's "not selectable" style for buttons and panels was inherited by the PDF text layer. The feature register had listed text selection as implemented but untested | **Reported by the user** | Text layer selectable; selection toolbar and right-click menu; markup tools follow the dragged text; UI scenarios 7–9 added |
+| 22 | A drag starting in the margin or between lines selected nothing | New UI scenario 6 | Selection anchored to the nearest characters, as in Acrobat |
+| 23 | Text that already carried a highlight could not be selected again | New UI scenario 7 | Drags may start on markup annotations |
+| 24 | On Linux, the app's browser engine tried to download spell-check dictionaries from Google at start-up (Windows uses its own spell checker and downloads nothing) | Network log of the build environment during testing | Every session hardened when created; the UI test now fails on any outbound attempt by any app process (verified to catch this) |
+| 25 | Printing went through the Windows dialog only, without Acrobat's sizing, pages-per-sheet, comments & forms or preview | **Reported by the user** | New print dialog with live preview; prints directly to the chosen printer; UI scenario 26 checks the produced sheets |
+| 26 | Properties panel showed an internal temporary file name after an edit | Testing | Shows the document's name |
+| 27 | After converting to Word and then choosing PowerPoint, the Word result ("Completed") stayed on screen until the new job started; the Windows UI run read that stale result and checked for the PowerPoint file too early (27 / 28) | Windows CI | The result clears when another format is chosen; the test waits for the result naming the expected file |
 
 ## 6. Tests not run, and why
 
@@ -117,10 +130,10 @@ Screenshots of every scenario are written to `test-results/ui/` (not committed).
 | Windows 10 and Windows 11 desktop editions | Not run | CI uses Windows Server 2025 (same kernel family as Windows 11) |
 | Interactive (non-silent) installer pages: folder choice, desktop-shortcut option | Not run | Automated install is silent |
 | Signing with a USB token / smart card (PKCS#11) | Not run | No hardware token available |
-| Printing to a physical printer | Not run | No printer; print preparation (page rendering, permission check) is tested |
+| Printing to a physical printer | Not run | No printer. The print job (sheets, page placement, black and white) is checked by sending the exact page the printer would receive to PDF instead (UI scenario 26); the engine tests cover page rendering, the print permission and the comments/forms options. Driver behaviour (duplex, tray, colour) depends on the printer and is not tested |
 | High-DPI displays and Windows display scaling | Not run | Needs a physical Windows desktop |
 | Dropping files from Explorer | Not run | Cannot be automated with the test driver |
 | OCR accuracy for Hindi and Gujarati | Not run | Only English accuracy is asserted; the languages are installed and detected on Windows |
 | Large-scale performance (hundreds of scanned pages, very large image-heavy files) | Not run | No benchmark was performed; only the 300-page open test |
-| Keyboard shortcuts other than Ctrl+F; batch cancel and retry; folder scanning; disk-full and access-denied handling | Not run | Implemented; not covered by automated tests |
+| Keyboard shortcuts other than Ctrl+F (Ctrl+A was checked by hand on Linux, not by the suite); batch cancel and retry; folder scanning; disk-full and access-denied handling | Not run | Implemented; not covered by automated tests |
 | Real-world documents | Not run, by design | The brief requires synthetic test documents |
