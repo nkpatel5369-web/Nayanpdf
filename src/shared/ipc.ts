@@ -29,7 +29,7 @@ export const INVOKE_CHANNELS = [
   "doc:close",
   "doc:state",
   "doc:preview",
-  "doc:print",
+  "doc:printPlan", "print:printers",
   "job:start",
   "job:cancel",
   "job:retry",

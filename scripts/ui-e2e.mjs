@@ -31,7 +31,7 @@ function record(name, ok, detail = "") {
   console.log(`${ok ? "PASS" : "FAIL"} ${name} ${detail}`);
 }
 function pdfText(path) {
-  return execFileSync(PY, ["-c", "import pymupdf,sys; d=pymupdf.open(sys.argv[1]); print('\\n'.join(p.get_text() for p in d)); print('PAGES', d.page_count); print('ANNOTS', sum(len(list(p.annots())) for p in d)); print('IMAGES', sum(len(p.get_images()) for p in d))", path]).toString();
+  return execFileSync(PY, ["-c", "import pymupdf,sys; d=pymupdf.open(sys.argv[1]); print('\\n'.join(p.get_text() for p in d)); print('PAGES', d.page_count); print('ANNOTS', sum(len(list(p.annots())) for p in d)); print('IMAGES', sum(len(p.get_images()) for p in d)); u = lambda p, r: ''.join(c['c'] for b in p.get_text('rawdict')['blocks'] for l in b.get('lines', []) for s in l['spans'] for c in s['chars'] if r.x0 <= (c['bbox'][0] + c['bbox'][2]) / 2 <= r.x1 and r.y0 <= (c['bbox'][1] + c['bbox'][3]) / 2 <= r.y1).strip(); print('MARKUP', [(a.type[1], u(p, pymupdf.Quad(a.vertices[i:i+4]).rect)) for p in d for a in p.annots() if a.vertices and a.type[0] in (8, 9, 10, 11) for i in range(0, len(a.vertices), 4)])", path]).toString();
 }
 
 for (const f of ["financial.pdf", "form.pdf", "a.pdf", "b.pdf", "c.pdf", "notes.pdf", "twenty.pdf", "scanned.pdf"]) {
@@ -44,13 +44,24 @@ for (const f of ["financial.pdf", "form.pdf", "a.pdf", "b.pdf", "c.pdf", "notes.
 const src = join(work, "financial.pdf");
 setDialogs({});
 
+// On Linux, Chromium sends all its traffic (including background requests from
+// the browser process, such as spell-check dictionary downloads) through the
+// proxy named in the environment. A local recording proxy that refuses every
+// request turns any attempt by the app to reach the internet into a test failure.
+const proxyHits = [];
+const proxy = createServer((req, res) => { proxyHits.push(req.url); res.writeHead(403); res.end(); });
+proxy.on("connect", (req, sock) => { proxyHits.push(req.url); sock.end("HTTP/1.1 403 Forbidden\r\n\r\n"); });
+await new Promise((r) => proxy.listen(0, "127.0.0.1", r));
+const proxyUrl = `http://127.0.0.1:${proxy.address().port}`;
+const proxyEnv = IS_WIN ? {} : { HTTPS_PROXY: proxyUrl, HTTP_PROXY: proxyUrl, https_proxy: proxyUrl, http_proxy: proxyUrl, ALL_PROXY: proxyUrl, NO_PROXY: "", no_proxy: "" };
+
 const app = await electron.launch({
   // Resolved through the electron package: since Electron 43 the binary is
   // downloaded on first use rather than at npm install time.
   executablePath: createRequire(import.meta.url)("electron"),
   // The Chromium sandbox cannot run as root in a Linux container; Windows keeps it.
   args: [...(IS_WIN ? [] : ["--no-sandbox"]), root, src],
-  env: { ...process.env, NAYANPDF_PYTHON: PY, NAYANPDF_TEST_DIALOGS: dialogFile, NAYANPDF_TEST_USERDATA: join(out, "profile"), ELECTRON_DISABLE_SECURITY_WARNINGS: "1" },
+  env: { ...process.env, ...proxyEnv, NAYANPDF_PYTHON: PY, NAYANPDF_TEST_DIALOGS: dialogFile, NAYANPDF_TEST_USERDATA: join(out, "profile"), ELECTRON_DISABLE_SECURITY_WARNINGS: "1" },
   timeout: 60000,
 });
 app.process().stdout.on("data", (d) => process.stdout.write(String(d).split("\n").filter((l) => l.startsWith("[testhook]")).map((l) => "  " + l + "\n").join("")));
@@ -170,6 +181,39 @@ try {
     record("Highlight and sticky note annotations", items >= 2, `${items} comments listed`);
   });
 
+  await step("Select text in View mode, copy it and strike it through", async () => {
+    await page.click('.doc-pane.active .mode-tabs button[title="View"]');
+    const span = page.locator('.doc-pane.active .page[data-page-number="1"] .textLayer span:not(.markedContent)', { hasText: "Statement of Profit" }).first();
+    const b = await span.boundingBox();
+    // Drag from the start of the title to roughly the middle, like a user would.
+    await page.mouse.move(b.x + 1, b.y + b.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(b.x + b.width * 0.55, b.y + b.height / 2, { steps: 12 });
+    await page.mouse.up();
+    await page.waitForSelector(".sel-bar", { timeout: 10000 });
+    const selected = await page.evaluate(() => window.getSelection().toString());
+    await page.click('.sel-bar button[aria-label="Copy"]');
+    const copied = await app.evaluate(({ clipboard }) => clipboard.readText());
+    await shot("04a-text-selected");
+    await page.click('.sel-bar button[aria-label="Strikethrough"]');
+    await waitIdle();
+    record("Select text in View mode, copy it and strike it through", selected.startsWith("Statement of Profit") && copied === selected,
+      `selected and copied "${copied.trim().slice(0, 40)}..."`);
+    globalThis.__struck = selected.trim();
+  });
+
+  await step("Right-click a selected word and underline it", async () => {
+    const word = page.locator('.doc-pane.active .page[data-page-number="1"] .textLayer span:not(.markedContent)', { hasText: "Depreciation" }).first();
+    await word.dblclick();
+    const r = await page.evaluate(() => { const b = window.getSelection().getRangeAt(0).getBoundingClientRect(); return { x: b.x + b.width / 2, y: b.y + b.height / 2, t: window.getSelection().toString() }; });
+    await page.mouse.click(r.x, r.y, { button: "right" });
+    await page.waitForSelector('.sel-menu button:has-text("Underline")', { timeout: 10000 });
+    await shot("04b-context-menu");
+    await page.click('.sel-menu button:has-text("Underline")');
+    await waitIdle();
+    record("Right-click a selected word and underline it", r.t.trim() === "Depreciation", `context menu on "${r.t.trim()}"`);
+  });
+
   await step("Save As writes a new file and leaves the original untouched", async () => {
     const before = statSync(src).mtimeMs;
     const target = join(work, "financial_edited.pdf");
@@ -178,7 +222,14 @@ try {
     await page.waitForTimeout(1500);
     const t = pdfText(target);
     const ok = existsSync(target) && t.includes("1,25,000.00") && /ANNOTS [2-9]/.test(t) && statSync(src).mtimeMs === before && pdfText(src).includes("1,23,456.78");
-    record("Save As writes a new file and leaves the original untouched", ok, `edited file has new value + annotations; original unchanged`);
+    // The markups made from text selections sit exactly on the selected words.
+    const markup = (t.match(/^MARKUP (.*)$/m) || [])[1] || "";
+    const sm = markup.match(/\('StrikeOut', '([^']*)'\)/);
+    const sel = globalThis.__struck || "";
+    const struck = !!sm && sm[1].startsWith("Statement of Profit") && !sm[1].includes("(amounts in Rs.)") && Math.abs(sm[1].length - sel.length) <= 2;
+    const underlined = markup.includes("('Underline', 'Depreciation')");
+    record("Save As writes a new file and leaves the original untouched", ok && struck && underlined,
+      `edited file has new value + annotations (strike-through and underline exactly on the selected text: ${struck && underlined}); original unchanged`);
   });
 
   await step("Organize pages: delete a page and apply", async () => {
@@ -437,6 +488,34 @@ try {
     record("Digital signature with a new certificate (verified)", v.endsWith("True True"), `intact/valid: ${v.split("\n").pop()}`);
   });
 
+  await step("Print: Acrobat-style dialog (printer, pages 1-5 odd only, 2 per sheet, black and white)", async () => {
+    const printed = join(work, "printed.pdf");
+    setDialogs({ printers: [{ name: "Office Laser", displayName: "Office Laser", description: "" }], printToPDF: printed });
+    await page.keyboard.press("Control+p");
+    await page.waitForSelector(".print-sheet img", { timeout: 60000 });
+    await page.selectOption('select[aria-label="Printer"]', "Office Laser");
+    await page.fill('input[aria-label="Pages"]', "1-5");
+    await page.selectOption('select[aria-label="Odd or even pages"]', "odd");
+    await page.click('.modal .seg button:has-text("Multiple")');
+    await page.click('label.check:has-text("grayscale") input');
+    await page.waitForFunction(() => /2 sheets/.test(document.querySelector(".print-preview")?.textContent || ""), null, { timeout: 30000 });
+    await page.waitForTimeout(1200);
+    await shot("19-print-dialog");
+    await page.click('.modal-foot button.primary:has-text("Print")');
+    await page.waitForSelector('.toast:has-text("Sent to printer")', { timeout: 120000 });
+    // Sheets as printed: count, orientation, pages per sheet, and no colour left.
+    const r = JSON.parse(execFileSync(PY, ["-c", [
+      "import pymupdf,sys,json; d=pymupdf.open(sys.argv[1]); out=[]",
+      "for p in d:",
+      "    px=p.get_pixmap(dpi=40); s=px.samples; n=px.n",
+      "    spread=max(max(s[i:i+3])-min(s[i:i+3]) for i in range(0, len(s), n*7))",
+      "    out.append({'w': round(p.rect.width), 'h': round(p.rect.height), 'images': len(p.get_images()), 'spread': spread})",
+      "print(json.dumps(out))"].join("\n"), printed]).toString());
+    const ok = r.length === 2 && r.every((x) => x.w > x.h) && r[0].images === 2 && r[1].images === 1 && r.every((x) => x.spread <= 6);
+    record("Print: Acrobat-style dialog (printer, pages 1-5 odd only, 2 per sheet, black and white)", ok,
+      `${r.length} landscape sheet(s), pages per sheet ${r.map((x) => x.images).join("+")}, colour spread ${Math.max(...r.map((x) => x.spread))}`);
+  });
+
   await step("Settings and dark theme", async () => {
     await page.click('.rail-btn:has-text("Settings")');
     await page.click('.seg button:has-text("Dark")');
@@ -451,13 +530,18 @@ try {
     record("Settings and dark theme", theme === "dark", `theme=${theme}`);
   });
 
-  await step("No network requests attempted by the renderer", async () => {
+  await step("No network requests attempted by the app", async () => {
     const urls = await page.evaluate(() => performance.getEntriesByType("resource").map((e) => e.name).filter((u) => !/^(app|nayan-doc|data|blob):/.test(u)));
-    record("No network requests attempted by the renderer", urls.length === 0, urls.slice(0, 3).join(", "));
+    const outside = proxyHits.filter((u) => !/^(127\.0\.0\.1|localhost)(:|$)/.test(u.replace(/^https?:\/\//, "")));
+    const detail = IS_WIN
+      ? `page requests: ${urls.length} (browser-process traffic is checked by the Windows acceptance test)`
+      : `page requests: ${urls.length}; any-process attempts through the recording proxy: ${outside.length}${outside.length ? " (" + outside.slice(0, 3).join(", ") + ")" : ""}`;
+    record("No network requests attempted by the app", urls.length === 0 && outside.length === 0, detail);
   });
 } finally {
   setDialogs({ closeConfirm: 0 });
   await Promise.race([app.close().catch(() => undefined), new Promise((r) => setTimeout(r, 15000))]);
+  proxy.close();
   writeFileSync(join(out, "results.json"), JSON.stringify(results, null, 2));
   const failed = results.filter((r) => !r.ok).length;
   console.log(`UI E2E: ${results.length - failed}/${results.length} passed`);

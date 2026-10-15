@@ -441,15 +441,27 @@ def interleave(ctx, pathA: str, pathB: str, output: str, reverseB: bool = False,
 
 
 @method("pages.thumbnail")
-def thumbnail(ctx, path: str, page: int, width: int = 160, password: str | None = None):
-    """PNG thumbnail as base64 (used for files not open in the viewer, e.g. merge lists)."""
+def thumbnail(ctx, path: str, page: int, width: int = 160, password: str | None = None, annots: str = "all",
+              grayscale: bool = False):
+    """PNG thumbnail as base64 (merge lists, print preview).
+
+    annots/grayscale mirror print.prepare so the print preview matches the printout.
+    """
     import base64
 
     doc = open_pdf(path, password)
     try:
+        if page < 1 or page > doc.page_count:
+            raise invalid("Page out of range.")
         p = doc[page - 1]
+        if annots == "forms":
+            for a in p.annots():
+                if a.type[0] != pymupdf.PDF_ANNOT_WIDGET:
+                    a.set_flags(a.flags | pymupdf.PDF_ANNOT_IS_HIDDEN)
+                    a.update()
         zoom = max(0.05, min(4.0, width / max(1, p.rect.width)))
-        pix = p.get_pixmap(matrix=pymupdf.Matrix(zoom, zoom), alpha=False)
+        pix = p.get_pixmap(matrix=pymupdf.Matrix(zoom, zoom), alpha=False, annots=annots != "none",
+                           colorspace=pymupdf.csGRAY if grayscale else pymupdf.csRGB)
         return {"png": base64.b64encode(pix.tobytes("png")).decode("ascii"), "width": pix.width,
                 "height": pix.height, "pageCount": doc.page_count}
     finally:

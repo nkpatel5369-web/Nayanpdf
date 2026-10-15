@@ -107,9 +107,23 @@ function registerAppProtocol() {
   });
 }
 
+// Chromium's spell checker fetches dictionaries from Google on Linux as soon as a
+// session exists. Every session is hardened the moment it is created: spell
+// checking off, no languages, and any dictionary URL pointed at a dead local port.
+function hardenSession(ses: Electron.Session) {
+  try {
+    ses.setSpellCheckerEnabled(false);
+    ses.setSpellCheckerDictionaryDownloadURL("http://127.0.0.1:9/");
+    if (process.platform === "linux") ses.setSpellCheckerLanguages([]);
+  } catch {
+    /* not supported on this platform */
+  }
+}
+app.on("session-created", hardenSession);
+
 function lockDownDefaultSession() {
   const ses = session.defaultSession;
-  ses.setSpellCheckerEnabled(false); // the spell checker would download dictionaries
+  hardenSession(ses);
   ses.setPermissionRequestHandler((_wc, _perm, cb) => cb(false));
   ses.setPermissionCheckHandler(() => false);
   const devUrl = process.env.NAYANPDF_DEV_URL;

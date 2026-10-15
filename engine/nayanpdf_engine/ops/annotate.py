@@ -99,6 +99,30 @@ def _words_quads(page: pymupdf.Page, area: pymupdf.Rect) -> list[pymupdf.Quad]:
     return [r.quad for _, r in sorted(lines.items())]
 
 
+def _selection_quads(page: pymupdf.Page, rects: list[pymupdf.Rect]) -> list[pymupdf.Quad]:
+    """Turn the rectangles of a text selection (as drawn by the viewer's text layer)
+    into one quad per text line, built from the actual glyph boxes, so the mark sits
+    exactly on the selected characters, partial words included."""
+    if not rects:
+        return []
+    raw = page.get_text("rawdict", flags=pymupdf.TEXTFLAGS_TEXT)
+    out: list[pymupdf.Quad] = []
+    for block in raw.get("blocks", []):
+        for line in block.get("lines", []):
+            hit = None
+            for span in line.get("spans", []):
+                for ch in span.get("chars", []):
+                    bb = pymupdf.Rect(ch["bbox"])
+                    if bb.is_empty or bb.is_infinite:
+                        continue
+                    cx, cy = (bb.x0 + bb.x1) / 2, (bb.y0 + bb.y1) / 2
+                    if any(r.x0 - 0.5 <= cx <= r.x1 + 0.5 and r.y0 - 1.5 <= cy <= r.y1 + 1.5 for r in rects):
+                        hit = pymupdf.Rect(bb) if hit is None else hit | bb
+            if hit is not None and hit.width > 0.5:
+                out.append(hit.quad)
+    return out
+
+
 def _stamp_image(text: str, color: str, date_text: str | None, border: bool = True) -> bytes:
     from PIL import Image, ImageDraw, ImageFont
 
@@ -169,7 +193,12 @@ def _add(page: pymupdf.Page, op: dict, author: str | None, space: str) -> pymupd
     if kind in ("highlight", "underline", "strikeout", "squiggly"):
         quads = None
         if op.get("quads"):
-            quads = [to_fitz_rect(page, q, space).quad for q in op["quads"]]
+            sel = [to_fitz_rect(page, q, space) for q in op["quads"]]
+            # Snap a viewer selection to the glyphs it covers; use the given boxes
+            # as they are when there is no text under them.
+            quads = _selection_quads(page, sel) if op.get("snap", True) else []
+            if not quads:
+                quads = [r.quad for r in sel]
         elif rect is not None:
             quads = _words_quads(page, rect)
         if not quads:

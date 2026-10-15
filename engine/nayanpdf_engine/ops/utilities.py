@@ -539,20 +539,43 @@ def crop(ctx, path: str, output: str, top: float = 0, right: float = 0, bottom: 
 
 @method("print.prepare")
 def print_prepare(ctx, path: str, outputDir: str, pages=None, dpi: int = 300, grayscale: bool = False,
-                  password: str | None = None):
-    """Render pages to images for the print dialog (honours the print permission)."""
+                  password: str | None = None, annots: str = "all"):
+    """Render pages to images for printing (honours the print permission).
+
+    pages  : page string ("1-3,5") or a list of page numbers; each page is rendered once
+    annots : "all" (document and markups), "none" (document only) or "forms"
+             (document and form fields, without comments)
+    """
+    if annots not in ("all", "none", "forms"):
+        raise invalid("annots must be all, none or forms.")
     doc = open_pdf(path, password, require=["print"])
     try:
         os.makedirs(os_path(outputDir), exist_ok=True)
-        sel = parse_pages(pages, doc.page_count)
+        if isinstance(pages, list):
+            sel = []
+            for n in pages:
+                n = int(n)
+                if n < 1 or n > doc.page_count:
+                    raise invalid(f"Page {n} does not exist.")
+                if n - 1 not in sel:
+                    sel.append(n - 1)
+        else:
+            sel = parse_pages(pages, doc.page_count)
         files = []
         for k, i in enumerate(sel):
             ctx.progress(k, len(sel), f"Preparing page {i + 1}")
             p = doc[i]
-            pix = p.get_pixmap(dpi=int(dpi), colorspace=pymupdf.csGRAY if grayscale else pymupdf.csRGB, alpha=False)
-            target = os.path.join(outputDir, f"print_{k + 1:05d}.png")
+            if annots == "forms":
+                # Hide comments for this rendering only (the document is not saved).
+                for a in p.annots():
+                    if a.type[0] != pymupdf.PDF_ANNOT_WIDGET:
+                        a.set_flags(a.flags | pymupdf.PDF_ANNOT_IS_HIDDEN)
+                        a.update()
+            pix = p.get_pixmap(dpi=int(dpi), colorspace=pymupdf.csGRAY if grayscale else pymupdf.csRGB, alpha=False,
+                               annots=annots != "none")
+            target = os.path.join(outputDir, f"print_{i + 1:05d}.png")
             pix.save(target)
-            files.append({"file": target, "widthPt": p.rect.width, "heightPt": p.rect.height})
+            files.append({"page": i + 1, "file": target, "widthPt": p.rect.width, "heightPt": p.rect.height})
         return {"pages": files}
     finally:
         doc.close()

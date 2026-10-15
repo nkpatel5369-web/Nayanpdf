@@ -28,8 +28,8 @@ export function PropertiesPanel() {
       <h3 style={{ marginBottom: 8 }}>Document properties</h3>
       <table className="tbl" style={{ fontSize: 12.5 }}>
         <tbody>
-          <tr><td className="muted">File</td><td className="ellipsis" title={info.path}>{info.fileName}</td></tr>
-          <tr><td className="muted">Size</td><td>{formatBytes(info.fileSize)}</td></tr>
+          <tr><td className="muted">File</td><td className="ellipsis" title={ws.doc.state.savedPath || ws.doc.state.originalPath}>{ws.doc.state.name}</td></tr>
+          <tr><td className="muted">Size</td><td>{formatBytes(info.fileSize)}{ws.doc.state.dirty ? " (with unsaved changes)" : ""}</td></tr>
           <tr><td className="muted">Pages</td><td>{info.pageCount}</td></tr>
           <tr><td className="muted">Page size</td><td>{Object.entries(info.pageSizes).map(([k, v]) => `${k} (${v})`).join(", ")}</td></tr>
           <tr><td className="muted">PDF version</td><td>{info.pdfVersion}</td></tr>

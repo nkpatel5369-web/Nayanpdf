@@ -9,6 +9,8 @@ import { Viewer, ViewerHandle } from "./Viewer";
 import { ThumbnailPanel } from "./Thumbnails";
 import { Mode, RedactMark, WsApi, WsContext } from "./context";
 import { PageOverlay, clearOverlayCache } from "./Overlay";
+import { SelectionTools, TEXT_TOOLS } from "./Selection";
+import { PrintDialog } from "./PrintDialog";
 import { EditPanel } from "./panels/EditPanel";
 import { CommentPanel } from "./panels/CommentPanel";
 import { FormsPanel } from "./panels/FormsPanel";
@@ -56,6 +58,7 @@ export function DocumentView({ sessionId, active }: { sessionId: string; active:
   const [pageInput, setPageInput] = useState("1");
   const [tick, setTick] = useState(0);
   const findInputRef = useRef<HTMLInputElement>(null);
+  const viewWrapRef = useRef<HTMLDivElement>(null);
   const passwordRef = useRef<string | undefined>(doc?.password);
 
   const state = doc?.state;
@@ -126,6 +129,10 @@ export function DocumentView({ sessionId, active }: { sessionId: string; active:
         setTimeout(() => findInputRef.current?.select(), 0);
       } else if (typing) {
         return;
+      } else if (e.ctrlKey && key === "a" && (mode === "view" || mode === "comment")) {
+        // Select all text on the current page (pages are rendered on demand).
+        e.preventDefault();
+        window.dispatchEvent(new CustomEvent("nayan:select-all", { detail: { sessionId, page } }));
       } else if (e.ctrlKey && key === "z" && !e.shiftKey) {
         e.preventDefault();
         undo();
@@ -257,7 +264,7 @@ export function DocumentView({ sessionId, active }: { sessionId: string; active:
               </div>
             </div>
           )}
-          <div style={{ position: "relative", minWidth: 0, minHeight: 0, display: mode === "pages" ? "none" : "block" }}>
+          <div ref={viewWrapRef} style={{ position: "relative", minWidth: 0, minHeight: 0, display: mode === "pages" ? "none" : "block" }}>
             <Viewer
               ref={viewerRef}
               url={state.url}
@@ -274,8 +281,9 @@ export function DocumentView({ sessionId, active }: { sessionId: string; active:
               onError={(m) => toast({ kind: "error", title: "Cannot display document", body: m })}
               renderOverlay={(ctx) => <PageOverlay ctx={ctx} />}
               overlayVersion={[mode, tool, revision, marks, selected, opts, page]}
-              overlayInteractive={mode !== "view"}
+              overlayInteractive={mode !== "view" && !(mode === "comment" && TEXT_TOOLS.has(tool))}
             />
+            {active && <SelectionTools wrapRef={viewWrapRef} onPrint={() => setDialog("print")} />}
             {findOpen && (
               <div className="find-bar">
                 <input ref={findInputRef} className="input sm" style={{ width: 200 }} placeholder="Find in document" value={findQ}
@@ -355,50 +363,6 @@ function ToolsMenu(props: { onPick: (id: string) => void; sessionId: string }) {
         </>
       )}
     </div>
-  );
-}
-
-function PrintDialog({ onClose }: { onClose: () => void }) {
-  const ws = (React.useContext(WsContext))!;
-  const settings = useApp((s) => s.settings);
-  const [range, setRange] = useState<"all" | "current" | "custom">("all");
-  const [pages, setPages] = useState("");
-  const [dpi, setDpi] = useState(settings.printDpi);
-  const [gray, setGray] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const print = async () => {
-    setBusy(true);
-    try {
-      const spec = range === "all" ? undefined : range === "current" ? String(ws.page) : pages;
-      const r = await api.print(ws.sessionId, spec, dpi, gray);
-      if (!r.printed && r.reason && r.reason !== "cancelled") useApp.getState().toast({ kind: "error", title: "Printing failed", body: r.reason });
-      onClose();
-    } catch (e: any) {
-      useApp.getState().toast({ kind: "error", title: "Printing failed", body: errorText(e) });
-    } finally {
-      setBusy(false);
-    }
-  };
-  return (
-    <Modal title="Print" onClose={onClose} footer={<><button className="btn" onClick={onClose}>Cancel</button><button className="btn primary" disabled={busy} onClick={print}>{busy ? <Spinner /> : <Printer size={15} />} Continue to printer</button></>}>
-      <Field label="Pages">
-        <div className="row">
-          <label className="check"><input type="radio" checked={range === "all"} onChange={() => setRange("all")} /> All</label>
-          <label className="check"><input type="radio" checked={range === "current"} onChange={() => setRange("current")} /> Current page ({ws.page})</label>
-          <label className="check"><input type="radio" checked={range === "custom"} onChange={() => setRange("custom")} /> Pages</label>
-          <input className="input sm" style={{ width: 140 }} disabled={range !== "custom"} placeholder="1-3, 5" value={pages} onChange={(e) => setPages(e.target.value)} />
-        </div>
-      </Field>
-      <div className="grid2">
-        <Field label="Print quality">
-          <select className="input" value={dpi} onChange={(e) => setDpi(parseInt(e.target.value))}>
-            <option value={150}>Draft (150 dpi)</option><option value={300}>Standard (300 dpi)</option><option value={600}>High (600 dpi)</option>
-          </select>
-        </Field>
-        <Field label=" "><Check checked={gray} onChange={setGray}>Black and white</Check></Field>
-      </div>
-      <p className="subtle">Pages are rendered by NayanPDF's PDF engine and sent to the Windows print dialog, where you choose the printer, copies and paper.</p>
-    </Modal>
   );
 }
 

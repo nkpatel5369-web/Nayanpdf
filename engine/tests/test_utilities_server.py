@@ -112,6 +112,47 @@ def test_print_prepare_respects_permission(fx, ctx):
     assert e.value.code == "PERMISSION_RESTRICTED"
 
 
+def test_print_prepare_comments_and_forms_options(ctx):
+    """Document and markups / document only / form fields only, as in Acrobat."""
+    from PIL import Image
+
+    src = out("print_annots.pdf")
+    d = pymupdf.open()
+    pg = d.new_page(width=300, height=300)
+    pg.insert_text((20, 30), "Print test")
+    box = pg.add_rect_annot(pymupdf.Rect(20, 60, 120, 120))  # a comment (red filled box)
+    box.set_colors(stroke=(1, 0, 0), fill=(1, 0, 0))
+    box.update()
+    w = pymupdf.Widget()
+    w.field_type = pymupdf.PDF_WIDGET_TYPE_TEXT
+    w.field_name = "amount"
+    w.rect = pymupdf.Rect(150, 60, 280, 120)
+    w.field_value = "1,25,000.00"
+    w.fill_color = (0, 0, 1)  # blue field background
+    pg.add_widget(w)
+    d.save(src)
+    d.close()
+
+    def sample(mode):
+        od = os.path.join(os.path.dirname(out("x")), "print_" + mode)
+        r = utilities.print_prepare(ctx, src, od, pages=[1], dpi=72, annots=mode)
+        im = Image.open(r["pages"][0]["file"]).convert("RGB")
+        return im.getpixel((70, 90)), im.getpixel((272, 66))  # inside the comment, an empty corner of the field
+
+    comment, field = sample("all")
+    assert comment[0] > 200 and comment[1] < 80, comment
+    assert field[2] > 200 and field[0] < 80, field
+    comment, field = sample("none")
+    assert comment == (255, 255, 255) and field == (255, 255, 255), (comment, field)
+    comment, field = sample("forms")
+    assert comment == (255, 255, 255), comment
+    assert field[2] > 200 and field[0] < 80, field
+    # The source is not modified by hiding comments for printing.
+    d = pymupdf.open(src)
+    assert not (next(d[0].annots()).flags & pymupdf.PDF_ANNOT_IS_HIDDEN)
+    d.close()
+
+
 # ---- protocol --------------------------------------------------------------------------
 
 def _server(requests, env=None):

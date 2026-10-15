@@ -10,7 +10,7 @@ import * as docs from "./docs";
 import { EngineError, EngineProcess, enginePool } from "./engine";
 import { jobs, cleanupDir } from "./jobs";
 import { log } from "./log";
-import { htmlToPdf, printDocument } from "./output";
+import { htmlToPdf, printPlan, PrintJob } from "./output";
 import { appTempBase, appTempRoot } from "./paths";
 import * as store from "./store";
 import { testAnswer } from "./testhooks";
@@ -283,11 +283,20 @@ const handlers: Record<string, Handler> = {
     rmSync(r.output, { force: true });
     return thumb;
   },
-  "doc:print": async (e, payload) => {
+  "print:printers": async (e) => {
+    const t = testAnswer("printers");
+    if (t.hit) return t.value;
+    const list = await win(e).webContents.getPrintersAsync();
+    return list.map((p) => ({ name: p.name, displayName: p.displayName || p.name, description: p.description || "" }));
+  },
+  "doc:printPlan": async (e, payload) => {
     const p = obj(payload);
     const { path, password } = docs.currentPath(str(p.sessionId, "session"));
-    const dpi = Math.max(100, Math.min(600, Number(p.dpi) || store.getSettings().printDpi));
-    return printDocument(win(e), path, password, typeof p.pages === "string" && p.pages ? p.pages : undefined, dpi, !!p.grayscale);
+    const probe = await enginePool.queryCall("doc.probe", { path, password });
+    const job = sanitizePrintJob(obj(p.job), Number(probe.pages) || 0);
+    const t = testAnswer("printToPDF");
+    if (t.hit && typeof t.value === "string") access.allowOutputDir(dirname(t.value));
+    return printPlan(win(e), path, password, job, t.hit ? String(t.value) : undefined);
   },
   "job:start": (_e, payload) => {
     const p = obj(payload);
@@ -380,4 +389,46 @@ export function registerIpc() {
     ok.forEach((p) => access.allowInput(p));
     return ok;
   });
+}
+
+
+/** Validate a print job coming from the renderer before anything is rendered or printed. */
+function sanitizePrintJob(j: Record<string, any>, pageCount: number): PrintJob {
+  const bad = (m: string): never => {
+    throw Object.assign(new Error(`Invalid print settings: ${m}`), { code: "INVALID_ARGUMENT" });
+  };
+  const num = (v: any, lo: number, hi: number, name: string) => {
+    const n = Number(v);
+    if (!Number.isFinite(n) || n < lo || n > hi) bad(name);
+    return n;
+  };
+  const oneOf = <T extends string>(v: any, set: readonly T[], name: string): T => (set.includes(v) ? v : bad(name));
+  if (!Array.isArray(j.sheets) || j.sheets.length === 0 || j.sheets.length > 20000) bad("sheets");
+  const sheets = (j.sheets as any[]).map((sheet) => {
+    if (!Array.isArray(sheet) || sheet.length === 0 || sheet.length > 16) bad("sheet");
+    return sheet.map((it: any) => ({
+      page: Math.round(num(it?.page, 1, pageCount, "page")),
+      x: num(it.x, -20000, 20000, "x"),
+      y: num(it.y, -20000, 20000, "y"),
+      w: num(it.w, 0.1, 20000, "w"),
+      h: num(it.h, 0.1, 20000, "h"),
+      rotate: it.rotate === 90 ? (90 as const) : (0 as const),
+      border: !!it.border,
+    }));
+  });
+  return {
+    printer: typeof j.printer === "string" && j.printer.length < 300 ? j.printer : "",
+    copies: Math.round(num(j.copies ?? 1, 1, 999, "copies")),
+    collate: j.collate !== false,
+    duplex: oneOf(j.duplex ?? "simplex", ["simplex", "longEdge", "shortEdge"] as const, "duplex"),
+    grayscale: !!j.grayscale,
+    dpi: Math.round(num(j.dpi ?? 300, 100, 600, "dpi")),
+    annots: oneOf(j.annots ?? "all", ["all", "none", "forms"] as const, "annots"),
+    paper: oneOf(j.paper ?? "A4", ["A3", "A4", "A5", "Letter", "Legal"] as const, "paper"),
+    sheetW: num(j.sheetW, 100, 5000, "sheet width"),
+    sheetH: num(j.sheetH, 100, 5000, "sheet height"),
+    landscape: !!j.landscape,
+    sheets,
+    systemDialog: !!j.systemDialog,
+  };
 }

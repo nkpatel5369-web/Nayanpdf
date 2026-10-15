@@ -4,6 +4,7 @@ import { api } from "../api";
 import { useApp } from "../store";
 import { useWs } from "./context";
 import { cssPointToPdf, cssRectToPdf, PageCtx, pdfRectToCss } from "./Viewer";
+import { TEXT_TOOLS } from "./Selection";
 
 // Tools that are drawn as a rectangle.
 const RECT_TOOLS = new Set(["highlight", "underline", "strikeout", "squiggly", "freetext", "callout", "rect", "circle", "stamp",
@@ -43,7 +44,9 @@ export function PageOverlay({ ctx }: { ctx: PageCtx }) {
   const [pending, setPending] = useState<{ kind: string; rect: number[]; css: Drag; p1?: number[]; p2?: number[] } | null>(null);
   const vp = ctx.viewport;
   const tool = ws.tool;
-  const interactive = ws.mode !== "view" && ws.mode !== "pages" && tool !== "none";
+  // Comment "Select" and the text markup tools work on the text selection, so the
+  // overlay lets the mouse through to the text layer (annotation boxes stay clickable).
+  const interactive = ws.mode !== "view" && ws.mode !== "pages" && tool !== "none" && !(ws.mode === "comment" && TEXT_TOOLS.has(tool));
 
   const onDown = (e: React.MouseEvent) => {
     if (e.button !== 0 || !ref.current || pending) return;

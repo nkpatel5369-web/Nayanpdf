@@ -29,45 +29,106 @@ function lockDownSession(partition: string, allowDirs: string[]) {
   return ses;
 }
 
-export async function printDocument(parent: BrowserWindow, path: string, password: string | undefined, pages: string | undefined,
-  dpi: number, grayscale: boolean): Promise<{ printed: boolean; reason?: string; pages: number }> {
+export interface PrintItem {
+  page: number;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  rotate: 0 | 90;
+  border: boolean;
+}
+
+export interface PrintJob {
+  printer: string; // "" = the system default printer
+  copies: number;
+  collate: boolean;
+  duplex: "simplex" | "longEdge" | "shortEdge";
+  grayscale: boolean;
+  dpi: number;
+  annots: "all" | "none" | "forms";
+  paper: "A3" | "A4" | "A5" | "Letter" | "Legal";
+  sheetW: number; // points
+  sheetH: number;
+  landscape: boolean;
+  sheets: PrintItem[][];
+  systemDialog: boolean; // let Windows show its own dialog (driver options)
+}
+
+/** HTML of the sheets exactly as laid out by the print dialog (sizes in points). */
+function sheetsHtml(job: PrintJob, files: Map<number, string>): string {
+  const n = (v: number) => Math.round(v * 100) / 100;
+  const items = (sheet: PrintItem[]) => sheet.map((it) => {
+    const img = it.rotate
+      ? `width:${n(it.h)}pt;height:${n(it.w)}pt;transform:translate(-50%,-50%) rotate(90deg)`
+      : `width:${n(it.w)}pt;height:${n(it.h)}pt;transform:translate(-50%,-50%)`;
+    return `<div class="it${it.border ? " b" : ""}" style="left:${n(it.x)}pt;top:${n(it.y)}pt;width:${n(it.w)}pt;height:${n(it.h)}pt"><img src="${pathToFileURL(files.get(it.page)!).href}" style="${img}"></div>`;
+  }).join("");
+  return [
+    "<!DOCTYPE html><html><head><meta charset='utf-8'><style>",
+    `@page { size: ${n(job.sheetW)}pt ${n(job.sheetH)}pt; margin: 0 }`,
+    "html,body{margin:0;padding:0;background:#fff}",
+    `.sheet{position:relative;width:${n(job.sheetW)}pt;height:${n(job.sheetH)}pt;overflow:hidden;break-after:page;page-break-after:always}`,
+    ".sheet:last-child{break-after:auto;page-break-after:auto}",
+    ".it{position:absolute;overflow:hidden}.it.b{outline:0.6pt solid #000}",
+    ".it img{position:absolute;left:50%;top:50%;max-width:none}",
+    "</style></head><body>",
+    ...job.sheets.map((s) => `<div class="sheet">${items(s)}</div>`),
+    "</body></html>",
+  ].join("");
+}
+
+/**
+ * Print a laid-out job: pages are rendered by the PDF engine, placed on sheets as
+ * planned in NayanPDF's print dialog and sent to the chosen printer. With
+ * systemDialog the Windows print dialog is shown for driver-specific options.
+ */
+export async function printPlan(parent: BrowserWindow, path: string, password: string | undefined, job: PrintJob,
+  testPdfPath?: string): Promise<{ printed: boolean; reason?: string; sheets: number; testOutput?: string }> {
   const dir = join(appTempRoot(), `print-${Date.now().toString(36)}`);
   mkdirSync(dir, { recursive: true });
   const proc = new EngineProcess("print");
+  let win: BrowserWindow | null = null;
   try {
-    const res = await proc.call("print.prepare", { path, password, pages, outputDir: dir, dpi, grayscale });
-    const imgs: { file: string; widthPt: number; heightPt: number }[] = res.pages;
-    const html = [
-      "<!DOCTYPE html><html><head><meta charset='utf-8'><style>",
-      "@page { margin: 0 } @page land { size: landscape; margin: 0 } @page port { size: portrait; margin: 0 }",
-      "html,body{margin:0;padding:0;background:#fff}",
-      ".pg{width:100%;height:100vh;display:flex;align-items:center;justify-content:center;break-after:page;page-break-after:always;overflow:hidden}",
-      ".pg:last-child{break-after:auto;page-break-after:auto}",
-      ".land{page:land}.port{page:port}",
-      "img{max-width:100%;max-height:100%;object-fit:contain}",
-      "</style></head><body>",
-      ...imgs.map((p) => `<div class="pg ${p.widthPt > p.heightPt ? "land" : "port"}"><img src="${pathToFileURL(p.file).href}"></div>`),
-      "</body></html>",
-    ].join("");
+    const pages = [...new Set(job.sheets.flat().map((i) => i.page))];
+    const res = await proc.call("print.prepare", { path, password, pages, outputDir: dir, dpi: job.dpi, grayscale: job.grayscale, annots: job.annots });
+    const files = new Map<number, string>(res.pages.map((p: any) => [p.page, p.file]));
     const htmlFile = join(dir, "print.html");
-    writeFileSync(htmlFile, html, "utf8");
+    writeFileSync(htmlFile, sheetsHtml(job, files), "utf8");
     lockDownSession("nayan-print", [dir]);
-    const win = new BrowserWindow({
+    win = new BrowserWindow({
       show: false,
       parent,
       webPreferences: { partition: "nayan-print", sandbox: true, contextIsolation: true, javascript: false, spellcheck: false },
     });
     await win.loadFile(htmlFile);
+    if (testPdfPath) {
+      // Automated tests: produce the exact sheets as a PDF instead of printing.
+      const data = await win.webContents.printToPDF({ pageSize: job.paper, landscape: job.landscape, printBackground: true,
+        margins: { top: 0, bottom: 0, left: 0, right: 0 }, preferCSSPageSize: true });
+      writeFileSync(testPdfPath, data);
+      return { printed: true, sheets: job.sheets.length, testOutput: testPdfPath };
+    }
+    const w = win;
     const result = await new Promise<{ printed: boolean; reason?: string }>((resolve) => {
-      win.webContents.print({ silent: false, printBackground: true, margins: { marginType: "none" } }, (success, reason) =>
-        resolve({ printed: success, reason: success ? undefined : reason }),
-      );
+      w.webContents.print({
+        silent: !job.systemDialog,
+        deviceName: job.printer || undefined,
+        printBackground: true,
+        copies: job.copies,
+        collate: job.collate,
+        color: !job.grayscale,
+        duplexMode: job.duplex,
+        landscape: job.landscape,
+        pageSize: job.paper,
+        margins: { marginType: "none" },
+      }, (success, reason) => resolve({ printed: success, reason: success ? undefined : reason }));
     });
-    win.destroy();
-    return { ...result, pages: imgs.length };
+    return { ...result, sheets: job.sheets.length };
   } finally {
+    win?.destroy();
     proc.stop();
-    setTimeout(() => rmSync(dir, { recursive: true, force: true }), 60000).unref();
+    setTimeout(() => rmSync(dir, { recursive: true, force: true }), 120000).unref();
   }
 }
 

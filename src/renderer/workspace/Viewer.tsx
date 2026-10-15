@@ -37,6 +37,8 @@ export interface ViewerHandle {
   pageCount(): number;
   rotation(): number;
   currentPage(): number;
+  /** Current viewport of a page (CSS pixels), for mapping selections to PDF space. */
+  pageViewport(page: number): any;
 }
 
 interface Props {
@@ -226,6 +228,7 @@ export const Viewer = forwardRef<ViewerHandle, Props>(function Viewer(props, ref
     pageCount: () => viewerRef.current?.pagesCount || 0,
     rotation: () => viewerRef.current?.pagesRotation || 0,
     currentPage: () => viewerRef.current?.currentPageNumber || 1,
+    pageViewport: (page) => viewerRef.current?.getPageView(page - 1)?.viewport || null,
   }));
 
   const portals: React.ReactNode[] = [];

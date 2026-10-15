@@ -193,6 +193,40 @@ def test_annotations_add_edit_delete_flatten(fx, ctx):
 
 # ---- watermark / header / footer / numbering ----------------------------------------------
 
+def test_highlight_from_text_selection_snaps_to_characters(fx, ctx):
+    """A selection covering only part of a line marks exactly those characters;
+    a selection over two lines gives one mark per line (viewer behaviour)."""
+    word = _line(fx["c"], 1, "Marker C-001")
+    d = pymupdf.open(fx["c"])
+    pg = d[0]
+    hit = pg.search_for("Marker")[0]
+    h = pg.rect.height
+    # Selection box slightly larger than the word, in PDF space (origin bottom-left).
+    sel = [hit.x0 - 0.4, h - hit.y1 - 2, hit.x1 + 0.4, h - hit.y0 + 2]
+    d.close()
+    r = annotate.apply(ctx, fx["c"], out("sel_highlight.pdf"),
+                       [{"op": "add", "page": 1, "kind": "highlight", "quads": [sel]}])
+    d = pymupdf.open(r["output"])
+    pg = d[0]
+    a = next(pg.annots())
+    v = a.vertices
+    rect = pymupdf.Rect(min(p[0] for p in v), min(p[1] for p in v), max(p[0] for p in v), max(p[1] for p in v))
+    covered = pg.get_textbox(rect + (0.5, 0.5, -0.5, -0.5)).strip()
+    assert covered == "Marker", covered
+    assert rect.x1 < word[2] - 5, "highlight must stop at the end of the selected word"
+    d.close()
+    # Two lines selected: one mark (quad) per line.
+    l1 = _line(fx["c"], 1, "C page 1")
+    l2 = _line(fx["c"], 1, "Marker C-001")
+    r = annotate.apply(ctx, fx["c"], out("sel_strike.pdf"),
+                       [{"op": "add", "page": 1, "kind": "strikeout", "quads": [l1, l2]}])
+    d = pymupdf.open(r["output"])
+    pg = d[0]
+    a = next(pg.annots())
+    assert len(a.vertices) == 8, a.vertices  # two quads of four points
+    d.close()
+
+
 def test_watermark_header_footer_bates(fx, ctx):
     r = stamp.watermark(ctx, fx["c"], out("wm.pdf"), text="CONFIDENTIAL", angle=45, opacity=0.2)
     assert all("CONFIDENTIAL" in t for t in page_texts(r["output"]))

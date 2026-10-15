@@ -50,6 +50,13 @@ export function CommentPanel() {
             </button>
           ))}
         </div>
+        {["select", "highlight", "underline", "strikeout", "squiggly"].includes(t) && (
+          <p className="subtle" style={{ margin: "8px 0 0" }}>
+            {t === "select"
+              ? "Select text to copy or mark it, or click a comment to edit it. Right-click for more."
+              : "Drag across text to mark it. Works on text, not on scanned images (run OCR first)."}
+          </p>
+        )}
         {t !== "select" && t !== "stamp" && (
           <>
             <Field label="Colour"><ColorPicker value={ws.opts.color || defaultColor(t)} onChange={(c) => ws.setOpts({ color: c })} /></Field>
