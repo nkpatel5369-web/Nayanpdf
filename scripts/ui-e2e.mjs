@@ -100,6 +100,19 @@ const waitIdle = async () => {
   await page.waitForTimeout(300);
   await page.waitForSelector(".busy-veil", { state: "detached", timeout: 120000 });
 };
+// The text layer is rebuilt after every change to the document, so wait for
+// the element to be on screen and to stop moving before measuring it.
+const stableBox = async (loc) => {
+  let prev = null;
+  for (let i = 0; i < 40; i++) {
+    await loc.scrollIntoViewIfNeeded({ timeout: 15000 });
+    const b = await loc.boundingBox();
+    if (b && prev && Math.abs(b.x - prev.x) < 0.5 && Math.abs(b.y - prev.y) < 0.5 && Math.abs(b.width - prev.width) < 0.5) return b;
+    prev = b;
+    await page.waitForTimeout(150);
+  }
+  throw new Error("element did not settle on screen");
+};
 
 try {
   await step("Document opens from the command line and renders", async () => {
@@ -183,8 +196,9 @@ try {
 
   await step("Select text in View mode, copy it and strike it through", async () => {
     await page.click('.doc-pane.active .mode-tabs button[title="View"]');
+    await waitIdle();
     const span = page.locator('.doc-pane.active .page[data-page-number="1"] .textLayer span:not(.markedContent)', { hasText: "Statement of Profit" }).first();
-    const b = await span.boundingBox();
+    const b = await stableBox(span);
     // Drag from the start of the title to roughly the middle, like a user would.
     await page.mouse.move(b.x + 1, b.y + b.height / 2);
     await page.mouse.down();
@@ -204,6 +218,7 @@ try {
 
   await step("Right-click a selected word and underline it", async () => {
     const word = page.locator('.doc-pane.active .page[data-page-number="1"] .textLayer span:not(.markedContent)', { hasText: "Depreciation" }).first();
+    await stableBox(word);
     await word.dblclick();
     const r = await page.evaluate(() => { const b = window.getSelection().getRangeAt(0).getBoundingClientRect(); return { x: b.x + b.width / 2, y: b.y + b.height / 2, t: window.getSelection().toString() }; });
     await page.mouse.click(r.x, r.y, { button: "right" });
