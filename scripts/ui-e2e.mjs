@@ -64,7 +64,19 @@ const app = await electron.launch({
   env: { ...process.env, ...proxyEnv, NAYANPDF_PYTHON: PY, NAYANPDF_TEST_DIALOGS: dialogFile, NAYANPDF_TEST_USERDATA: join(out, "profile"), ELECTRON_DISABLE_SECURITY_WARNINGS: "1" },
   timeout: 60000,
 });
-app.process().stdout.on("data", (d) => process.stdout.write(String(d).split("\n").filter((l) => l.startsWith("[testhook]")).map((l) => "  " + l + "\n").join("")));
+// Test-hook lines from the main process, kept so scenarios can check what a
+// dialog would have offered (for example the file name Save As suggests).
+const hookLog = [];
+let hookBuf = "";
+app.process().stdout.on("data", (d) => {
+  const lines = (hookBuf + String(d)).split("\n");
+  hookBuf = lines.pop();
+  for (const l of lines.map((x) => x.replace(/\r$/, ""))) {
+    if (!l.startsWith("[testhook]")) continue;
+    hookLog.push(l);
+    process.stdout.write("  " + l + "\n");
+  }
+});
 const page = await app.firstWindow();
 page.setDefaultTimeout(30000);
 page.on("pageerror", (e) => console.log("  [renderer error]", e.message));
@@ -536,6 +548,55 @@ try {
     const ok = r.length === 2 && r.every((x) => x.w > x.h) && r[0].images === 2 && r[1].images === 1 && r.every((x) => x.spread <= 6);
     record("Print: Acrobat-style dialog (printer, pages 1-5 odd only, 2 per sheet, black and white)", ok,
       `${r.length} landscape sheet(s), pages per sheet ${r.map((x) => x.images).join("+")}, colour spread ${Math.max(...r.map((x) => x.spread))}`);
+  });
+
+  await step("Save As offers the document's own name; replacing the original asks once", async () => {
+    // A PDF as it might come from accounting software, with spaces in its name.
+    const orig = join(work, "Tally Invoice 2026.pdf");
+    copyFileSync(join(work, "twenty.pdf"), orig);
+    const pages = (f) => Number(execFileSync(PY, ["-c", "import pymupdf,sys; print(pymupdf.open(sys.argv[1]).page_count)", f]).toString().trim());
+    const deleteSecondPage = async () => {
+      await page.click('.doc-pane.active .mode-tabs button:has-text("Pages")');
+      await page.waitForSelector(".doc-pane.active .org-item");
+      const n0 = await page.locator(".doc-pane.active .org-item").count();
+      await page.locator(".doc-pane.active .org-item").nth(1).click();
+      await page.click('.doc-pane.active .ws-toolbar button:has-text("Delete")');
+      await page.click('.doc-pane.active button:has-text("Apply changes")');
+      await page.click('.modal-foot button:has-text("Apply")');
+      await page.waitForSelector(".modal", { state: "detached", timeout: 60000 });
+      await page.waitForFunction((n) => document.querySelectorAll(".doc-pane.active .pdfViewer .page").length === n, n0 - 1, { timeout: 60000 });
+    };
+    setDialogs({ openFiles: [orig] });
+    await page.click('button[title="Open PDF (Ctrl+O)"]');
+    await page.waitForSelector('.tab.active .name:has-text("Tally Invoice 2026.pdf")');
+    await page.waitForSelector(".doc-pane.active .pdfViewer .page canvas");
+    await deleteSecondPage();
+    // Save As: the suggestion is the original name in the same folder; the user
+    // keeps it and confirms replacing the original.
+    const mark = hookLog.length;
+    setDialogs({ saveAs: orig, overwriteOriginal: 0 });
+    await page.locator('.doc-pane.active button:has-text("Save As")').click();
+    await page.waitForFunction(() => !document.querySelector(".tab.active .dirty"), null, { timeout: 30000 }).catch(() => undefined);
+    await page.waitForTimeout(1500);
+    const sug = hookLog.slice(mark).map((l) => l.match(/^\[testhook\] saveAs suggested=(".*") -> /)).find(Boolean);
+    const suggested = sug ? JSON.parse(sug[1]) : "";
+    const norm = (p) => (IS_WIN ? p.toLowerCase() : p).replace(/\\/g, "/");
+    const sameName = norm(suggested) === norm(orig);
+    const asked1 = hookLog.slice(mark).filter((l) => l.startsWith("[testhook] overwriteOriginal")).length;
+    const n1 = pages(orig);
+    // A further edit and Ctrl+S: saved straight to the same file, no second
+    // question (a question would be answered "Cancel" and nothing would be saved).
+    await deleteSecondPage();
+    const mark2 = hookLog.length;
+    setDialogs({ overwriteOriginal: 1 });
+    await page.keyboard.press("Control+s");
+    await page.waitForTimeout(2000);
+    const asked2 = hookLog.slice(mark2).filter((l) => l.startsWith("[testhook] overwriteOriginal")).length;
+    const n2 = pages(orig);
+    await shot("19b-save-as-name");
+    record("Save As offers the document's own name; replacing the original asks once",
+      sameName && asked1 === 1 && n1 === 19 && asked2 === 0 && n2 === 18,
+      `suggested "${suggested.split(/[\\/]/).pop()}" in the same folder: ${sameName}; asked ${asked1} then ${asked2} time(s); pages 20 -> ${n1} -> ${n2}`);
   });
 
   await step("Settings and dark theme", async () => {

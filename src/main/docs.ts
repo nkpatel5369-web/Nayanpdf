@@ -26,6 +26,9 @@ interface Session {
   index: number;
   savedIndex: number; // revision index that matches the file on disk
   savedPath?: string;
+  // The user has agreed to replace the original file in this session; later
+  // saves to it do not ask again.
+  overwriteConfirmed?: boolean;
   dir: string;
   tokens: Map<number, string>;
 }
@@ -196,18 +199,7 @@ export async function save(win: BrowserWindow, id: string): Promise<{ state: Doc
   const s = get(id);
   if (!s.savedPath) return { state: state(s), needsSaveAs: true };
   if (s.index === s.savedIndex && existsSync(s.savedPath)) return { state: state(s) };
-  if (sameFile(s.savedPath, s.originalPath)) {
-    const r = await dialog.showMessageBox(win, {
-      type: "warning",
-      buttons: ["Overwrite original", "Cancel"],
-      defaultId: 1,
-      cancelId: 1,
-      title: "Overwrite original document?",
-      message: `Replace the original file "${basename(s.originalPath)}" with your edited version?`,
-      detail: "This cannot be undone outside NayanPDF.",
-    });
-    if (r.response !== 0) return { state: state(s), cancelled: true };
-  }
+  if (sameFile(s.savedPath, s.originalPath) && !(await confirmOverwriteOriginal(win, s))) return { state: state(s), cancelled: true };
   atomicCopy(s.revisions[s.index], s.savedPath);
   s.savedIndex = s.index;
   access.allowInput(s.savedPath);
@@ -215,12 +207,35 @@ export async function save(win: BrowserWindow, id: string): Promise<{ state: Doc
   return { state: state(s) };
 }
 
+/**
+ * Replacing the file the user opened is allowed, but only knowingly: ask once
+ * per session (unless switched off in Settings), never on every save.
+ */
+async function confirmOverwriteOriginal(win: BrowserWindow, s: Session): Promise<boolean> {
+  if (s.overwriteConfirmed || getSettings().allowOverwriteOriginal) return true;
+  const t = testAnswer("overwriteOriginal");
+  const response = t.hit ? Number(t.value) : (await dialog.showMessageBox(win, {
+    type: "warning",
+    buttons: ["Replace original", "Cancel"],
+    defaultId: 1,
+    cancelId: 1,
+    title: "Replace the original document?",
+    message: `"${basename(s.originalPath)}" is the file you opened. Replace it with your edited version?`,
+    detail: "NayanPDF will not ask again for this document until you close it. To keep the original, choose Cancel and save under a different name.",
+  })).response;
+  if (response !== 0) return false;
+  s.overwriteConfirmed = true;
+  return true;
+}
+
 export async function saveAs(win: BrowserWindow, id: string): Promise<{ state: DocState; cancelled?: boolean }> {
   const s = get(id);
+  // Offer the document's own name, as Acrobat does; the file is only replaced
+  // after the user confirms it.
   const base = s.savedPath || s.originalPath;
-  const stem = basename(base, extname(base));
-  const suggested = join(getSettings().defaultOutputDir || dirname(base), s.savedPath ? basename(base) : `${stem}_edited.pdf`);
-  const t = testAnswer("saveAs");
+  const name = extname(base).toLowerCase() === ".pdf" ? basename(base) : `${basename(base, extname(base))}.pdf`;
+  const suggested = join(getSettings().defaultOutputDir || dirname(base), name);
+  const t = testAnswer("saveAs", suggested);
   const r = t.hit ? { canceled: !t.value, filePath: t.value as string } : await dialog.showSaveDialog(win, {
     title: "Save PDF as",
     defaultPath: suggested,
@@ -229,17 +244,7 @@ export async function saveAs(win: BrowserWindow, id: string): Promise<{ state: D
   });
   if (r.canceled || !r.filePath) return { state: state(s), cancelled: true };
   let target = r.filePath.toLowerCase().endsWith(".pdf") ? r.filePath : r.filePath + ".pdf";
-  if (sameFile(target, s.originalPath) && !getSettings().allowOverwriteOriginal) {
-    const c = await dialog.showMessageBox(win, {
-      type: "warning",
-      buttons: ["Overwrite original", "Cancel"],
-      defaultId: 1,
-      cancelId: 1,
-      title: "Overwrite original document?",
-      message: "You selected the original file. Replace it with the edited version?",
-    });
-    if (c.response !== 0) return { state: state(s), cancelled: true };
-  }
+  if (sameFile(target, s.originalPath) && !(await confirmOverwriteOriginal(win, s))) return { state: state(s), cancelled: true };
   access.allowOutputDir(dirname(target));
   atomicCopy(s.revisions[s.index], target);
   s.savedPath = target;
