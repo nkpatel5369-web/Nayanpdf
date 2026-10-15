@@ -8,15 +8,15 @@ What was tested, how, the results, the defects the tests found, and what has not
 |---|---|---|
 | Engine test suite (pytest, synthetic documents) | Linux development build | **105 / 105 passed** |
 | Engine test suite with networking disabled | Linux, empty network namespace | **105 / 105 passed** (15 October 2026) |
-| UI end-to-end test (real Electron app, 28 scenarios) | Linux development build (xvfb) | **28 / 28 passed**; see §4 for run history |
-| UI end-to-end test with networking disabled | Linux, network namespace with loopback only | **28 / 28 passed** (15 October 2026); the earlier 25-scenario version passed 3 consecutive runs |
+| UI end-to-end test (real Electron app, 29 scenarios) | Linux development build (xvfb) | **29 / 29 passed**; see §4 for run history |
+| UI end-to-end test with networking disabled | Linux, network namespace with loopback only | **29 / 29 passed** (15 October 2026); the earlier 25-scenario version passed 3 consecutive runs |
 | Any outbound attempt by any app process (recording proxy) | Linux | **0** (the check detects the spell-check download that existed before the fix) |
 | Office linked-content leak test, sensitivity check | Linux | Leak detected with protection removed; none with protection |
 | Windows runtime assembly (Python, Tesseract, Ghostscript, LibreOffice; hashes and publisher signatures verified) | Windows CI | Pass |
-| Engine test suite against the bundled Windows runtime | Windows CI | **105 / 105 passed** (build 10) |
-| UI end-to-end test on Windows (28 scenarios) | Windows CI | **28 / 28 passed** in build 10 and in the separate UI run that followed the last test change; see §4 for the two earlier Windows runs that did not pass |
-| Installer build (`NayanPDF_Setup.exe`, 419.3 MB, includes LibreOffice; build 10 SHA-256 `047DB4370D01950B638A99B5AE8E5AAE44055BECD97C9AA6421A44771CA3AD44`) | Windows CI | Pass |
-| Acceptance: install, Electron fuses read back from the installed exe, offline self-test, full engine suite on the installed copy with outbound traffic blocked, app launch and document display with network and listening-port monitoring, uninstall, reinstall | Windows CI | **67 / 67 checks passed** (build 10); build 7 passed 63 / 63 and build 3 62 / 62 before the later checks were added |
+| Engine test suite against the bundled Windows runtime | Windows CI | **105 / 105 passed** (builds 10 and 11) |
+| UI end-to-end test on Windows (29 scenarios) | Windows CI | **29 / 29 passed** in build 11 and in the separate Windows UI run on the same commit; see §4 for the two earlier Windows runs that did not pass |
+| Installer build (`NayanPDF_Setup.exe`, 419.3 MB, includes LibreOffice; build 11 SHA-256 `94A30022000FDD1DE822A56D7E5552C5755E9EA7C694C234152FD604616C229B`) | Windows CI | Pass |
+| Acceptance: install, Electron fuses read back from the installed exe, offline self-test, full engine suite on the installed copy with outbound traffic blocked, app launch and document display with network and listening-port monitoring, uninstall, reinstall | Windows CI | **67 / 67 checks passed** (builds 10 and 11); build 7 passed 63 / 63 and build 3 62 / 62 before the later checks were added |
 
 Windows CI is GitHub Actions `windows-latest`: Windows Server 2025, kernel 10.0.26100, x64. Results are published with each pre-release (`report.md`).
 
@@ -47,7 +47,7 @@ Command: `python -m pytest engine/tests -q`. Every test opens the output file ag
 | `test_utilities_server.py` | 13 | 13 | Repair; linearise; PDF/A with basic checks; bookmarks and page labels; attachments; image extraction; blank-page detection; page-size standardisation and crop; print preparation respects the print permission; print with comments, without comments, and with form fields only; engine protocol, events and error codes; batch continues after an invalid file; source files byte-identical after every operation |
 | **Total** | **105** | **105** | |
 
-All 105 were also run inside a Linux network namespace with no usable network interface: **105 passed** (see `docs/OFFLINE_VERIFICATION.md`). All 105 passed on Windows in build 10, both against the bundled runtime and against the installed copy with outbound traffic blocked.
+All 105 were also run inside a Linux network namespace with no usable network interface: **105 passed** (see `docs/OFFLINE_VERIFICATION.md`). All 105 passed on Windows in builds 10 and 11, both against the bundled runtime and against the installed copy with outbound traffic blocked.
 
 ## 4. UI end-to-end test
 
@@ -81,12 +81,13 @@ All 105 were also run inside a Linux network namespace with no usable network in
 | 24 | Watermark with live preview | Preview rendered; watermark text in the page | Pass |
 | 25 | Digital signature with a new certificate | Certificate created in the app; signed file verified intact and valid | Pass |
 | 26 | Print with the Acrobat-style dialog | Printer chosen, pages 1-5 odd only, 2 per sheet, black and white: the produced sheets are 2 landscape sheets with 2 + 1 pages and no colour | Pass |
-| 27 | Settings and dark theme | Theme switched | Pass |
-| 28 | No network requests by the app | 0 page requests; on Linux 0 attempts by any app process through a recording proxy | Pass |
+| 27 | Save As offers the document's own name; replacing the original asks once | A PDF named `Tally Invoice 2026.pdf`, one page deleted: Save As suggests exactly that name in the same folder; one confirmation; after a second deletion Ctrl+S saves without asking again (20 → 19 → 18 pages on disk). With the ask-once logic removed, the scenario fails | Pass |
+| 28 | Settings and dark theme | Theme switched | Pass |
+| 29 | No network requests by the app | 0 page requests; on Linux 0 attempts by any app process through a recording proxy | Pass |
 
 **Run history.** The suite was run repeatedly while it was being extended. The Merge scenario (now 17) failed in 3 of 8 complete runs before the fix for defect 13, and the Compare scenario (now 21) failed in the same runs only because it uses the merged file as input. After the fix: 3 consecutive complete runs with networking disabled, 25 / 25 each.
 
-On Windows, after scenarios 7, 8 and 26 were added: run 5 passed 27 / 28 (Convert read the previous result, defect 27); run 6 passed 26 / 28 (the selection scenario measured the title while the page was being re-rendered and got no position, and the Save As check that looks for that strike-through failed with it; fixed in the test by waiting for the text to settle). Build 10 and the following UI run: 28 / 28. On Linux the 28-scenario suite passed both with and without network access.
+On Windows, after scenarios 7, 8 and 26 were added: run 5 passed 27 / 28 (Convert read the previous result, defect 27); run 6 passed 26 / 28 (the selection scenario measured the title while the page was being re-rendered and got no position, and the Save As check that looks for that strike-through failed with it; fixed in the test by waiting for the text to settle). Build 10 and the following UI run: 28 / 28. On Linux the 28-scenario suite passed both with and without network access, and so did the 29-scenario suite after the Save As scenario was added. Windows, 29 scenarios: 29 / 29 in build 11 and in the separate UI run on the same commit.
 
 Screenshots of every scenario are written to `test-results/ui/` (not committed).
 
@@ -121,6 +122,7 @@ Screenshots of every scenario are written to `test-results/ui/` (not committed).
 | 25 | Printing went through the Windows dialog only, without Acrobat's sizing, pages-per-sheet, comments & forms or preview | **Reported by the user** | New print dialog with live preview; prints directly to the chosen printer; UI scenario 26 checks the produced sheets |
 | 26 | Properties panel showed an internal temporary file name after an edit | Testing | Shows the document's name |
 | 27 | After converting to Word and then choosing PowerPoint, the Word result ("Completed") stayed on screen until the new job started; the Windows UI run read that stale result and checked for the PowerPoint file too early (27 / 28) | Windows CI | The result clears when another format is chosen; the test waits for the result naming the expected file |
+| 28 | Save As always suggested `<name>_edited.pdf`, which the user had to retype for every document; and the Settings switch that removes the overwrite warning was ignored by Save (Ctrl+S) | **Reported by the user** (first point); code review (second) | Save As suggests the document's own name; one confirmation per document per session before the original is replaced; the switch applies to Save and Save As; UI scenario 27 |
 
 ## 6. Tests not run, and why
 

@@ -7,7 +7,7 @@ Status of every feature in the NayanPDF brief, using the five statuses the brief
 - **E:** engine test in `engine/tests/` (pytest, synthetic documents, output files reopened and inspected).
 - **U:** scenario in the UI end-to-end test `scripts/ui-e2e.mjs`, which drives the real Electron application, its main process and engine (see `docs/TEST_REPORT.md`).
 
-**Platforms.** The evidence codes refer to tests run on the Linux development build. The same engine tests and UI scenarios have also been run on Windows (GitHub Actions, Windows Server 2025), against the bundled Windows runtime, and the installed application passed the 67-point Windows acceptance test (build 10). Windows 10/11 desktop editions and standard (non-administrator) accounts have not been tested.
+**Platforms.** The evidence codes refer to tests run on the Linux development build. The same engine tests and UI scenarios have also been run on Windows (GitHub Actions, Windows Server 2025), against the bundled Windows runtime, and the installed application passed the 67-point Windows acceptance test (builds 10 and 11). Windows 10/11 desktop editions and standard (non-administrator) accounts have not been tested.
 
 ## Status summary
 
@@ -35,12 +35,12 @@ No processing feature needs a paid licence or a separately installed component: 
 | Thumbnail panel, page navigation, page-number entry, zoom | Fully implemented and tested | U2 |
 | Search within document | Fully implemented and tested | U3 |
 | Document properties panel (pages, file size, page sizes, PDF version, encryption, fonts) | Fully implemented and tested | E: `test_probe`, `test_inspect_and_integrity`; panel shown in U screenshots |
-| Save (Ctrl+S) and Save As (Ctrl+Shift+S) | Fully implemented and tested | U9: Save As writes a new file and the original is byte-identical afterwards. Overwriting the original requires an explicit confirmation |
-| Light and dark themes | Fully implemented and tested | U27 |
+| Save (Ctrl+S) and Save As (Ctrl+Shift+S) | Fully implemented and tested | U9: Save As writes a new file and the original is byte-identical afterwards. U27: Save As suggests the document's own name in its own folder (no added suffix); replacing the original needs one confirmation per document per session, after which Ctrl+S saves straight to it. The confirmation can be switched off in Settings |
+| Light and dark themes | Fully implemented and tested | U28 |
 | Windows display scaling / high-DPI | Implemented with limitations | Uses Chromium's native per-monitor DPI handling and vector UI icons. Not tested on a Windows high-DPI display |
 | Conversion centre with output folder, page ranges, quality, OCR options | Fully implemented and tested | U15, U22 |
 | Batch workspace with queue, status, output location, errors | Fully implemented and tested | U16, E: `test_batch_continues_after_invalid_file` |
-| Settings: theme, default folder, OCR languages, export settings, compression preset, recent files, temp files | Implemented with limitations | All settings are stored locally and applied. Only the theme setting is exercised by an automated test (U27) |
+| Settings: theme, default folder, OCR languages, export settings, compression preset, recent files, temp files | Implemented with limitations | All settings are stored locally and applied. Only the theme setting is exercised by an automated test (U28) |
 
 ## 2. PDF viewing (brief §8)
 
@@ -322,10 +322,10 @@ NayanPDF edits the page content stream itself. It does not lay white boxes over 
 | Restricted preload bridge with channel allowlist | Fully implemented and tested | `src/preload/preload.ts`, `src/shared/ipc.ts` |
 | IPC validation: sender origin, argument types, method allowlist, paths limited to files the user chose | Fully implemented and tested | `src/main/ipc.ts`, `src/main/access.ts`; exercised by every UI scenario |
 | No shell interpolation; external tools run with argument arrays | Fully implemented and tested | `engine/nayanpdf_engine/util/tools.py` |
-| Navigation and new windows blocked; all non-local requests cancelled; spell-check dictionary downloads disabled in every session | Fully implemented and tested | U28 (no page requests; on Linux, no attempt by any app process through a recording proxy) |
-| No open ports or listeners | Fully implemented and tested | Engine talks over stdin/stdout pipes only. Windows acceptance (build 10): 0 listening TCP ports owned by NayanPDF processes, sampled throughout two launches of the installed app |
+| Navigation and new windows blocked; all non-local requests cancelled; spell-check dictionary downloads disabled in every session | Fully implemented and tested | U29 (no page requests; on Linux, no attempt by any app process through a recording proxy) |
+| No open ports or listeners | Fully implemented and tested | Engine talks over stdin/stdout pipes only. Windows acceptance (builds 10 and 11): 0 listening TCP ports owned by NayanPDF processes, sampled throughout two launches of the installed app |
 | No telemetry, updater, accounts, activation | Fully implemented and tested | None exists in the code; see `docs/OFFLINE_VERIFICATION.md` |
-| Electron fuses (no ELECTRON_RUN_AS_NODE, no inspector, ASAR integrity) | Fully implemented and tested | Set at packaging time; read back from the installed `NayanPDF.exe` by the Windows acceptance test (build 10): Run-as-Node off, `NODE_OPTIONS` and inspector arguments ignored, ASAR integrity on, ASAR-only loading on |
+| Electron fuses (no ELECTRON_RUN_AS_NODE, no inspector, ASAR integrity) | Fully implemented and tested | Set at packaging time; read back from the installed `NayanPDF.exe` by the Windows acceptance test (builds 10 and 11): Run-as-Node off, `NODE_OPTIONS` and inspector arguments ignored, ASAR integrity on, ASAR-only loading on |
 
 ## 21. Performance (brief §27)
 

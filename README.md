@@ -12,7 +12,7 @@ A fully offline PDF editor and document toolkit for Windows 10 and 11 (64-bit). 
 ## Current delivery status
 
 - **Windows installer:** built, installed and tested on a clean Windows machine by `.github/workflows/windows-installer.yml`. Every successful build is published as a GitHub pre-release (`v1.0.0-build.N`) with `NayanPDF_Setup.exe`, its SHA-256 and the acceptance report. Use the newest pre-release.
-- **Evidence on Windows (build 10):** the 105 engine tests pass against the bundled runtime and again against the installed copy with outbound traffic blocked; the 67-point acceptance test covering install, the security switches compiled into `NayanPDF.exe`, offline self-test, app launch with zero network connections and zero listening ports, uninstall and reinstall passes; and the 28-scenario UI test, including text selection, markup and printing, passes.
+- **Evidence on Windows (build 11):** the 105 engine tests pass against the bundled runtime and again against the installed copy with outbound traffic blocked; the 67-point acceptance test covering install, the security switches compiled into `NayanPDF.exe`, offline self-test, app launch with zero network connections and zero listening ports, uninstall and reinstall passes; and the 29-scenario UI test, including text selection, markup, printing and saving, passes.
 - **Not yet verified:** installation under a standard (non-administrator) Windows account, and Windows 10 or Windows 11 desktop editions specifically. The CI machine is Windows Server 2025 (Windows 11 kernel 10.0.26100).
 
 ## 1. Installing
@@ -56,7 +56,7 @@ Ctrl+P (or the printer button, or right-click → Print) opens NayanPDF's print 
 - **Orientation** (auto/portrait/landscape), **paper size** (A4, A3, A5, Letter, Legal), **print on both sides** (long or short edge), **comments & forms** (document and markups, document only, form fields only) and **quality** (150/300/600 dpi).
 - A **preview** shows each sheet exactly as it will print. **Print** sends it straight to the chosen printer. For printer-specific options (paper tray, stapling, colour profiles) use **Printer settings (Windows dialog)…**, which opens the Windows dialog with the same layout.
 
-Every change creates a revision you can undo (Ctrl+Z) and redo (Ctrl+Y). **Nothing touches your original file until you save.** Save As (Ctrl+Shift+S) writes a new file; Save (Ctrl+S) on the original asks for confirmation first.
+Every change creates a revision you can undo (Ctrl+Z) and redo (Ctrl+Y). **Nothing touches your original file until you save.** Save As (Ctrl+Shift+S) suggests the document's own name in its own folder, as Acrobat does; type a new name to keep the original. Replacing the original asks once per document; after you agree, Ctrl+S saves straight to it until you close the document. The Settings option *Allow "Save" to overwrite the original file without an extra warning* removes that question.
 
 **More tools** in the toolbar adds watermarks, headers/footers, page numbers, Bates numbers, backgrounds and borders (with a live preview), passwords and permissions, compression, OCR and properties.
 
@@ -168,7 +168,7 @@ npm start              # runs the app; set NAYANPDF_PYTHON to your Python if it 
 
 ```
 python -m pytest engine/tests -q        # engine: 105 tests on synthetic documents
-node scripts/ui-e2e.mjs                 # UI end-to-end: 28 scenarios (Linux: run under xvfb-run)
+node scripts/ui-e2e.mjs                 # UI end-to-end: 29 scenarios (Linux: run under xvfb-run)
 ```
 
 The engine tests generate their own fixtures (financial statements, bank statements spanning pages, scans, forms, encrypted and damaged files) under `engine/tests/_fixtures`; no real client document is used. The UI test needs the engine fixtures, so run the engine tests first. It drives the real application and writes screenshots and `results.json` to `test-results/ui`.
