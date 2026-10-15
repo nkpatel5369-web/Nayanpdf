@@ -353,9 +353,16 @@ try {
     await page.click('.rail-btn:has-text("Tools")');
     await page.click(`.list-item:has-text("${name}")`);
   };
-  const runAndWait = async (label, timeout = 180000) => {
+  // `expect` (optional) is text the finished result must show, such as the
+  // output file name, so a result left over from an earlier run never counts.
+  const runAndWait = async (label, timeout = 180000, expect = "") => {
     await page.click(`button.primary:has-text("${label}")`);
-    await page.waitForSelector('.result-box strong:has-text("Completed"), .result-box strong:has-text("Failed")', { timeout });
+    await page.waitForFunction((want) => {
+      const box = document.querySelector(".result-box");
+      const status = box?.querySelector("strong")?.textContent || "";
+      if (status === "Failed") return true;
+      return status === "Completed" && (!want || box.textContent.includes(want));
+    }, expect, { timeout });
     return page.textContent(".result-box");
   };
 
@@ -424,10 +431,10 @@ try {
     setDialogs({ openFiles: [join(work, "financial.pdf")] });
     await page.click('button:has-text("Choose file")');
     await page.click('.tool-card:has-text("Word")');
-    let res = await runAndWait("Convert");
+    let res = await runAndWait("Convert", 180000, "financial.docx");
     const okW = existsSync(join(work, "financial.docx"));
     await page.click('.tool-card:has-text("PowerPoint")');
-    res = await runAndWait("Convert");
+    res = await runAndWait("Convert", 180000, "financial.pptx");
     const okP = existsSync(join(work, "financial.pptx"));
     record("Convert PDF to Word and PowerPoint", okW && okP, `docx=${okW} pptx=${okP}`);
   });

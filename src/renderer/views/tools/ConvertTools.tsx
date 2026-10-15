@@ -66,7 +66,7 @@ function FromPdf(props: { args?: any }) {
   const [txtLayout, setTxtLayout] = useState(true);
   const [htmlMode, setHtmlMode] = useState("semantic");
   const [outDir, setOutDir] = useState<string | null>(null);
-  const { job, run, running } = useJob();
+  const { job, run, reset, running } = useJob();
   const langsAvail: string[] = caps?.capabilities?.ocrLanguages?.filter((l: string) => l !== "osd") || ["eng"];
   const pg = pages.trim() || undefined;
   const go = () => {
@@ -91,7 +91,7 @@ function FromPdf(props: { args?: any }) {
           <div className="label" style={{ marginBottom: 8 }}>Convert to</div>
           <div className="tool-grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", marginBottom: 14 }}>
             {TARGETS.map((t) => (
-              <button key={t.id} className="tool-card" style={target === t.id ? { borderColor: "var(--accent)", background: "var(--accent-soft)" } : undefined} onClick={() => setTarget(t.id)}>
+              <button key={t.id} className="tool-card" style={target === t.id ? { borderColor: "var(--accent)", background: "var(--accent-soft)" } : undefined} onClick={() => { if (t.id !== target && !running) reset(); setTarget(t.id); }}>
                 <t.icon size={20} color="var(--accent)" /><div><div className="tt">{t.label}</div><div className="td">{t.desc}</div></div>
               </button>
             ))}
