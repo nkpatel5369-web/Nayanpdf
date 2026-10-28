@@ -26,17 +26,9 @@ const TOOLS = [
 const STAMPS = ["Approved", "NotApproved", "Draft", "Final", "Confidential", "ForComment", "AsIs", "Departmental", "Experimental", "Expired", "ForPublicRelease", "NotForPublicRelease", "Sold", "TopSecret"];
 const CUSTOM_STAMPS = ["PAID", "VERIFIED", "RECEIVED", "AUDITED", "CHECKED", "REJECTED", "ENTERED", "ORIGINAL SEEN"];
 
+/** Comment and markup tools (left tools pane). The list of comments is in the right-hand panel. */
 export function CommentPanel() {
   const ws = useWs();
-  const [list, setList] = useState<any[]>([]);
-  useEffect(() => {
-    let alive = true;
-    ws.query("annot.list", {}).then((d: any) => alive && setList(d.annotations || [])).catch(() => undefined);
-    return () => {
-      alive = false;
-    };
-  }, [ws.revision]);
-  const sel = ws.selected?.kind === "annot" ? ws.selected : null;
   const t = ws.tool;
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
@@ -100,8 +92,25 @@ export function CommentPanel() {
         )}
         {t === "initials" && <p className="subtle">Places your initials and today's date (set your initials in Settings).</p>}
       </div>
+    </div>
+  );
+}
+
+/** The document's comments (right-hand panel): list, edit, delete, flatten. */
+export function CommentsList() {
+  const ws = useWs();
+  const [list, setList] = useState<any[]>([]);
+  useEffect(() => {
+    let alive = true;
+    ws.query("annot.list", {}).then((d: any) => alive && setList(d.annotations || [])).catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [ws.revision]);
+  const sel = ws.selected?.kind === "annot" ? ws.selected : null;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
       {sel && <AnnotEditor a={sel} />}
-      <div className="divider" style={{ margin: 0 }} />
       <div className="row panel-pad" style={{ paddingBottom: 6 }}>
         <strong className="grow">Comments ({list.length})</strong>
         <button className="btn sm" disabled={!list.length} onClick={async () => {

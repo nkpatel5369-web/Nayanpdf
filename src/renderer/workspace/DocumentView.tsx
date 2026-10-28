@@ -2,7 +2,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   ChevronDown, ChevronLeft, ChevronRight, Eye, FilePen, FormInput, Highlighter, LayoutGrid, Maximize, MoveHorizontal, PanelLeft, PanelRight,
   Printer, Redo2, RotateCw, RotateCcw, Save, Search, Shredder, Signature, Stamp, Undo2, X, ZoomIn, ZoomOut, Info, FileDown, ArrowLeftRight, Lock,
-  BookOpen, Check as CheckIcon, Expand,
+  BookOpen, Check as CheckIcon, Expand, GalleryThumbnails, Bookmark, Paperclip, MessageSquare, MousePointer2, StickyNote, PenLine, Type,
+  ArrowLeft, Combine, FileSearch, ScanText, Scissors, Images, Tags, Wrench, FilePlus2, Layers,
 } from "lucide-react";
 import { api, baseName, dirName, joinPath, stem, waitForJob } from "../api";
 import { errorText, useApp } from "../store";
@@ -13,7 +14,7 @@ import { PageOverlay, clearOverlayCache } from "./Overlay";
 import { SelectionTools, TEXT_TOOLS } from "./Selection";
 import { PrintDialog } from "./PrintDialog";
 import { EditPanel } from "./panels/EditPanel";
-import { CommentPanel } from "./panels/CommentPanel";
+import { CommentPanel, CommentsList } from "./panels/CommentPanel";
 import { FormsPanel } from "./panels/FormsPanel";
 import { RedactPanel } from "./panels/RedactPanel";
 import { SignPanel } from "./panels/SignPanel";
@@ -25,12 +26,22 @@ import { openDocument, usePrompt } from "../components/common";
 
 const MODES: { id: Mode; label: string; icon: any; defaultTool: string }[] = [
   { id: "view", label: "View", icon: Eye, defaultTool: "none" },
-  { id: "edit", label: "Edit", icon: FilePen, defaultTool: "text" },
-  { id: "comment", label: "Comment", icon: Highlighter, defaultTool: "highlight" },
-  { id: "pages", label: "Pages", icon: LayoutGrid, defaultTool: "none" },
-  { id: "forms", label: "Forms", icon: FormInput, defaultTool: "fields" },
+  { id: "edit", label: "Edit text & images", icon: FilePen, defaultTool: "text" },
+  { id: "comment", label: "Add comments", icon: Highlighter, defaultTool: "highlight" },
+  { id: "pages", label: "Organize pages", icon: LayoutGrid, defaultTool: "none" },
+  { id: "forms", label: "Fill in a form", icon: FormInput, defaultTool: "fields" },
   { id: "redact", label: "Redact", icon: Shredder, defaultTool: "redactArea" },
   { id: "sign", label: "Sign", icon: Signature, defaultTool: "placeSignature" },
+];
+
+/** Right-hand panels, opened from the icon rail (one at a time, as in Acrobat). */
+type RightTab = "comments" | "thumbs" | "bookmarks" | "attachments" | "props";
+const RIGHT_TABS: { id: RightTab; label: string; icon: any }[] = [
+  { id: "comments", label: "Comments", icon: MessageSquare },
+  { id: "thumbs", label: "Page thumbnails", icon: GalleryThumbnails },
+  { id: "bookmarks", label: "Bookmarks", icon: Bookmark },
+  { id: "attachments", label: "Attachments", icon: Paperclip },
+  { id: "props", label: "Document properties (Ctrl+D)", icon: Info },
 ];
 
 export function DocumentView({ sessionId, active }: { sessionId: string; active: boolean }) {
@@ -47,13 +58,19 @@ export function DocumentView({ sessionId, active }: { sessionId: string; active:
   const [marks, setMarks] = useState<RedactMark[]>([]);
   const [selected, setSelected] = useState<any>(null);
   const settings = useApp((s) => s.settings);
-  const [leftTab, setLeftTab] = useState<"thumbs" | "bookmarks" | "attachments">("thumbs");
-  // As in Acrobat, a document opens with only its pages on screen. The navigation
-  // panel opens when the PDF asks for it (or when Settings say so); the tools panel
-  // opens with a tool that needs it.
-  const [showLeft, setShowLeft] = useState(false);
-  const [showRight, setShowRight] = useState(!!doc?.initialMode && doc.initialMode !== "view");
-  const [rightView, setRightView] = useState<"mode" | "props">("mode");
+  // Layout as in the current Acrobat: tools on the left, navigation panels on the
+  // right. A document opens with only its pages on screen; the right panel opens
+  // when the PDF asks for it (or when Settings say so), the tools pane when a tool
+  // is chosen from it.
+  const startTool = !!doc?.initialMode && doc.initialMode !== "view";
+  const [showTools, setShowTools] = useState(startTool);
+  const [rightTab, setRightTabState] = useState<RightTab | null>(doc?.initialMode === "comment" ? "comments" : null);
+  const lastRight = useRef<RightTab>("thumbs");
+  const setRightTab = (t: RightTab | null) => {
+    if (t) lastRight.current = t;
+    setRightTabState(t);
+  };
+  const toggleRight = (t: RightTab) => setRightTab(rightTab === t ? null : t);
   const [display, setDisplay] = useState<DisplayMode>({ layout: "continuous", cover: false });
   const [readMode, setReadMode] = useState(false);
   const pageInputRef = useRef<HTMLInputElement>(null);
@@ -72,35 +89,50 @@ export function DocumentView({ sessionId, active }: { sessionId: string; active:
   const state = doc?.state;
   const revision = state?.revision ?? 0;
 
-  const setMode = (m: Mode) => {
+  /**
+   * Switch tool. From the tools pane the tool's options open there (and the
+   * comments list on the right for commenting, as in Acrobat); from the quick
+   * action toolbar the tool simply becomes active.
+   */
+  const setMode = (m: Mode, from: "pane" | "quick" = "pane", toolId?: string) => {
     setModeState(m);
-    setTool(MODES.find((x) => x.id === m)!.defaultTool);
+    setTool(toolId || MODES.find((x) => x.id === m)!.defaultTool);
     setSelected(null);
-    setRightView("mode");
-    setShowRight(m !== "view");
+    if (from === "pane" && m !== "view") {
+      setShowTools(true);
+      if (m === "comment") setRightTab("comments");
+    }
   };
 
   const onInitialView = (v: InitialView) => {
     const pref = useApp.getState().settings.navPanelOnOpen;
     if (pref === "never") return;
-    const tab = v.pageMode === "UseOutlines" ? "bookmarks" : v.pageMode === "UseAttachments" ? "attachments" : v.pageMode === "UseThumbs" ? "thumbs" : null;
-    if (tab && pref === "document") {
-      setLeftTab(tab);
-      setShowLeft(true);
-    } else if (pref === "always") {
-      setLeftTab(tab || "thumbs");
-      setShowLeft(true);
-    }
+    const tab: RightTab | null = v.pageMode === "UseOutlines" ? "bookmarks" : v.pageMode === "UseAttachments" ? "attachments" : v.pageMode === "UseThumbs" ? "thumbs" : null;
+    if (tab && pref === "document") setRightTab(tab);
+    else if (pref === "always") setRightTab(tab || "thumbs");
   };
-  const toggleProps = () => {
-    if (rightView === "props" && showRight) {
-      setRightView("mode");
-      setShowRight(mode !== "view");
-    } else {
-      setRightView("props");
-      setShowRight(true);
-    }
-  };
+  const toggleProps = () => toggleRight("props");
+
+  // Clicking a comment on the page shows it in the Comments panel.
+  useEffect(() => {
+    if (selected?.kind === "annot") setRightTab("comments");
+  }, [selected?.kind, selected?.id]);
+
+  // Commands from the application menu (Menu > Save, Print, ...).
+  useEffect(() => {
+    const h = (e: any) => {
+      if (e.detail?.sessionId !== sessionId) return;
+      const c = e.detail.cmd;
+      if (c === "save") save();
+      else if (c === "saveAs") saveAs();
+      else if (c === "print") setDialog("print");
+      else if (c === "protect") setDialog("protect");
+      else if (c === "props") setRightTab("props");
+      else if (c === "tools") setShowTools(true);
+    };
+    window.addEventListener("nayan:doc-command", h);
+    return () => window.removeEventListener("nayan:doc-command", h);
+  });
 
   // Read mode (Ctrl+H) hides the application's toolbars and panels.
   useEffect(() => {
@@ -168,9 +200,8 @@ export function DocumentView({ sessionId, active }: { sessionId: string; active:
       } else if (e.key === "F4" && !e.ctrlKey && !e.altKey) {
         // Acrobat: F4 navigation panel, Shift+F4 tools panel.
         e.preventDefault();
-        if (mode === "pages") return;
-        if (e.shiftKey) setShowRight((x) => !x);
-        else setShowLeft((x) => !x);
+        if (e.shiftKey) setShowTools((x) => !x);
+        else setRightTabState((x) => (x ? null : lastRight.current));
       } else if (e.ctrlKey && !e.shiftKey && key === "d") {
         e.preventDefault();
         toggleProps();
@@ -247,7 +278,7 @@ export function DocumentView({ sessionId, active }: { sessionId: string; active:
     };
     window.addEventListener("keydown", k);
     return () => window.removeEventListener("keydown", k);
-  }, [active, page, mode, findOpen, state?.canUndo, state?.canRedo, selected, display, readMode, rightView, showRight]);
+  }, [active, page, mode, findOpen, state?.canUndo, state?.canRedo, selected, display, readMode, rightTab, showTools]);
 
   if (!doc || !state || !ws) return null;
 
@@ -285,87 +316,97 @@ export function DocumentView({ sessionId, active }: { sessionId: string; active:
   };
   const doFind = (prev = false, again = true) => findQ && viewerRef.current?.find(findQ, { caseSensitive: findCase, entireWord: findWord, previous: prev, again });
 
-  const rightPanel = () => {
-    if (rightView === "props") return <PropertiesPanel />;
+  const toolPanel = () => {
     switch (mode) {
       case "edit": return <EditPanel />;
       case "comment": return <CommentPanel />;
       case "forms": return <FormsPanel />;
       case "redact": return <RedactPanel />;
       case "sign": return <SignPanel />;
-      default: return <PropertiesPanel />;
+      case "pages": return <div className="panel-pad subtle">Select pages in the grid, then use the toolbar above it: rotate, delete, duplicate, insert, extract. Drag pages to reorder. Apply changes when you are done.</div>;
+      default: return null;
     }
   };
+  const rightPanel = () => {
+    switch (rightTab) {
+      case "comments": return <CommentsList />;
+      case "thumbs": return <ThumbnailPanel pdf={pdf} count={count} current={page} rotation={viewerRef.current?.rotation() || 0} onSelect={(p) => viewerRef.current?.goTo(p)} />;
+      case "bookmarks": return <BookmarksPanel />;
+      case "attachments": return <AttachmentsPanel />;
+      case "props": return <PropertiesPanel />;
+      default: return null;
+    }
+  };
+  const modeDef = MODES.find((m) => m.id === mode)!;
+  const runAction = (id: string) => {
+    const setView = useApp.getState().setView;
+    switch (id) {
+      case "edit": case "comment": case "pages": case "forms": case "redact": case "sign": return setMode(id as Mode);
+      case "protect": case "stamp": case "print": return setDialog(id as any);
+      case "batch": return setView({ kind: "batch" });
+      default: return setView({ kind: "tool", tool: id as any, args: { sessionId } });
+    }
+  };
+  const showRight = !!rightTab && mode !== "pages" && !readMode;
+  const cols = [showTools && !readMode ? "auto" : "", "minmax(0, 1fr)", showRight ? "auto" : "", readMode ? "" : "44px"].filter(Boolean).join(" ");
 
   return (
     <WsContext.Provider value={ws}>
       <div className="ws">
-        <div className="ws-toolbar">
-          <button className="icon-btn" title="Save (Ctrl+S)" onClick={save}><Save size={17} /></button>
-          <button className="btn sm ghost" title="Save As (Ctrl+Shift+S)" onClick={saveAs}>Save As</button>
-          <button className="icon-btn" title="Print (Ctrl+P)" onClick={() => setDialog("print")}><Printer size={17} /></button>
+        <div className="ws-toolbar doc-bar">
+          <button className={"btn sm ghost all-tools-btn" + (showTools ? " on" : "")} aria-pressed={showTools} title="All tools (Shift+F4)" onClick={() => setShowTools(!showTools)}>
+            <PanelLeft size={16} /> All tools
+          </button>
+          {mode !== "view" && (
+            <span className="tool-chip" role="status">
+              <modeDef.icon size={15} /> {modeDef.label}
+              <button className="icon-btn xs" title="Close tool" onClick={() => setMode("view")}><X size={14} /></button>
+            </span>
+          )}
+          <div className="grow" />
           <button className="icon-btn" title="Undo (Ctrl+Z)" disabled={!state.canUndo} onClick={undo}><Undo2 size={17} /></button>
           <button className="icon-btn" title={`Redo (Ctrl+Y)`} disabled={!state.canRedo} onClick={redo}><Redo2 size={17} /></button>
           <div className="sep" />
-          <div className="mode-tabs">
-            {MODES.map((m) => (
-              <button key={m.id} className={mode === m.id ? "on" : ""} title={m.label} onClick={() => setMode(m.id)}>
-                <m.icon size={15} /> <span className="ml">{m.label}</span>
-              </button>
-            ))}
-          </div>
-          <div className="sep" />
-          <ToolsMenu onPick={(id) => setDialog(id as any)} sessionId={sessionId} />
-          {mode !== "pages" && (
-            <ViewMenu display={display} showLeft={showLeft} showRight={showRight}
-              onDisplay={(d) => viewerRef.current?.setDisplay(d)}
-              onZoom={(z) => viewerRef.current?.setScale(z)}
-              onRotate={(d) => viewerRef.current?.rotate(d)}
-              onToggleLeft={() => setShowLeft(!showLeft)}
-              onToggleRight={() => setShowRight(!showRight)}
-              onReadMode={() => setReadMode(true)}
-              onFullScreen={() => viewerRef.current?.fullScreen()}
-              onGoTo={() => { pageInputRef.current?.focus(); pageInputRef.current?.select(); }} />
-          )}
-          <div className="grow" />
           {mode !== "pages" && (
             <>
-              <button className="icon-btn" title="Previous page" onClick={() => viewerRef.current?.goTo(page - 1)}><ChevronLeft size={17} /></button>
-              <input ref={pageInputRef} className="input sm page-input" title="Go to page (Ctrl+Shift+N)" value={pageInput} onChange={(e) => setPageInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && viewerRef.current?.goTo(parseInt(pageInput) || 1)} onBlur={() => setPageInput(String(page))} />
-              <span className="subtle">/ {count}</span>
-              <button className="icon-btn" title="Next page" onClick={() => viewerRef.current?.goTo(page + 1)}><ChevronRight size={17} /></button>
-              <div className="sep" />
-              <button className="icon-btn" title="Zoom out (Ctrl+-)" onClick={() => viewerRef.current?.zoomOut()}><ZoomOut size={17} /></button>
-              <span className="zoom-label">{scaleText}</span>
-              <button className="icon-btn" title="Zoom in (Ctrl+=)" onClick={() => viewerRef.current?.zoomIn()}><ZoomIn size={17} /></button>
-              <button className="icon-btn" title="Fit width (Ctrl+2)" onClick={() => viewerRef.current?.setScale("page-width")}><MoveHorizontal size={17} /></button>
-              <button className="icon-btn hide-narrow" title="Fit page (Ctrl+0)" onClick={() => viewerRef.current?.setScale("page-fit")}><Maximize size={16} /></button>
-              <button className="icon-btn" title="Rotate view clockwise (Ctrl+Shift+Plus; does not change the file)" onClick={() => viewerRef.current?.rotate(90)}><RotateCw size={16} /></button>
               <button className={"icon-btn" + (findOpen ? " active" : "")} title="Search (Ctrl+F)" onClick={() => { setFindOpen(!findOpen); setTimeout(() => findInputRef.current?.focus(), 0); }}><Search size={17} /></button>
+              <ViewMenu display={display} showLeft={showTools} showRight={!!rightTab}
+                onDisplay={(d) => viewerRef.current?.setDisplay(d)}
+                onZoom={(z) => viewerRef.current?.setScale(z)}
+                onRotate={(d) => viewerRef.current?.rotate(d)}
+                onToggleLeft={() => setShowTools(!showTools)}
+                onToggleRight={() => setRightTabState(rightTab ? null : lastRight.current)}
+                onReadMode={() => setReadMode(true)}
+                onFullScreen={() => viewerRef.current?.fullScreen()}
+                onGoTo={() => { pageInputRef.current?.focus(); pageInputRef.current?.select(); }} />
               <div className="sep" />
-              <button className={"icon-btn" + (showLeft ? " active" : "")} title="Navigation panel: pages, bookmarks, attachments (F4)" onClick={() => setShowLeft(!showLeft)}><PanelLeft size={17} /></button>
             </>
           )}
-          <button className={"icon-btn" + (rightView === "props" && showRight ? " active" : "")} title="Document properties (Ctrl+D)" onClick={toggleProps}><Info size={17} /></button>
-          <button className={"icon-btn" + (showRight ? " active" : "")} title="Tools panel (Shift+F4)" onClick={() => setShowRight(!showRight)}><PanelRight size={17} /></button>
+          <button className="icon-btn" title="Save (Ctrl+S)" onClick={save}><Save size={17} /></button>
+          <button className="btn sm ghost" title="Save As (Ctrl+Shift+S)" onClick={saveAs}>Save As</button>
+          <button className="icon-btn" title="Print (Ctrl+P)" onClick={() => setDialog("print")}><Printer size={17} /></button>
         </div>
-        <div className="ws-body" style={{ gridTemplateColumns: mode === "pages" || readMode ? "1fr" : `${showLeft ? "auto" : ""} 1fr ${showRight ? "auto" : ""}`.trim() }}>
-          {mode !== "pages" && showLeft && !readMode && (
-            <div className="side">
-              <div className="side-tabs">
-                <button className={leftTab === "thumbs" ? "on" : ""} onClick={() => setLeftTab("thumbs")}>Pages</button>
-                <button className={leftTab === "bookmarks" ? "on" : ""} onClick={() => setLeftTab("bookmarks")}>Bookmarks</button>
-                <button className={leftTab === "attachments" ? "on" : ""} onClick={() => setLeftTab("attachments")}>Files</button>
-              </div>
-              <div className="side-body">
-                {leftTab === "thumbs" && <ThumbnailPanel pdf={pdf} count={count} current={page} rotation={viewerRef.current?.rotation() || 0} onSelect={(p) => viewerRef.current?.goTo(p)} />}
-                {leftTab === "bookmarks" && <BookmarksPanel />}
-                {leftTab === "attachments" && <AttachmentsPanel />}
-              </div>
+        <div className="ws-body" style={{ gridTemplateColumns: cols }}>
+          {showTools && !readMode && (
+            <div className="side tools-pane" role="region" aria-label="Tools">
+              {mode === "view" ? (
+                <>
+                  <div className="pane-head"><strong className="grow">All tools</strong><button className="icon-btn xs" title="Close (Shift+F4)" onClick={() => setShowTools(false)}><X size={15} /></button></div>
+                  <AllTools onPick={runAction} />
+                </>
+              ) : (
+                <>
+                  <div className="pane-head">
+                    <button className="btn sm ghost" title="Back to all tools" onClick={() => setMode("view")}><ArrowLeft size={15} /> All tools</button>
+                    <div className="grow" />
+                    <button className="icon-btn xs" title="Close" onClick={() => setShowTools(false)}><X size={15} /></button>
+                  </div>
+                  <div className="side-body">{toolPanel()}</div>
+                </>
+              )}
             </div>
           )}
-          <div ref={viewWrapRef} style={{ position: "relative", minWidth: 0, minHeight: 0, display: mode === "pages" ? "none" : "block" }}>
+          <div ref={viewWrapRef} className="view-area" style={{ position: "relative", minWidth: 0, minHeight: 0, display: mode === "pages" ? "none" : "block" }}>
             <Viewer
               ref={viewerRef}
               url={state.url}
@@ -389,6 +430,32 @@ export function DocumentView({ sessionId, active }: { sessionId: string; active:
               overlayInteractive={mode !== "view" && !(mode === "comment" && TEXT_TOOLS.has(tool))}
             />
             {active && <SelectionTools wrapRef={viewWrapRef} onPrint={() => setDialog("print")} />}
+            {!readMode && (
+              <div className="qat" role="toolbar" aria-label="Quick tools">
+                <button className={"icon-btn" + (mode === "view" ? " active" : "")} title="Select text and images" onClick={() => setMode("view")}><MousePointer2 size={17} /></button>
+                <button className={"icon-btn" + (mode === "comment" && tool === "note" ? " active" : "")} title="Add a sticky note" onClick={() => setMode("comment", "quick", "note")}><StickyNote size={17} /></button>
+                <button className={"icon-btn" + (mode === "comment" && tool === "highlight" ? " active" : "")} title="Highlight text" onClick={() => setMode("comment", "quick", "highlight")}><Highlighter size={17} /></button>
+                <button className={"icon-btn" + (mode === "comment" && tool === "ink" ? " active" : "")} title="Draw" onClick={() => setMode("comment", "quick", "ink")}><PenLine size={17} /></button>
+                <button className={"icon-btn" + (mode === "comment" && tool === "freetext" ? " active" : "")} title="Add a text box" onClick={() => setMode("comment", "quick", "freetext")}><Type size={17} /></button>
+                <button className={"icon-btn" + (mode === "sign" ? " active" : "")} title="Sign" onClick={() => setMode("sign")}><Signature size={17} /></button>
+              </div>
+            )}
+            {!readMode && (
+              <div className="page-ctrl" role="toolbar" aria-label="Page navigation and zoom">
+                <button className="icon-btn" title="Previous page" onClick={() => viewerRef.current?.prev()}><ChevronLeft size={17} /></button>
+                <input ref={pageInputRef} className="input sm page-input" title="Go to page (Ctrl+Shift+N)" value={pageInput} onChange={(e) => setPageInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && viewerRef.current?.goTo(parseInt(pageInput) || 1)} onBlur={() => setPageInput(String(page))} />
+                <span className="subtle page-total">/ {count}</span>
+                <button className="icon-btn" title="Next page" onClick={() => viewerRef.current?.next()}><ChevronRight size={17} /></button>
+                <div className="sep" />
+                <button className="icon-btn" title="Zoom out (Ctrl+-)" onClick={() => viewerRef.current?.zoomOut()}><ZoomOut size={17} /></button>
+                <span className="zoom-label">{scaleText}</span>
+                <button className="icon-btn" title="Zoom in (Ctrl+=)" onClick={() => viewerRef.current?.zoomIn()}><ZoomIn size={17} /></button>
+                <button className="icon-btn" title="Fit width (Ctrl+2)" onClick={() => viewerRef.current?.setScale("page-width")}><MoveHorizontal size={17} /></button>
+                <button className="icon-btn" title="Fit page (Ctrl+0)" onClick={() => viewerRef.current?.setScale("page-fit")}><Maximize size={16} /></button>
+                <button className="icon-btn" title="Rotate view clockwise (Ctrl+Shift+Plus; does not change the file)" onClick={() => viewerRef.current?.rotate(90)}><RotateCw size={16} /></button>
+              </div>
+            )}
             {findOpen && (
               <div className="find-bar">
                 <input ref={findInputRef} className="input sm" style={{ width: 200 }} placeholder="Find in document" value={findQ}
@@ -417,14 +484,23 @@ export function DocumentView({ sessionId, active }: { sessionId: string; active:
               </div>
             )}
             {doc.info?.likelyScanned && mode === "view" && (
-              <div className="find-bar" style={{ left: 22, right: "auto" }}>
+              <div className="find-bar" style={{ left: 64, right: "auto" }}>
                 <span className="subtle">This document has no text layer.</span>
                 <button className="btn sm" onClick={() => useApp.getState().setView({ kind: "tool", tool: "ocr", args: { sessionId } })}>Make searchable (OCR)</button>
               </div>
             )}
           </div>
           {mode === "pages" && <OrganizePages />}
-          {mode !== "pages" && showRight && !readMode && <div className="side right">{rightPanel()}</div>}
+          {showRight && <div className="side right" role="region" aria-label={RIGHT_TABS.find((t) => t.id === rightTab)?.label}>{rightPanel()}</div>}
+          {!readMode && (
+            <nav className="right-rail" aria-label="Panels">
+              {RIGHT_TABS.map((t) => (
+                <button key={t.id} className={"icon-btn" + (rightTab === t.id && mode !== "pages" ? " active" : "")} aria-pressed={rightTab === t.id} title={t.label} disabled={mode === "pages"} onClick={() => toggleRight(t.id)}>
+                  <t.icon size={18} />
+                </button>
+              ))}
+            </nav>
+          )}
         </div>
         {busy && (
           <div className="busy-veil">
@@ -436,6 +512,44 @@ export function DocumentView({ sessionId, active }: { sessionId: string; active:
       {dialog === "stamp" && <StampDialog onClose={() => setDialog(null)} />}
       {dialog === "protect" && <ProtectDialog onClose={() => setDialog(null)} />}
     </WsContext.Provider>
+  );
+}
+
+/** The All tools list (left pane), in the order a reviewer reaches for them. */
+const ALL_TOOLS: { id: string; label: string; icon: any; more?: boolean }[] = [
+  { id: "edit", label: "Edit text & images", icon: FilePen },
+  { id: "comment", label: "Add comments", icon: Highlighter },
+  { id: "pages", label: "Organize pages", icon: LayoutGrid },
+  { id: "forms", label: "Fill in a form", icon: FormInput },
+  { id: "sign", label: "Sign", icon: Signature },
+  { id: "redact", label: "Redact", icon: Shredder },
+  { id: "protect", label: "Protect with a password", icon: Lock },
+  { id: "stamp", label: "Watermark, header & page numbers", icon: Stamp },
+  { id: "compress", label: "Compress", icon: FileDown },
+  { id: "convert", label: "Export / convert", icon: ArrowLeftRight },
+  { id: "ocr", label: "Recognize text (OCR)", icon: ScanText },
+  { id: "merge", label: "Combine files", icon: Combine },
+  { id: "compare", label: "Compare files", icon: FileSearch },
+  { id: "print", label: "Print", icon: Printer },
+  { id: "split", label: "Split", icon: Scissors, more: true },
+  { id: "create", label: "Create PDF", icon: FilePlus2, more: true },
+  { id: "extractImages", label: "Extract images", icon: Images, more: true },
+  { id: "metadata", label: "Document properties & metadata", icon: Tags, more: true },
+  { id: "utilities", label: "More utilities (PDF/A, repair, attachments...)", icon: Wrench, more: true },
+  { id: "batch", label: "Batch processing", icon: Layers, more: true },
+];
+
+function AllTools({ onPick }: { onPick: (id: string) => void }) {
+  const [more, setMore] = useState(false);
+  return (
+    <div className="side-body all-tools">
+      {ALL_TOOLS.filter((t) => more || !t.more).map((t) => (
+        <button key={t.id} className="tool-item" onClick={() => onPick(t.id)}>
+          <t.icon size={17} /> <span>{t.label}</span>
+        </button>
+      ))}
+      <button className="tool-item more" onClick={() => setMore(!more)}>{more ? "View less" : "View more"} <ChevronDown size={14} style={{ transform: more ? "rotate(180deg)" : undefined }} /></button>
+    </div>
   );
 }
 
@@ -454,35 +568,6 @@ function describeReport(r: any): string {
   if (r.streamsFound) parts.push(`it remains in ${r.streamsFound} internal object(s)`);
   if (r.areasNotCovered?.length) parts.push(`${r.areasNotCovered.length} area(s) did not render as covered`);
   return parts.length ? "\n" + parts.join("; ") + ". Mark the remaining occurrences (or a larger area) and apply again." : "";
-}
-
-function ToolsMenu(props: { onPick: (id: string) => void; sessionId: string }) {
-  const [open, setOpen] = useState(false);
-  const setView = useApp((s) => s.setView);
-  const items = [
-    { id: "stamp", label: "Watermark, header, page numbers...", icon: Stamp, run: () => props.onPick("stamp") },
-    { id: "protect", label: "Protect with password...", icon: Lock, run: () => props.onPick("protect") },
-    { id: "compress", label: "Compress...", icon: FileDown, run: () => setView({ kind: "tool", tool: "compress", args: { sessionId: props.sessionId } }) },
-    { id: "convert", label: "Convert / export...", icon: ArrowLeftRight, run: () => setView({ kind: "tool", tool: "convert", args: { sessionId: props.sessionId } }) },
-    { id: "ocr", label: "OCR (make searchable)...", icon: Search, run: () => setView({ kind: "tool", tool: "ocr", args: { sessionId: props.sessionId } }) },
-  ];
-  return (
-    <div style={{ position: "relative" }}>
-      <button className="btn sm" onClick={() => setOpen(!open)}>More tools <ChevronDown size={14} /></button>
-      {open && (
-        <>
-          <div style={{ position: "fixed", inset: 0, zIndex: 50 }} onClick={() => setOpen(false)} />
-          <div className="card" style={{ position: "absolute", top: 34, left: 0, zIndex: 51, padding: 4, minWidth: 260 }}>
-            {items.map((it) => (
-              <button key={it.id} className="btn ghost" style={{ width: "100%", justifyContent: "flex-start" }} onClick={() => { setOpen(false); it.run(); }}>
-                <it.icon size={15} /> {it.label}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-    </div>
-  );
 }
 
 /** Acrobat's View menu: page display, zoom, rotate view, panels, Read mode and Full Screen. */
@@ -528,8 +613,8 @@ function ViewMenu(props: {
             {item("Rotate view counterclockwise", () => props.onRotate(-90), { kbd: "Ctrl+Shift+Minus", icon: RotateCcw })}
             {item("Go to page...", props.onGoTo, { kbd: "Ctrl+Shift+N" })}
             <div className="sep" />
-            {item("Navigation panel", props.onToggleLeft, { on: props.showLeft, kbd: "F4" })}
-            {item("Tools panel", props.onToggleRight, { on: props.showRight, kbd: "Shift+F4" })}
+            {item("All tools panel", props.onToggleLeft, { on: props.showLeft, kbd: "Shift+F4" })}
+            {item("Right-hand panel (pages, bookmarks, comments...)", props.onToggleRight, { on: props.showRight, kbd: "F4" })}
             <div className="sep" />
             {item("Read mode", props.onReadMode, { kbd: "Ctrl+H", icon: BookOpen })}
             {item("Full screen mode", props.onFullScreen, { kbd: "Ctrl+L", icon: Expand })}

@@ -125,53 +125,58 @@ const stableBox = async (loc) => {
   }
   throw new Error("element did not settle on screen");
 };
+// The current Acrobat layout: tools are picked from the All tools pane on the left;
+// the app rail (Home, Tools, Convert...) is reached through the Home tab.
+const openTool = async (label) => {
+  if (!(await page.locator(".doc-pane.active .tools-pane").count())) await page.click(".doc-pane.active .all-tools-btn");
+  const back = page.locator('.doc-pane.active .tools-pane button[title="Back to all tools"]');
+  if (await back.count()) await back.click();
+  await page.click(`.doc-pane.active .tools-pane .tool-item:has(> span:text-is("${label}"))`);
+};
+const exitTool = async () => {
+  const close = page.locator('.doc-pane.active .tool-chip button[title="Close tool"]');
+  if (await close.count()) await close.click();
+};
+const rail = async (name) => {
+  if (!(await page.locator(".rail").count())) await page.click(".tab.home-tab");
+  await page.click(`.rail-btn:has-text("${name}")`);
+};
 
 try {
   await step("Document opens from the command line and renders", async () => {
     await page.waitForSelector(".tab .name", { timeout: 60000 });
     await page.waitForSelector(".pdfViewer .page canvas", { timeout: 60000 });
-    const name = await page.textContent(".tab .name");
+    const name = await page.textContent(".tab.active .name");
     const pages = await page.locator(".pdfViewer .page").count();
     await shot("01-document-open");
     record("Document opens from the command line and renders", name === "financial.pdf" && pages >= 1, `tab=${name}, pages=${pages}`);
   });
 
   await step("Panels follow the document on open; F4, Shift+F4 and Ctrl+D toggle them", async () => {
-    // financial.pdf (exported by LibreOffice) asks to open with its bookmarks, as
-    // Acrobat would show it; the tools panel stays closed in View mode.
+    // financial.pdf (exported by LibreOffice) asks to open with its bookmarks, which
+    // Acrobat shows in the right-hand panel; the All tools pane stays closed.
     const sides = () => page.evaluate(() => ({
-      left: document.querySelector(".doc-pane.active .ws-body > .side:not(.right) .side-tabs button.on")?.textContent || "",
-      right: document.querySelector(".doc-pane.active .ws-body > .side.right")?.textContent?.slice(0, 40) || "",
+      tools: document.querySelector(".doc-pane.active .tools-pane .pane-head")?.textContent || "",
+      right: document.querySelector(".doc-pane.active .ws-body > .side.right")?.getAttribute("aria-label") || "",
     }));
     await page.waitForTimeout(500);
     const s0 = await sides();
     await page.locator(".doc-pane.active .viewer-container").focus();
-    await page.keyboard.press("F4");
-    await page.waitForTimeout(300);
-    const s1 = await sides();
-    await page.keyboard.press("F4");
-    await page.waitForTimeout(300);
-    const s2 = await sides();
-    await page.keyboard.press("Control+d");
-    await page.waitForTimeout(300);
-    const s3 = await sides();
-    await page.keyboard.press("Control+d");
-    await page.waitForTimeout(300);
-    const s4 = await sides();
-    await page.keyboard.press("Shift+F4");
-    await page.waitForTimeout(300);
-    const s5 = await sides();
-    await page.keyboard.press("Shift+F4");
-    await page.waitForTimeout(300);
-    const s6 = await sides();
+    const press = async (k) => { await page.keyboard.press(k); await page.waitForTimeout(300); return sides(); };
+    const s1 = await press("F4");
+    const s2 = await press("F4");
+    const s3 = await press("Control+d");
+    const s4 = await press("Control+d");
+    const s5 = await press("Shift+F4");
+    const s6 = await press("Shift+F4");
     await shot("01b-panels");
-    const ok = s0.left === "Bookmarks" && !s0.right && !s1.left && !!s2.left && s3.right.startsWith("Document properties") && !s4.right && !!s5.right && !s6.right;
+    const ok = s0.right === "Bookmarks" && !s0.tools && !s1.right && s2.right === "Bookmarks" && s3.right.startsWith("Document properties") && !s4.right && s5.tools.startsWith("All tools") && !s6.tools;
     record("Panels follow the document on open; F4, Shift+F4 and Ctrl+D toggle them", ok,
-      `on open: navigation "${s0.left}" (the PDF asks for bookmarks), tools ${s0.right ? "open" : "closed"}; F4 ${s1.left ? "open" : "closed"}/${s2.left ? "open" : "closed"}; Ctrl+D properties ${s3.right.startsWith("Document properties")}/${s4.right ? "open" : "closed"}; Shift+F4 ${s5.right ? "open" : "closed"}/${s6.right ? "open" : "closed"}`);
+      `on open: right panel "${s0.right}" (the PDF asks for bookmarks), All tools ${s0.tools ? "open" : "closed"}; F4 ${s1.right || "closed"}/${s2.right || "closed"}; Ctrl+D "${s3.right}"/${s4.right || "closed"}; Shift+F4 ${s5.tools ? "All tools" : "closed"}/${s6.tools ? "open" : "closed"}`);
   });
 
   await step("Thumbnails, zoom and page navigation", async () => {
-    await page.click(".doc-pane.active .side-tabs button:has-text('Pages')");
+    await page.click('.doc-pane.active .right-rail button[title="Page thumbnails"]');
     await page.waitForSelector(".thumb-item canvas");
     const before = await page.textContent(".zoom-label");
     await page.click('[title="Zoom in (Ctrl+=)"]');
@@ -182,7 +187,7 @@ try {
     const pageNo = await page.inputValue(".page-input");
     record("Thumbnails, zoom and page navigation", before !== after && pageNo === "2", `zoom ${before} -> ${after}, page ${pageNo}`);
     await page.click('[title="Fit width (Ctrl+2)"]');
-    await page.keyboard.press("F4");
+    await page.click('.doc-pane.active .right-rail button[title="Page thumbnails"]');
   });
 
   await step("Search within the document", async () => {
@@ -197,7 +202,7 @@ try {
 
   await step("Edit existing text in place", async () => {
     await page.click('[title="Previous page"]');
-    await page.click('.mode-tabs button:has-text("Edit")');
+    await openTool("Edit text & images");
     const line = page.locator('.ov-line[data-text="1,23,456.78"]').first();
     await line.waitFor({ timeout: 30000 });
     await line.click();
@@ -220,7 +225,7 @@ try {
   });
 
   await step("Highlight and sticky note annotations", async () => {
-    await page.click('.mode-tabs button:has-text("Comment")');
+    await openTool("Add comments");
     await page.click('button[title="Highlight"]');
     const pg = page.locator(".pdfViewer .page").first();
     const box = await pg.boundingBox();
@@ -243,7 +248,7 @@ try {
   });
 
   await step("Select text in View mode, copy it and strike it through", async () => {
-    await page.click('.doc-pane.active .mode-tabs button[title="View"]');
+    await exitTool();
     await waitIdle();
     const span = page.locator('.doc-pane.active .page[data-page-number="1"] .textLayer span:not(.markedContent)', { hasText: "Statement of Profit" }).first();
     const b = await stableBox(span);
@@ -296,7 +301,7 @@ try {
   });
 
   await step("Organize pages: delete a page and apply", async () => {
-    await page.click('.mode-tabs button:has-text("Pages")');
+    await openTool("Organize pages");
     await page.waitForSelector(".org-item");
     const n0 = await page.locator(".org-item").count();
     await page.locator(".org-item").nth(1).click();
@@ -313,7 +318,7 @@ try {
   });
 
   await step("Redact a PAN pattern permanently", async () => {
-    await page.click('.doc-pane.active .mode-tabs button:has-text("Redact")');
+    await openTool("Redact");
     await page.click('label.check:has-text("PAN (India)") input');
     await page.click('button:has-text("Find and mark")');
     await page.waitForSelector(".ov-redact", { timeout: 30000 });
@@ -333,7 +338,7 @@ try {
   });
 
   await step("Sign: create a typed signature and place it", async () => {
-    await page.click('.mode-tabs button:has-text("Sign")');
+    await openTool("Sign");
     await page.click('.sig-item:has-text("+ New")');
     await page.click('.modal button:has-text("Type")');
     await page.fill('.modal input[placeholder="Type your name"]', "N K Patel");
@@ -359,10 +364,10 @@ try {
     await page.click('button[title="Open PDF (Ctrl+O)"]');
     await page.waitForSelector('.tab.active .name:has-text("form.pdf")');
     await page.waitForSelector(".doc-pane.active .pdfViewer .page canvas");
-    await page.locator(".doc-pane.active .mode-tabs button:has-text('Forms')").click();
-    await page.waitForSelector(".doc-pane.active .side.right input.input");
-    await page.locator(".doc-pane.active .side.right input.input").first().fill("ACME Traders");
-    await page.locator('.doc-pane.active .side.right button:has-text("Apply")').click();
+    await openTool("Fill in a form");
+    await page.waitForSelector(".doc-pane.active .tools-pane input.input");
+    await page.locator(".doc-pane.active .tools-pane input.input").first().fill("ACME Traders");
+    await page.locator('.doc-pane.active .tools-pane button:has-text("Apply")').click();
     await waitIdle();
     const target = join(work, "form_filled.pdf");
     setDialogs({ saveAs: target });
@@ -374,7 +379,7 @@ try {
   });
 
   await step("Compress tool reports measured sizes", async () => {
-    await page.click('.rail-btn:has-text("Tools")');
+    await rail("Tools");
     await page.click('.list-item:has-text("Compress PDF")');
     setDialogs({ openFiles: [join(work, "twenty.pdf")] });
     await page.click('button:has-text("Choose file")');
@@ -386,7 +391,7 @@ try {
   });
 
   await step("Convert PDF to Excel", async () => {
-    await page.click('.rail-btn:has-text("Convert")');
+    await rail("Convert");
     setDialogs({ openFiles: [join(work, "financial.pdf")] });
     await page.click('button:has-text("Choose file")');
     await page.click('.tool-card:has-text("Excel / CSV")');
@@ -398,7 +403,7 @@ try {
   });
 
   await step("Batch: valid files succeed, invalid file fails, queue continues", async () => {
-    await page.click('.rail-btn:has-text("Batch")');
+    await rail("Batch");
     setDialogs({ openFiles: [join(work, "a.pdf"), join(work, "notes.pdf"), join(work, "b.pdf")], pickOutputDir: join(work, "batch") });
     mkdirSync(join(work, "batch"), { recursive: true });
     await page.click('button:has-text("Add files")');
@@ -413,7 +418,7 @@ try {
 
 
   const toolPage = async (name) => {
-    await page.click('.rail-btn:has-text("Tools")');
+    await rail("Tools");
     await page.click(`.list-item:has-text("${name}")`);
   };
   // `expect` (optional) is text the finished result must show, such as the
@@ -490,7 +495,7 @@ try {
   });
 
   await step("Convert PDF to Word and PowerPoint", async () => {
-    await page.click('.rail-btn:has-text("Convert")');
+    await rail("Convert");
     setDialogs({ openFiles: [join(work, "financial.pdf")] });
     await page.click('button:has-text("Choose file")');
     await page.click('.tool-card:has-text("Word")');
@@ -511,7 +516,7 @@ try {
     const base = `http://127.0.0.1:${srv.address().port}`;
     writeFileSync(join(work, "report.html"), `<!doctype html><html><head><link rel="stylesheet" href="${base}/style.css"></head><body><h1>Quarterly report</h1><p>Revenue 1,25,000.00</p><img src="${base}/pixel.png" width="40" height="40"></body></html>`);
     try {
-      await page.click('.rail-btn:has-text("Convert")');
+      await rail("Convert");
       await page.click('.seg button:has-text("Other formats to PDF")');
       await page.click('.tool-card:has-text("HTML page")');
       setDialogs({ openFiles: [join(work, "report.html")] });
@@ -527,8 +532,7 @@ try {
 
   await step("Watermark with live preview applied to open document", async () => {
     await page.click(".tab:has-text('financial_signed_image.pdf')");
-    await page.click('.doc-pane.active button:has-text("More tools")');
-    await page.click('button:has-text("Watermark, header, page numbers")');
+    await openTool("Watermark, header & page numbers");
     await page.waitForSelector(".modal img", { timeout: 60000 });
     await shot("17-watermark-preview");
     await page.click('.modal-foot button:has-text("Apply")');
@@ -538,7 +542,7 @@ try {
   });
 
   await step("Digital signature with a new certificate (verified)", async () => {
-    await page.click('.doc-pane.active .mode-tabs button[title="Sign"]');
+    await openTool("Sign");
     await page.click('.doc-pane.active button:has-text("Invisible")');
     await page.click('.modal button:has-text("Create...")');
     await page.fill('.modal >> nth=1 >> .field:has-text("Your name") input', "N K Patel Test");
@@ -592,7 +596,7 @@ try {
     copyFileSync(join(work, "twenty.pdf"), orig);
     const pages = (f) => Number(execFileSync(PY, ["-c", "import pymupdf,sys; print(pymupdf.open(sys.argv[1]).page_count)", f]).toString().trim());
     const deleteSecondPage = async () => {
-      await page.click('.doc-pane.active .mode-tabs button:has-text("Pages")');
+      await openTool("Organize pages");
       await page.waitForSelector(".doc-pane.active .org-item");
       const n0 = await page.locator(".doc-pane.active .org-item").count();
       await page.locator(".doc-pane.active .org-item").nth(1).click();
@@ -638,11 +642,11 @@ try {
   await step("Acrobat view keys: zoom, page display, navigation, rotate, read mode, full screen, space-drag", async () => {
     // The active document is "Tally Invoice 2026.pdf" (18 pages after the previous scenario,
     // which left it in Pages mode).
-    await page.click('.doc-pane.active .mode-tabs button[title="View"]');
+    await exitTool();
     await waitIdle();
     const view = page.locator(".doc-pane.active .viewer-container");
     await view.focus();
-    const zoom = async (k) => { await page.keyboard.press(k); await page.waitForTimeout(400); return page.textContent(".doc-pane.active .ws-toolbar .zoom-label"); };
+    const zoom = async (k) => { await page.keyboard.press(k); await page.waitForTimeout(400); return page.textContent(".doc-pane.active .page-ctrl .zoom-label"); };
     const geom = () => page.evaluate(() => {
       const c = document.querySelector(".doc-pane.active .viewer-container");
       const pages = [...c.querySelectorAll(".pdfViewer .page")].map((p) => p.getBoundingClientRect());
@@ -671,7 +675,7 @@ try {
     await page.keyboard.press("ArrowRight");
     await page.waitForTimeout(400);
     checks.arrow = (await pageNo()) === "3";
-    const total = (await page.textContent(".doc-pane.active .ws-toolbar .subtle")).replace(/\D/g, "");
+    const total = (await page.textContent(".doc-pane.active .page-ctrl .page-total")).replace(/\D/g, "");
     await page.keyboard.press("End");
     await page.waitForTimeout(400);
     // Two-page view shows the last spread; only the spread on screen is in the page list.
@@ -700,11 +704,11 @@ try {
     await view.focus();
     await page.keyboard.press("Control+h");
     await page.waitForTimeout(300);
-    checks.readMode = !(await page.locator(".doc-pane.active .ws-toolbar").isVisible()) && !(await page.locator(".rail").isVisible()) && (await page.locator(".read-bar").isVisible());
+    checks.readMode = !(await page.locator(".doc-pane.active .doc-bar").isVisible()) && !(await page.locator(".topbar").isVisible()) && !(await page.locator(".doc-pane.active .qat").count()) && !(await page.locator(".doc-pane.active .right-rail").count()) && (await page.locator(".read-bar").isVisible());
     await shot("20a-read-mode");
     await page.keyboard.press("Escape");
     await page.waitForTimeout(300);
-    checks.readExit = await page.locator(".doc-pane.active .ws-toolbar").isVisible();
+    checks.readExit = await page.locator(".doc-pane.active .doc-bar").isVisible();
     await view.focus();
     await page.keyboard.press("Control+l");
     await page.waitForFunction(() => document.fullscreenElement?.classList.contains("viewer-wrap"), null, { timeout: 10000 }).catch(() => undefined);
@@ -747,8 +751,8 @@ try {
       await page.waitForSelector(".doc-pane.active .pdfViewer .page canvas");
       await page.waitForTimeout(800);
       return page.evaluate(() => ({
-        left: document.querySelector(".doc-pane.active .ws-body > .side:not(.right) .side-tabs button.on")?.textContent || "",
-        right: !!document.querySelector(".doc-pane.active .ws-body > .side.right"),
+        left: !!document.querySelector(".doc-pane.active .tools-pane"),
+        right: document.querySelector(".doc-pane.active .ws-body > .side.right")?.getAttribute("aria-label") || "",
         y: [...document.querySelectorAll(".doc-pane.active .pdfViewer .page")].slice(0, 2).map((p) => Math.round(p.getBoundingClientRect().y)),
       }));
     };
@@ -758,20 +762,83 @@ try {
     const twoUp = b.y.length === 2 && Math.abs(b.y[0] - b.y[1]) <= 2;
     await shot("20d-initial-view");
     record("Initial view: a plain PDF opens with pages only; one saved with bookmarks and two-page layout opens that way",
-      !a.left && !a.right && b.left === "Bookmarks" && !b.right && twoUp,
-      `plain.pdf: navigation ${a.left ? "open" : "closed"}, tools ${a.right ? "open" : "closed"}; opens_with_bookmarks.pdf: panel "${b.left}", pages 1-2 side by side ${twoUp}`);
+      !a.left && !a.right && b.right === "Bookmarks" && !b.left && twoUp,
+      `plain.pdf: All tools ${a.left ? "open" : "closed"}, right panel ${a.right || "closed"}; opens_with_bookmarks.pdf: right panel "${b.right}", pages 1-2 side by side ${twoUp}`);
+  });
+
+  await step("Layout: Menu, All tools, quick tools, right-hand rail and Home tab", async () => {
+    // Active document: opens_with_bookmarks.pdf (a copy of financial.pdf).
+    const checks = {};
+    const tabName = await page.textContent(".tab.active .name");
+    const rightLabel = () => page.evaluate(() => document.querySelector(".doc-pane.active .ws-body > .side.right")?.getAttribute("aria-label") || "");
+    await page.click('.topbar button[title="Menu"]');
+    await page.waitForSelector(".app-menu");
+    const menu = await page.locator(".app-menu button").allTextContents();
+    checks.menu = ["Open...", "Save", "Save As...", "Print...", "Document properties", "Close document", "Preferences", "Exit"].every((x) => menu.some((m) => m.startsWith(x)));
+    await shot("21a-menu");
+    await page.click('.app-menu button:has-text("Document properties")');
+    await page.waitForTimeout(300);
+    checks.menuProps = (await rightLabel()).startsWith("Document properties");
+    await page.click(".doc-pane.active .all-tools-btn");
+    const n1 = await page.locator(".doc-pane.active .tools-pane .tool-item").count();
+    await page.click('.doc-pane.active .tools-pane .tool-item:has-text("View more")');
+    const n2 = await page.locator(".doc-pane.active .tools-pane .tool-item").count();
+    checks.allTools = n1 === 15 && n2 === 21;
+    await shot("21b-all-tools");
+    await openTool("Add comments");
+    await page.waitForTimeout(300);
+    checks.toolChip = (await page.textContent(".doc-pane.active .tool-chip")).includes("Add comments") && (await rightLabel()) === "Comments";
+    await exitTool();
+    checks.exit = !(await page.locator(".doc-pane.active .tool-chip").count()) && (await page.locator(".doc-pane.active .tools-pane .tool-item").count()) > 10;
+    await page.click('.doc-pane.active .tools-pane button[title="Close (Shift+F4)"]');
+    // Quick tools: highlight straight away, with no pane opening.
+    const showRight = async (label) => {
+      if ((await rightLabel()) !== label) await page.click(`.doc-pane.active .right-rail button[title="${label}"]`);
+      await page.waitForTimeout(400);
+    };
+    const hideRight = async () => {
+      const l = await rightLabel();
+      if (l) await page.click(`.doc-pane.active .right-rail button[title="${l}"]`);
+    };
+    await showRight("Comments");
+    const before = await page.locator(".doc-pane.active .side.right .list-item").count();
+    await hideRight();
+    await page.click('.doc-pane.active .qat button[title="Highlight text"]');
+    checks.quickNoPane = !(await page.locator(".doc-pane.active .tools-pane").count()) && !(await page.locator(".doc-pane.active .side.right").count());
+    const span = page.locator('.doc-pane.active .page[data-page-number="1"] .textLayer span:not(.markedContent)', { hasText: "Statement of Profit" }).first();
+    const b = await stableBox(span);
+    await page.mouse.move(b.x + 2, b.y + b.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(b.x + b.width * 0.5, b.y + b.height / 2, { steps: 10 });
+    await page.mouse.up();
+    await waitIdle();
+    await showRight("Comments");
+    await page.waitForTimeout(600);
+    const after = await page.locator(".doc-pane.active .side.right .list-item").count();
+    checks.quickHighlight = after === before + 1;
+    await showRight("Attachments");
+    checks.rail = (await rightLabel()) === "Attachments";
+    await page.click('.doc-pane.active .right-rail button[title="Attachments"]');
+    checks.railClose = !(await rightLabel());
+    await page.click(".tab.home-tab");
+    checks.home = await page.locator(".rail").isVisible();
+    await page.click(`.tab:has(.name:text-is("${tabName}"))`);
+    checks.back = !(await page.locator(".rail").count()) && (await page.locator(".doc-pane.active .doc-bar").isVisible());
+    const failed = Object.entries(checks).filter(([, v]) => !v).map(([k]) => k);
+    record("Layout: Menu, All tools, quick tools, right-hand rail and Home tab", failed.length === 0,
+      failed.length ? `failed: ${failed.join(", ")} (tools ${n1}/${n2}, comments ${before} -> ${after})` : `${Object.keys(checks).length} checks: ${Object.keys(checks).join(", ")}`);
   });
 
   await step("Settings and dark theme", async () => {
-    await page.click('.rail-btn:has-text("Settings")');
+    await rail("Settings");
     await page.click('.seg button:has-text("Dark")');
     await page.waitForTimeout(500);
     const theme = await page.evaluate(() => document.documentElement.dataset.theme);
     await shot("12-settings-dark");
-    await page.click('.rail-btn:has-text("Home")');
+    await rail("Home");
     await page.waitForTimeout(400);
     await shot("13-home-dark");
-    await page.click('.rail-btn:has-text("Settings")');
+    await rail("Settings");
     await page.click('.seg button:has-text("Light")');
     record("Settings and dark theme", theme === "dark", `theme=${theme}`);
   });

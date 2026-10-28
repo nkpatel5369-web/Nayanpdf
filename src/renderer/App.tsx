@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { Activity, FolderOpen, Home as HomeIcon, Layers, Moon, Settings as SettingsIcon, Sun, Wrench, X, ArrowLeftRight } from "lucide-react";
+import { Activity, FolderOpen, Home as HomeIcon, Layers, Moon, Settings as SettingsIcon, Sun, Wrench, X, ArrowLeftRight, Menu as MenuIcon } from "lucide-react";
 import type { DocState, JobInfo, Settings } from "@shared/ipc";
 import { api, on } from "./api";
 import { useApp } from "./store";
@@ -72,6 +72,11 @@ export function App() {
         e.preventDefault();
         setView({ kind: "settings" });
       }
+      if (e.ctrlKey && !e.shiftKey && e.key.toLowerCase() === "q") {
+        // Acrobat: Exit. Closing the window asks about unsaved changes first.
+        e.preventDefault();
+        window.close();
+      }
     };
     window.addEventListener("keydown", k);
     return () => window.removeEventListener("keydown", k);
@@ -102,11 +107,15 @@ export function App() {
   return (
     <div className="app">
       <div className="topbar">
+        <AppMenu closeTab={closeTab} />
         <div className="brand" onClick={() => setView({ kind: "home" })} title="Home">
           <div className="brand-mark">N</div>
           NayanPDF
         </div>
         <div className="tabs">
+          <div className={"tab home-tab" + (view.kind === "home" ? " active" : "")} onClick={() => setView({ kind: "home" })} title="Home">
+            <HomeIcon size={15} /> <span className="name">Home</span>
+          </div>
           {docOrder.map((id) => {
             const d = docs[id];
             const on_ = view.kind === "doc" && view.sessionId === id;
@@ -135,8 +144,8 @@ export function App() {
           </button>
         </div>
       </div>
-      <div className="main">
-        <nav className="rail">
+      <div className={"main" + (view.kind === "doc" ? " doc-view" : "")}>
+        {view.kind !== "doc" && <nav className="rail">
           <button className={"rail-btn" + (railActive("home") ? " active" : "")} onClick={() => setView({ kind: "home" })}>
             <HomeIcon size={19} /> Home
           </button>
@@ -153,7 +162,7 @@ export function App() {
           <button className={"rail-btn" + (railActive("settings") ? " active" : "")} onClick={() => setView({ kind: "settings" })}>
             <SettingsIcon size={19} /> Settings
           </button>
-        </nav>
+        </nav>}
         <div className="content">
           {view.kind === "home" && <Home />}
           {view.kind === "tool" && <ToolView tool={view.tool} args={view.args} />}
@@ -169,6 +178,55 @@ export function App() {
       {jobsOpen && <JobsDrawer onClose={() => setJobsOpen(false)} />}
       <PromptHost />
       <Toasts />
+    </div>
+  );
+}
+
+/** The application menu (top left), as in the current Acrobat. Document commands go to the active document. */
+function AppMenu({ closeTab }: { closeTab: (id: string) => void }) {
+  const [open, setOpen] = React.useState(false);
+  const view = useApp((s) => s.view);
+  const setView = useApp((s) => s.setView);
+  React.useEffect(() => {
+    if (!open) return;
+    const k = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    window.addEventListener("keydown", k);
+    return () => window.removeEventListener("keydown", k);
+  }, [open]);
+  const docId = view.kind === "doc" ? view.sessionId : null;
+  const doc = (cmd: string) => docId && window.dispatchEvent(new CustomEvent("nayan:doc-command", { detail: { sessionId: docId, cmd } }));
+  const items: ({ label: string; kbd?: string; run: () => void; needsDoc?: boolean } | "sep")[] = [
+    { label: "Create PDF...", run: () => setView({ kind: "tool", tool: "create" }) },
+    { label: "Open...", kbd: "Ctrl+O", run: () => pickAndOpen() },
+    { label: "Save", kbd: "Ctrl+S", needsDoc: true, run: () => doc("save") },
+    { label: "Save As...", kbd: "Ctrl+Shift+S", needsDoc: true, run: () => doc("saveAs") },
+    { label: "Print...", kbd: "Ctrl+P", needsDoc: true, run: () => doc("print") },
+    { label: "Protect with a password...", needsDoc: true, run: () => doc("protect") },
+    { label: "Document properties", kbd: "Ctrl+D", needsDoc: true, run: () => doc("props") },
+    { label: "Close document", kbd: "Ctrl+W", needsDoc: true, run: () => docId && closeTab(docId) },
+    "sep",
+    { label: "All tools", run: () => (docId ? doc("tools") : setView({ kind: "tool", tool: "merge" })) },
+    { label: "Combine files", run: () => setView({ kind: "tool", tool: "merge" }) },
+    { label: "Batch processing", run: () => setView({ kind: "batch" }) },
+    "sep",
+    { label: "Preferences", kbd: "Ctrl+K", run: () => setView({ kind: "settings" }) },
+    { label: "Exit", kbd: "Ctrl+Q", run: () => window.close() },
+  ];
+  return (
+    <div style={{ position: "relative" }}>
+      <button className={"icon-btn" + (open ? " active" : "")} title="Menu" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}><MenuIcon size={18} /></button>
+      {open && (
+        <>
+          <div style={{ position: "fixed", inset: 0, zIndex: 60 }} onClick={() => setOpen(false)} />
+          <div className="sel-menu app-menu" role="menu" style={{ top: 38, left: 0, zIndex: 61 }}>
+            {items.map((it, i) => it === "sep" ? <div key={i} className="sep" /> : (
+              <button key={it.label} role="menuitem" disabled={it.needsDoc && !docId} onClick={() => { setOpen(false); it.run(); }}>
+                {it.label}{it.kbd && <span className="kbd">{it.kbd}</span>}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
