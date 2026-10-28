@@ -5,6 +5,7 @@ import { toolById, TOOLS } from "../tools";
 import { CompressTool, ExtractImagesTool, MergeTool, MetadataTool, OcrTool, ProtectTool, SplitTool, WatermarkTool } from "./tools/BasicTools";
 import { ConvertTool, CreateTool } from "./tools/ConvertTools";
 import { CompareTool, DocModeTool, UtilitiesTool } from "./tools/MoreTools";
+import { SearchTool } from "./tools/SearchTool";
 
 export function ToolView({ tool, args }: { tool: ToolId; args?: any }) {
   const setView = useApp((s) => s.setView);
@@ -23,6 +24,7 @@ export function ToolView({ tool, args }: { tool: ToolId; args?: any }) {
       case "watermark": return <WatermarkTool args={args} />;
       case "metadata": return <MetadataTool args={args} />;
       case "utilities": return <UtilitiesTool args={args} />;
+      case "search": return <SearchTool />;
       default: return t ? <DocModeTool tool={t} /> : null;
     }
   })();

@@ -5,7 +5,7 @@
 //
 //   node scripts/ui-e2e.mjs            (Linux: run under xvfb-run)
 import { _electron as electron } from "playwright-core";
-import { existsSync, mkdirSync, rmSync, writeFileSync, copyFileSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, rmSync, writeFileSync, copyFileSync, statSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
@@ -783,7 +783,7 @@ try {
     const n1 = await page.locator(".doc-pane.active .tools-pane .tool-item").count();
     await page.click('.doc-pane.active .tools-pane .tool-item:has-text("View more")');
     const n2 = await page.locator(".doc-pane.active .tools-pane .tool-item").count();
-    checks.allTools = n1 === 15 && n2 === 21;
+    checks.allTools = n1 === 16 && n2 === 22;
     await shot("21b-all-tools");
     await openTool("Add comments");
     await page.waitForTimeout(300);
@@ -827,6 +827,185 @@ try {
     const failed = Object.entries(checks).filter(([, v]) => !v).map(([k]) => k);
     record("Layout: Menu, All tools, quick tools, right-hand rail and Home tab", failed.length === 0,
       failed.length ? `failed: ${failed.join(", ")} (tools ${n1}/${n2}, comments ${before} -> ${after})` : `${Object.keys(checks).length} checks: ${Object.keys(checks).join(", ")}`);
+  });
+
+  // Open a copy of a work file under a new name (so earlier scenarios' edits do not matter).
+  const openCopy = async (from, name) => {
+    const f = join(work, name);
+    copyFileSync(join(work, from), f);
+    setDialogs({ openFiles: [f] });
+    await page.click('button[title="Open PDF (Ctrl+O)"]');
+    await page.waitForSelector(`.tab.active .name:has-text("${name}")`);
+    await page.waitForSelector(".doc-pane.active .pdfViewer .page canvas");
+    await page.waitForTimeout(500);
+    return f;
+  };
+  const toastText = async (re, timeout = 60000) => {
+    await page.waitForFunction((src) => [...document.querySelectorAll(".toast")].some((t) => new RegExp(src).test(t.textContent || "")), re.source, { timeout });
+  };
+  const showRightPanel = async (label) => {
+    const cur = await page.evaluate(() => document.querySelector(".doc-pane.active .ws-body > .side.right")?.getAttribute("aria-label") || "");
+    if (cur !== label) await page.click(`.doc-pane.active .right-rail button[title="${label}"]`);
+    await page.waitForTimeout(300);
+  };
+
+  await step("Comment review: reply, status, check mark, filter, XFDF export and import, summary, CSV", async () => {
+    const checks = {};
+    await openCopy("a.pdf", "review.pdf");
+    // A sticky note from the quick tools.
+    await page.click('.doc-pane.active .qat button[title="Add a sticky note"]');
+    const pg = page.locator(".doc-pane.active .pdfViewer .page").first();
+    const box = await pg.boundingBox();
+    await page.mouse.click(box.x + box.width * 0.7, box.y + box.height * 0.2);
+    await page.fill(".edit-pop textarea", "Check depreciation schedule");
+    await page.keyboard.press("Enter");
+    await waitIdle();
+    await showRightPanel("Comments");
+    const card = page.locator(".doc-pane.active .comment-card").first();
+    await card.click();
+    await page.fill('.doc-pane.active .comment-card textarea[aria-label="Reply"]', "Revised as per Note 4");
+    await page.click('.doc-pane.active .comment-card button:has-text("Reply")');
+    await waitIdle();
+    await page.waitForSelector('.doc-pane.active .comment-card .reply:has-text("Revised as per Note 4")', { timeout: 30000 });
+    checks.reply = true;
+    await page.locator(".doc-pane.active .comment-card").first().click();
+    await page.selectOption('.doc-pane.active .comment-card select[aria-label="Set status"]', "Accepted");
+    await waitIdle();
+    await page.waitForSelector('.doc-pane.active .comment-card .badge:has-text("Accepted")', { timeout: 30000 });
+    checks.status = true;
+    await page.locator('.doc-pane.active .comment-card input[aria-label="Check mark"]').first().click();
+    await waitIdle();
+    await page.waitForFunction(() => document.querySelector('.doc-pane.active .comment-card input[aria-label="Check mark"]')?.checked, null, { timeout: 30000 });
+    checks.mark = true;
+    await page.click('.doc-pane.active button[title="Filter and sort comments"]');
+    await page.selectOption('.doc-pane.active select[aria-label="Status"]', "Rejected");
+    checks.filterNone = (await page.locator(".doc-pane.active .comment-card").count()) === 0;
+    await page.selectOption('.doc-pane.active select[aria-label="Status"]', "Accepted");
+    checks.filterOne = (await page.locator(".doc-pane.active .comment-card").count()) === 1;
+    await page.selectOption('.doc-pane.active select[aria-label="Status"]', "");
+    await shot("22a-comment-thread");
+    const option = async (label, dialogs) => {
+      setDialogs(dialogs);
+      await page.click('.doc-pane.active button[title="Comment options"]');
+      await page.click(`.sel-menu button:has-text("${label}")`);
+    };
+    const xfdf = join(work, "review.xfdf");
+    await option("Export comments", { saveFile: xfdf });
+    await toastText(/Comments exported/);
+    const x = existsSync(xfdf) ? readFileSync(xfdf, "utf8") : "";
+    checks.xfdf = x.includes("<text") && x.includes('state="Accepted"') && x.includes("Revised as per Note 4") && x.includes('statemodel="Marked"');
+    const summary = join(work, "review_summary.pdf");
+    await option("comment summary", { saveFile: summary });
+    await toastText(/Comment summary created/);
+    const st = existsSync(summary) ? pdfText(summary).split(/\s+/).join(" ") : "";
+    checks.summary = st.includes("Summary of comments") && st.includes("Check depreciation schedule") && st.includes("Revised as per Note 4") && st.includes("Accepted");
+    const csvf = join(work, "review_comments.csv");
+    await option("comment list", { saveFile: csvf });
+    await toastText(/Comment list exported/);
+    checks.csv = existsSync(csvf) && readFileSync(csvf, "utf8").includes("Revised as per Note 4");
+    // Into a clean copy: the thread, its status and the check mark come back.
+    await openCopy("a.pdf", "review_import.pdf");
+    await showRightPanel("Comments");
+    await option("Import comments", { openFiles: [xfdf] });
+    await toastText(/comment\(s\) imported/);
+    await page.waitForSelector('.doc-pane.active .comment-card .reply:has-text("Revised as per Note 4")', { timeout: 30000 });
+    checks.imported = (await page.locator('.doc-pane.active .comment-card .badge:has-text("Accepted")').count()) === 1;
+    const failed = Object.entries(checks).filter(([, v]) => !v).map(([k]) => k);
+    record("Comment review: reply, status, check mark, filter, XFDF export and import, summary, CSV", failed.length === 0,
+      failed.length ? `failed: ${failed.join(", ")}` : `${Object.keys(checks).length} checks: ${Object.keys(checks).join(", ")}`);
+  });
+
+  await step("Search across files in a folder, then open a match", async () => {
+    const dir = join(work, "search_here");
+    mkdirSync(join(dir, "sub"), { recursive: true });
+    copyFileSync(join(work, "financial.pdf"), join(dir, "accounts.pdf"));
+    copyFileSync(join(work, "twenty.pdf"), join(dir, "sub", "report.pdf"));
+    copyFileSync(join(work, "scanned.pdf"), join(dir, "scan.pdf"));
+    await page.keyboard.press("Control+Shift+F");
+    await page.waitForSelector('input[aria-label="Search for"]');
+    setDialogs({ openFolder: dir });
+    await page.click('button:has-text("Choose folder")');
+    await page.fill('input[aria-label="Search for"]', "depreciation");
+    await page.click('button.primary:has-text("Search")');
+    await page.waitForSelector(".search-results", { timeout: 120000 });
+    const head = await page.textContent(".search-results strong");
+    const files = await page.locator(".search-file").count();
+    const skipped = await page.textContent(".search-results details summary").catch(() => "");
+    await shot("22b-search-results");
+    await page.locator(".search-hit").first().click();
+    await page.waitForSelector('.tab.active .name:has-text("accounts.pdf")', { timeout: 30000 });
+    await page.waitForFunction(() => /\d+ \/ \d+/.test(document.querySelector(".doc-pane.active .find-bar")?.textContent || ""), null, { timeout: 30000 });
+    const find = await page.inputValue('.doc-pane.active .find-bar input');
+    const ok = /^1 match/.test(head) && files === 1 && /scanned/.test(skipped) && find === "depreciation";
+    record("Search across files in a folder, then open a match", ok, `"${head}"; ${files} file listed; skipped: ${skipped.trim()}; opened with find "${find}"`);
+    await page.keyboard.press("Escape");
+  });
+
+  await step("Link to a page, then the initial view saved with the document", async () => {
+    const f = await openCopy("twenty.pdf", "links.pdf");
+    await openTool("Edit text & images");
+    await page.click('.doc-pane.active .tools-pane button:has-text("Link")');
+    const pg = page.locator('.doc-pane.active .pdfViewer .page[data-page-number="1"]');
+    const b = await stableBox(pg);
+    await page.mouse.move(b.x + b.width * 0.1, b.y + b.height * 0.08);
+    await page.mouse.down();
+    await page.mouse.move(b.x + b.width * 0.5, b.y + b.height * 0.13, { steps: 6 });
+    await page.mouse.up();
+    await page.fill('input[aria-label="Link target page"]', "5");
+    await page.click('.link-pop button:has-text("Add link")');
+    await waitIdle();
+    await page.waitForSelector('.doc-pane.active .ov-link[title="Link to page 5"]', { timeout: 30000 });
+    await exitTool();
+    await page.waitForTimeout(800);
+    // Following the link in View mode.
+    const linkEl = page.locator('.doc-pane.active .page[data-page-number="1"] .annotationLayer a').first();
+    await linkEl.click();
+    await page.waitForTimeout(800);
+    const pageAfter = await page.inputValue(".doc-pane.active .page-input");
+    // Initial view: open with thumbnails, on page 3, fit page.
+    await page.keyboard.press("Control+d");
+    await page.waitForSelector('select[aria-label="Initial navigation panel"]');
+    await page.selectOption('select[aria-label="Initial navigation panel"]', "UseThumbs");
+    await page.selectOption('select[aria-label="Initial magnification"]', "fitPage");
+    await page.fill('input[aria-label="Open to page"]', "3");
+    await page.click('.initial-view button:has-text("Apply")');
+    await waitIdle();
+    const saved = join(work, "links_saved.pdf");
+    setDialogs({ saveAs: saved });
+    await page.click('.doc-pane.active button:has-text("Save As")');
+    await page.waitForTimeout(1500);
+    const v = existsSync(saved) ? execFileSync(PY, ["-c", "import sys,json; sys.path.insert(0,'engine'); from nayanpdf_engine.server import call; iv=call('meta.getInitialView', path=sys.argv[1]); l=call('links.list', path=sys.argv[1], page=1); print(json.dumps([iv, l['links']]))", saved], { cwd: root }).toString() : "[]";
+    const [iv, ls] = JSON.parse(v.trim().split("\n").pop());
+    const ok = pageAfter === "5" && iv?.pageMode === "UseThumbs" && iv?.openPage === 3 && iv?.zoom === "fitPage" && ls?.some((l) => l.kind === "page" && l.targetPage === 5);
+    record("Link to a page, then the initial view saved with the document", ok, `link followed to page ${pageAfter}; saved initial view ${JSON.stringify(iv)}; links ${JSON.stringify(ls)}`);
+  });
+
+  await step("Read Out Loud (installed voices, offline)", async () => {
+    const voices = await page.evaluate(() => new Promise((res) => {
+      const v = speechSynthesis.getVoices();
+      if (v.length) return res(v.length);
+      const t = setTimeout(() => res(speechSynthesis.getVoices().length), 1500);
+      speechSynthesis.addEventListener("voiceschanged", () => { clearTimeout(t); res(speechSynthesis.getVoices().length); });
+    }));
+    await page.click('.doc-pane.active .ws-toolbar button[aria-haspopup="menu"]:has-text("View")');
+    await page.click('.view-menu button:has-text("Read this page")');
+    let ok;
+    let detail;
+    if (voices > 0) {
+      await page.waitForSelector(".doc-pane.active .speak-bar", { timeout: 15000 });
+      const speaking = await page.evaluate(() => new Promise((res) => setTimeout(() => res(speechSynthesis.speaking || speechSynthesis.pending), 800)));
+      await shot("22c-read-aloud");
+      await page.click('.doc-pane.active .speak-bar button:has-text("Stop")');
+      await page.waitForTimeout(400);
+      const stopped = !(await page.locator(".doc-pane.active .speak-bar").count()) && !(await page.evaluate(() => speechSynthesis.speaking));
+      ok = speaking && stopped;
+      detail = `${voices} voice(s); speaking ${speaking}; stopped ${stopped}`;
+    } else {
+      await toastText(/No speech voices are installed/, 15000);
+      ok = !(await page.locator(".doc-pane.active .speak-bar").count());
+      detail = "no voices on this machine: the user is told so and nothing is spoken";
+    }
+    record("Read Out Loud (installed voices, offline)", ok, detail);
   });
 
   await step("Settings and dark theme", async () => {

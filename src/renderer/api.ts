@@ -14,7 +14,7 @@ async function call<T = any>(channel: string, payload?: unknown): Promise<T> {
   return r.data as T;
 }
 
-export type DialogKind = "pdf" | "images" | "office" | "text" | "html" | "pfx" | "cert" | "dll" | "any" | "all";
+export type DialogKind = "pdf" | "images" | "office" | "text" | "html" | "pfx" | "cert" | "dll" | "xfdf" | "any" | "all";
 
 export const api = {
   appInfo: () => call("app:info"),

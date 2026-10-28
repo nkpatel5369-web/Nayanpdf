@@ -86,8 +86,8 @@ class AccessRegistry {
 export const access = new AccessRegistry();
 
 // Parameter names that carry paths in engine requests.
-const INPUT_KEYS = new Set(["path", "pathA", "pathB", "insertPath", "replacementPath", "imagePath", "pfxPath", "pkcs11Lib"]);
-const INPUT_LIST_KEYS = new Set(["images", "trustedCerts"]);
+const INPUT_KEYS = new Set(["path", "pathA", "pathB", "insertPath", "replacementPath", "imagePath", "pfxPath", "pkcs11Lib", "xfdfPath"]);
+const INPUT_LIST_KEYS = new Set(["images", "trustedCerts", "paths"]);
 const OUTPUT_KEYS = new Set(["output", "textOutput"]);
 const OUTPUT_DIR_KEYS = new Set(["outputDir"]);
 

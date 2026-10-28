@@ -61,6 +61,8 @@ export function sanitizeSettings(s: any): Settings {
     defaultZoom: pick("defaultZoom", oneOf(["auto", "page-fit", "page-width", "page-actual"])),
     defaultLayout: pick("defaultLayout", oneOf(["auto", "single", "continuous", "two", "twoContinuous"])),
     navPanelOnOpen: pick("navPanelOnOpen", oneOf(["document", "always", "never"])),
+    readVoice: pick("readVoice", (v) => typeof v === "string" && v.length < 200),
+    readRate: pick("readRate", num(0.5, 2)),
   };
 }
 

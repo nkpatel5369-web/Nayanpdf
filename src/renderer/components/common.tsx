@@ -69,6 +69,17 @@ export async function openDocument(path: string, initialMode?: string): Promise<
   return false;
 }
 
+/** Open a PDF (or switch to it) at a page, optionally highlighting a search term. */
+export async function openAt(path: string, page: number, find?: string): Promise<void> {
+  if (!(await openDocument(path))) return;
+  const norm = (p: string) => p.replace(/\\/g, "/").toLowerCase();
+  const st = useApp.getState();
+  const d = Object.values(st.docs).find((x) => norm(x.state.originalPath) === norm(path) || (x.state.savedPath && norm(x.state.savedPath) === norm(path)));
+  if (!d) return;
+  st.setView({ kind: "doc", sessionId: d.state.sessionId });
+  window.dispatchEvent(new CustomEvent("nayan:goto", { detail: { sessionId: d.state.sessionId, page, find } }));
+}
+
 export async function pickAndOpen() {
   const files = await api.openFiles("pdf", true, "Open PDF");
   for (const f of files) await openDocument(f);

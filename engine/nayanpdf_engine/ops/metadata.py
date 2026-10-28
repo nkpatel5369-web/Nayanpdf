@@ -10,7 +10,7 @@ import pymupdf
 from ..errors import EngineError, invalid
 from ..registry import method
 from ..util.io import OutputFile, os_path, validate_pdf
-from ..util.pdf import doc_is_signed, open_pdf, owner_authenticated
+from ..util.pdf import doc_is_signed, open_pdf, owner_authenticated, save_doc
 
 FIELDS = ("title", "author", "subject", "keywords", "creator", "producer", "creationDate", "modDate")
 DOCINFO_KEYS = {"title": "/Title", "author": "/Author", "subject": "/Subject", "keywords": "/Keywords",
@@ -152,3 +152,113 @@ def remove(ctx, path: str, output: str, fields: list | None = None, removeXmp: b
         ctx.warn("Some properties could not be removed: " + ", ".join(left))
     final = out.commit(validate_pdf(expected_pages=n, password=password))
     return {"output": final, "remaining": list(left), "xmpRemoved": not has_xmp if removeXmp else False}
+
+
+# ----------------------------------------------------------------- initial view
+# What a viewer shows when the file is opened (Acrobat: Document Properties >
+# Initial View): the navigation panel, the page layout, the page and the
+# magnification, and whether the window title shows the document title.
+PAGE_MODES = ("UseNone", "UseOutlines", "UseThumbs", "UseAttachments")
+PAGE_LAYOUTS = ("SinglePage", "OneColumn", "TwoColumnLeft", "TwoColumnRight", "TwoPageLeft", "TwoPageRight")
+ZOOMS = ("default", "fitPage", "fitWidth", "fitVisible", "actual")
+
+
+def _read_initial_view(doc) -> dict:
+    cat = doc.pdf_catalog()
+    t, mode = doc.xref_get_key(cat, "PageMode")
+    t2, layout = doc.xref_get_key(cat, "PageLayout")
+    out = {"pageMode": mode.lstrip("/") if t == "name" else "UseNone",
+           "pageLayout": layout.lstrip("/") if t2 == "name" else "",
+           "openPage": 1, "zoom": "default", "displayDocTitle": False}
+    t3, oa = doc.xref_get_key(cat, "OpenAction")
+    if t3 == "array":
+        import re
+
+        m = re.match(r"\[\s*(\d+)\s+0\s+R\s*/(\w+)(.*)\]", oa)
+        if m:
+            xref, kind, rest = int(m.group(1)), m.group(2), m.group(3).split()
+            for i in range(doc.page_count):
+                if doc[i].xref == xref:
+                    out["openPage"] = i + 1
+            if kind == "Fit":
+                out["zoom"] = "fitPage"
+            elif kind in ("FitH", "FitBH"):
+                out["zoom"] = "fitWidth"
+            elif kind == "FitB":
+                out["zoom"] = "fitVisible"
+            elif kind == "XYZ" and len(rest) >= 3 and rest[2] not in ("null", "0"):
+                try:
+                    z = float(rest[2])
+                    out["zoom"] = "actual" if abs(z - 1) < 1e-6 else round(z * 100)
+                except ValueError:
+                    pass
+    t4, vp = doc.xref_get_key(cat, "ViewerPreferences/DisplayDocTitle")
+    out["displayDocTitle"] = t4 == "bool" and vp == "true"
+    return out
+
+
+@method("meta.getInitialView")
+def get_initial_view(ctx, path: str, password: str | None = None):
+    doc = open_pdf(path, password)
+    try:
+        return _read_initial_view(doc)
+    finally:
+        doc.close()
+
+
+@method("meta.initialView")
+def set_initial_view(ctx, path: str, output: str, password: str | None = None, overwrite: bool = False,
+                     pageMode: str = "UseNone", pageLayout: str = "", openPage: int = 1, zoom="default",
+                     displayDocTitle: bool = False):
+    if pageMode not in PAGE_MODES:
+        raise invalid("Unknown navigation panel setting.")
+    if pageLayout and pageLayout not in PAGE_LAYOUTS:
+        raise invalid("Unknown page layout.")
+    if not (zoom in ZOOMS or (isinstance(zoom, (int, float)) and 5 <= float(zoom) <= 6400)):
+        raise invalid("Unknown magnification.")
+    doc = open_pdf(path, password, require=["modify"])
+    try:
+        n = doc.page_count
+        page_no = int(openPage)
+        if page_no < 1 or page_no > n:
+            raise invalid(f"The document has no page {page_no}.")
+        cat = doc.pdf_catalog()
+        doc.xref_set_key(cat, "PageMode", f"/{pageMode}")
+        doc.xref_set_key(cat, "PageLayout", f"/{pageLayout}" if pageLayout else "null")
+        pref = doc[page_no - 1].xref
+        if zoom == "default" and page_no == 1:
+            action = "null"
+        elif zoom in ("default",):
+            action = f"[{pref} 0 R /XYZ null null 0]"
+        elif zoom == "fitPage":
+            action = f"[{pref} 0 R /Fit]"
+        elif zoom == "fitWidth":
+            action = f"[{pref} 0 R /FitH null]"
+        elif zoom == "fitVisible":
+            action = f"[{pref} 0 R /FitB]"
+        elif zoom == "actual":
+            action = f"[{pref} 0 R /XYZ null null 1]"
+        else:
+            action = f"[{pref} 0 R /XYZ null null {float(zoom) / 100:g}]"
+        doc.xref_set_key(cat, "OpenAction", action)
+        if displayDocTitle:
+            doc.xref_set_key(cat, "ViewerPreferences/DisplayDocTitle", "true")
+        else:
+            t, _ = doc.xref_get_key(cat, "ViewerPreferences")
+            if t != "null":
+                doc.xref_set_key(cat, "ViewerPreferences/DisplayDocTitle", "null")
+        out = OutputFile(ctx, output, overwrite, sources=[path])
+        save_doc(doc, out.temp, garbage=1)
+    finally:
+        doc.close()
+    final = out.commit(validate_pdf(expected_pages=n, password=password))
+    chk = open_pdf(final, password)
+    try:
+        got = _read_initial_view(chk)
+    finally:
+        chk.close()
+    want_zoom = zoom if not isinstance(zoom, (int, float)) else round(float(zoom))
+    if got["pageMode"] != pageMode or got["pageLayout"] != pageLayout or got["openPage"] != page_no or \
+            (got["zoom"] != want_zoom and not (want_zoom == "default")) or got["displayDocTitle"] != bool(displayDocTitle):
+        raise EngineError("VALIDATION_FAILED", f"The saved initial view does not match what was requested: {got}")
+    return {"output": final, "initialView": got}

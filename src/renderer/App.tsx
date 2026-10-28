@@ -72,6 +72,11 @@ export function App() {
         e.preventDefault();
         setView({ kind: "settings" });
       }
+      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "f") {
+        // Acrobat: Advanced Search.
+        e.preventDefault();
+        setView({ kind: "tool", tool: "search" });
+      }
       if (e.ctrlKey && !e.shiftKey && e.key.toLowerCase() === "q") {
         // Acrobat: Exit. Closing the window asks about unsaved changes first.
         e.preventDefault();
@@ -122,7 +127,7 @@ export function App() {
             return (
               <div key={id} className={"tab" + (on_ ? " active" : "")} onClick={() => setView({ kind: "doc", sessionId: id })} title={d.state.savedPath || d.state.originalPath}
                 onAuxClick={(e) => e.button === 1 && closeTab(id)}>
-                <span className="name">{d.state.name}</span>
+                <span className="name">{d.info?.displayDocTitle && d.info?.metadata?.title ? d.info.metadata.title : d.state.name}</span>
                 {d.state.dirty && <span className="dirty" title="Unsaved changes" />}
                 <span className="x" onClick={(e) => { e.stopPropagation(); closeTab(id); }} title="Close (Ctrl+W)">
                   <X size={14} />
@@ -206,6 +211,7 @@ function AppMenu({ closeTab }: { closeTab: (id: string) => void }) {
     { label: "Close document", kbd: "Ctrl+W", needsDoc: true, run: () => docId && closeTab(docId) },
     "sep",
     { label: "All tools", run: () => (docId ? doc("tools") : setView({ kind: "tool", tool: "merge" })) },
+    { label: "Search across files...", kbd: "Ctrl+Shift+F", run: () => setView({ kind: "tool", tool: "search" }) },
     { label: "Combine files", run: () => setView({ kind: "tool", tool: "merge" }) },
     { label: "Batch processing", run: () => setView({ kind: "batch" }) },
     "sep",

@@ -46,6 +46,7 @@ const EDIT_METHODS = new Set([
   "forms.fill", "meta.set", "meta.remove", "redact.apply", "bookmarks.set", "labels.set",
   "attachments.add", "attachments.delete", "sign.placeImage", "ocr.run", "compress.run",
   "pagesize.standardize", "pagesize.crop", "util.repair",
+  "annot.importXfdf", "links.apply", "meta.initialView",
 ]);
 
 // Read-only queries allowed against an open document.
@@ -54,6 +55,7 @@ const QUERY_METHODS = new Set([
   "annot.list", "forms.list", "meta.get", "bookmarks.get", "labels.get", "attachments.list", "security.inspect",
   "security.integrity", "sign.verify", "redact.search", "edit.listImages", "compress.analyze", "blank.detect",
   "util.pdfaCheck", "pages.thumbnail", "compare.run",
+  "links.list", "meta.getInitialView",
 ]);
 
 function newToken(): string {

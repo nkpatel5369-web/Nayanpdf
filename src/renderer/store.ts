@@ -4,7 +4,7 @@ import { DEFAULT_SETTINGS } from "@shared/ipc";
 
 export type ToolId =
   | "merge" | "split" | "compress" | "convert" | "organize" | "ocr" | "create" | "annotate" | "sign" | "protect"
-  | "redact" | "compare" | "extractImages" | "forms" | "edit" | "watermark" | "metadata" | "utilities" | "batch";
+  | "redact" | "compare" | "extractImages" | "forms" | "edit" | "watermark" | "metadata" | "utilities" | "batch" | "search";
 
 export type MainView = { kind: "home" } | { kind: "tool"; tool: ToolId; args?: any } | { kind: "doc"; sessionId: string }
   | { kind: "batch" } | { kind: "settings" } | { kind: "convert" };

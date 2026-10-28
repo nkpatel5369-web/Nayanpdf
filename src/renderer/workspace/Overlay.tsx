@@ -8,7 +8,7 @@ import { TEXT_TOOLS } from "./Selection";
 
 // Tools that are drawn as a rectangle.
 const RECT_TOOLS = new Set(["highlight", "underline", "strikeout", "squiggly", "freetext", "callout", "rect", "circle", "stamp",
-  "initials", "addText", "addImage", "redactArea", "placeSignature", "digitalBox", "textstamp"]);
+  "initials", "addText", "addImage", "redactArea", "placeSignature", "digitalBox", "textstamp", "link"]);
 const LINE_TOOLS = new Set(["line", "arrow"]);
 
 interface Drag {
@@ -109,7 +109,7 @@ export function PageOverlay({ ctx }: { ctx: PageCtx }) {
       // A click places a default-sized box.
       const w = (tool === "placeSignature" ? 160 : tool === "stamp" || tool === "textstamp" ? 150 : tool === "digitalBox" ? 200 : 180) * sc;
       const h = (tool === "placeSignature" ? 60 : tool === "stamp" || tool === "textstamp" ? 50 : tool === "digitalBox" ? 60 : 40) * sc;
-      if (["highlight", "underline", "strikeout", "squiggly", "redactArea", "rect", "circle"].includes(tool)) return;
+      if (["highlight", "underline", "strikeout", "squiggly", "redactArea", "rect", "circle", "link"].includes(tool)) return;
       css = { x0: d.x0, y0: d.y0, x1: d.x0 + w, y1: d.y0 + h };
     }
     const rect = cssRectToPdf(vp, css.x0, css.y0, css.x1, css.y1);
@@ -140,6 +140,7 @@ export function PageOverlay({ ctx }: { ctx: PageCtx }) {
       case "freetext":
       case "callout":
       case "addText":
+      case "link":
         setPending({ kind: tool, rect, css });
         break;
       case "addImage":
@@ -188,6 +189,7 @@ export function PageOverlay({ ctx }: { ctx: PageCtx }) {
     <div ref={ref} className={"overlay" + (interactive ? "" : " passive")} style={{ cursor }} onMouseDown={interactive ? onDown : undefined}>
       {ws.mode === "edit" && tool === "text" && <TextLines ctx={ctx} />}
       {ws.mode === "edit" && tool === "image" && <ImageObjects ctx={ctx} />}
+      {ws.mode === "edit" && tool === "link" && <LinkBoxes ctx={ctx} />}
       {ws.mode === "comment" && tool === "select" && <AnnotBoxes ctx={ctx} />}
       {ws.mode === "forms" && <FieldBoxes ctx={ctx} />}
       {(ws.mode === "redact" || ws.marks.length > 0) && <Marks ctx={ctx} />}
@@ -204,7 +206,14 @@ export function PageOverlay({ ctx }: { ctx: PageCtx }) {
           <polyline points={ink.map((p) => p.join(",")).join(" ")} fill="none" stroke={ws.opts.color || "#1c7ed6"} strokeWidth={(ws.opts.width ?? 2) * vp.scale} strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       )}
-      {pending && <TextEntry css={pending.css} multiline={pending.kind !== "note"} placeholder={pending.kind === "note" ? "Comment" : "Type text"} onSubmit={submitPending} onCancel={() => setPending(null)} />}
+      {pending && pending.kind === "link" && (
+        <LinkEntry css={pending.css} pageCount={ws.pdf?.numPages || 1} onCancel={() => setPending(null)}
+          onSubmit={(target) => {
+            ws.apply("links.apply", { ops: [{ op: "add", page: ctx.pageNumber, rect: pending.rect, ...target }] }, "Add link");
+            setPending(null);
+          }} />
+      )}
+      {pending && pending.kind !== "link" && <TextEntry css={pending.css} multiline={pending.kind !== "note"} placeholder={pending.kind === "note" ? "Comment" : "Type text"} onSubmit={submitPending} onCancel={() => setPending(null)} />}
     </div>
   );
 }
@@ -215,6 +224,59 @@ function cap(s: string) {
 
 function authorName() {
   return useApp.getState().settings.reviewerName || undefined;
+}
+
+/** Where a new link goes: a page of this document, or a web address (kept for readers; NayanPDF never opens it). */
+function LinkEntry(props: { css: Drag; pageCount: number; onSubmit: (t: { toPage?: number; uri?: string }) => void; onCancel: () => void }) {
+  const [kind, setKind] = useState<"page" | "uri">("page");
+  const [pageNo, setPageNo] = useState("1");
+  const [uri, setUri] = useState("");
+  const left = Math.min(props.css.x0, props.css.x1);
+  const top = Math.min(props.css.y0, props.css.y1) + Math.abs(props.css.y1 - props.css.y0) + 6;
+  const n = parseInt(pageNo);
+  const ok = kind === "page" ? n >= 1 && n <= props.pageCount : uri.trim().length > 3;
+  const submit = () => ok && props.onSubmit(kind === "page" ? { toPage: n } : { uri: uri.trim() });
+  return (
+    <div className="edit-pop link-pop" data-noprop style={{ left, top, width: 300 }} onMouseDown={(e) => e.stopPropagation()}
+      onKeyDown={(e) => { if (e.key === "Escape") props.onCancel(); if (e.key === "Enter") submit(); }}>
+      <strong>Link to</strong>
+      <label className="check"><input type="radio" name="lk" checked={kind === "page"} onChange={() => setKind("page")} /> A page in this document</label>
+      {kind === "page" && <input className="input sm" aria-label="Link target page" type="number" min={1} max={props.pageCount} value={pageNo} onChange={(e) => setPageNo(e.target.value)} autoFocus />}
+      <label className="check"><input type="radio" name="lk" checked={kind === "uri"} onChange={() => setKind("uri")} /> A web address</label>
+      {kind === "uri" && <input className="input sm" aria-label="Link web address" placeholder="https://..." value={uri} onChange={(e) => setUri(e.target.value)} autoFocus />}
+      {kind === "uri" && <span className="subtle">Saved in the PDF for readers. NayanPDF itself never opens web addresses.</span>}
+      <div className="row" style={{ width: "100%", justifyContent: "flex-end" }}>
+        <button className="btn sm" onClick={props.onCancel}><X size={13} /> Cancel</button>
+        <button className="btn sm primary" disabled={!ok} onClick={submit}><Check size={13} /> Add link</button>
+      </div>
+    </div>
+  );
+}
+
+// ------------------------------------------------------------ links (Edit > Link)
+function LinkBoxes({ ctx }: { ctx: PageCtx }) {
+  const ws = useWs();
+  const [list, setList] = useState<any[]>([]);
+  useEffect(() => {
+    let alive = true;
+    cached(`${ws.sessionId}:${ws.revision}:links:${ctx.pageNumber}`, () => ws.query("links.list", { page: ctx.pageNumber }))
+      .then((d: any) => alive && setList(d.links || []))
+      .catch(() => alive && setList([]));
+    return () => {
+      alive = false;
+    };
+  }, [ws.revision, ctx.pageNumber]);
+  return (
+    <>
+      {list.map((l) => (
+        <div key={l.index} className="ov-link" style={pdfRectToCss(ctx.viewport, l.rect)} data-noprop
+          title={l.kind === "page" ? `Link to page ${l.targetPage}` : l.uri ? `Link to ${l.uri}` : "Link"}>
+          <button className="rm" title="Remove link" onMouseDown={(e) => e.stopPropagation()}
+            onClick={() => ws.apply("links.apply", { ops: [{ op: "delete", page: ctx.pageNumber, index: l.index }] }, "Remove link")}>×</button>
+        </div>
+      ))}
+    </>
+  );
 }
 
 function TextEntry(props: { css: Drag; multiline: boolean; placeholder: string; onSubmit: (t: string) => void; onCancel: () => void; initial?: string }) {
@@ -469,7 +531,7 @@ function AnnotBoxes({ ctx }: { ctx: PageCtx }) {
   }, [ws.revision, ctx.pageNumber]);
   return (
     <>
-      {list.map((a) => {
+      {list.filter((a) => !a.irt).map((a) => {
         const css = pdfRectToCss(ctx.viewport, a.rect);
         const on = ws.selected?.kind === "annot" && ws.selected.id === a.id;
         return <div key={a.id} className={"ov-annot" + (on ? " sel" : "")} style={css} title={`${a.typeName}${a.contents ? ": " + a.contents : ""}`}

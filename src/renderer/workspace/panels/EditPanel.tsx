@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Image, ImagePlus, MousePointer2, Replace, Type, TypeOutline } from "lucide-react";
+import { Image, ImagePlus, Link2, MousePointer2, Replace, Type, TypeOutline } from "lucide-react";
 import { useWs } from "../context";
 import { Check, Field, Modal, Notice, Seg } from "../../components/ui";
 import { useApp } from "../../store";
@@ -12,6 +12,7 @@ export function EditPanel() {
     { id: "image", label: "Edit images", icon: Image, hint: "Select an image to move, resize (corner) or delete (Delete key)." },
     { id: "addText", label: "Add text", icon: TypeOutline, hint: "Drag a box where the new text should go." },
     { id: "addImage", label: "Add image", icon: ImagePlus, hint: "Drag a box, then choose an image file." },
+    { id: "link", label: "Link", icon: Link2, hint: "Drag a box over text or an image, then choose a page or a web address. Existing links show as dashed boxes; × removes one." },
   ];
   const cur = tools.find((t) => t.id === ws.tool);
   return (

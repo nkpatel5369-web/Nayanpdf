@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   ChevronDown, ChevronLeft, ChevronRight, Eye, FilePen, FormInput, Highlighter, LayoutGrid, Maximize, MoveHorizontal, PanelLeft, PanelRight,
   Printer, Redo2, RotateCw, RotateCcw, Save, Search, Shredder, Signature, Stamp, Undo2, X, ZoomIn, ZoomOut, Info, FileDown, ArrowLeftRight, Lock,
-  BookOpen, Check as CheckIcon, Expand, GalleryThumbnails, Bookmark, Paperclip, MessageSquare, MousePointer2, StickyNote, PenLine, Type,
+  BookOpen, Check as CheckIcon, Expand, Volume2, GalleryThumbnails, Bookmark, Paperclip, MessageSquare, MousePointer2, StickyNote, PenLine, Type,
   ArrowLeft, Combine, FileSearch, ScanText, Scissors, Images, Tags, Wrench, FilePlus2, Layers,
 } from "lucide-react";
 import { api, baseName, dirName, joinPath, stem, waitForJob } from "../api";
@@ -13,6 +13,7 @@ import { Mode, RedactMark, WsApi, WsContext } from "./context";
 import { PageOverlay, clearOverlayCache } from "./Overlay";
 import { SelectionTools, TEXT_TOOLS } from "./Selection";
 import { PrintDialog } from "./PrintDialog";
+import { pauseResume, readAloud, ReadState, stopReading } from "./ReadAloud";
 import { EditPanel } from "./panels/EditPanel";
 import { CommentPanel, CommentsList } from "./panels/CommentPanel";
 import { FormsPanel } from "./panels/FormsPanel";
@@ -73,6 +74,21 @@ export function DocumentView({ sessionId, active }: { sessionId: string; active:
   const toggleRight = (t: RightTab) => setRightTab(rightTab === t ? null : t);
   const [display, setDisplay] = useState<DisplayMode>({ layout: "continuous", cover: false });
   const [readMode, setReadMode] = useState(false);
+  const [reading, setReading] = useState<ReadState | null>(null);
+  const startReading = (toEnd: boolean) => {
+    if (!pdf) return;
+    readAloud(pdf, viewerRef.current?.currentPage() || page, toEnd, (p) => viewerRef.current?.goTo(p), setReading);
+  };
+  const togglePause = () => {
+    const paused = pauseResume();
+    if (paused !== null) setReading((r) => (r ? { ...r, paused } : r));
+  };
+  const stopRead = () => {
+    stopReading();
+    setReading(null);
+  };
+  // Stop speaking when the document is closed.
+  useEffect(() => () => { if (reading) stopReading(); }, []);
   const pageInputRef = useRef<HTMLInputElement>(null);
   const [findOpen, setFindOpen] = useState(false);
   const [findQ, setFindQ] = useState("");
@@ -117,6 +133,31 @@ export function DocumentView({ sessionId, active }: { sessionId: string; active:
   useEffect(() => {
     if (selected?.kind === "annot") setRightTab("comments");
   }, [selected?.kind, selected?.id]);
+
+  // "Go to page N and find X" (from search results across files). Kept until the
+  // document has loaded.
+  const pendingGoto = useRef<{ page: number; find?: string } | null>(null);
+  const runGoto = () => {
+    const g = pendingGoto.current;
+    const v = viewerRef.current;
+    if (!g || !v || !v.pageCount()) return;
+    pendingGoto.current = null;
+    v.goTo(Math.min(g.page, v.pageCount()));
+    if (g.find) {
+      setFindOpen(true);
+      setFindQ(g.find);
+      setTimeout(() => v.find(g.find!, { caseSensitive: false, entireWord: false }), 150);
+    }
+  };
+  useEffect(() => {
+    const h = (e: any) => {
+      if (e.detail?.sessionId !== sessionId) return;
+      pendingGoto.current = { page: e.detail.page, find: e.detail.find };
+      setTimeout(runGoto, 50);
+    };
+    window.addEventListener("nayan:goto", h);
+    return () => window.removeEventListener("nayan:goto", h);
+  }, []);
 
   // Commands from the application menu (Menu > Save, Print, ...).
   useEffect(() => {
@@ -193,7 +234,7 @@ export function DocumentView({ sessionId, active }: { sessionId: string; active:
       } else if (e.ctrlKey && key === "p") {
         e.preventDefault();
         setDialog("print");
-      } else if (e.ctrlKey && key === "f") {
+      } else if (e.ctrlKey && !e.shiftKey && key === "f") {
         e.preventDefault();
         setFindOpen(true);
         setTimeout(() => findInputRef.current?.select(), 0);
@@ -211,6 +252,16 @@ export function DocumentView({ sessionId, active }: { sessionId: string; active:
       } else if (e.ctrlKey && !e.shiftKey && key === "l") {
         e.preventDefault();
         if (mode !== "pages") v?.fullScreen();
+      } else if (e.ctrlKey && e.shiftKey && (key === "v" || key === "b")) {
+        // Acrobat: Read Out Loud this page (Ctrl+Shift+V) / to the end (Ctrl+Shift+B).
+        e.preventDefault();
+        startReading(key === "b");
+      } else if (e.ctrlKey && e.shiftKey && key === "c" && reading) {
+        e.preventDefault();
+        togglePause();
+      } else if (e.ctrlKey && e.shiftKey && key === "e" && reading) {
+        e.preventDefault();
+        stopRead();
       } else if (e.ctrlKey && e.shiftKey && key === "n") {
         e.preventDefault();
         if (mode === "pages") return;
@@ -278,7 +329,7 @@ export function DocumentView({ sessionId, active }: { sessionId: string; active:
     };
     window.addEventListener("keydown", k);
     return () => window.removeEventListener("keydown", k);
-  }, [active, page, mode, findOpen, state?.canUndo, state?.canRedo, selected, display, readMode, rightTab, showTools]);
+  }, [active, page, mode, findOpen, state?.canUndo, state?.canRedo, selected, display, readMode, rightTab, showTools, pdf, reading]);
 
   if (!doc || !state || !ws) return null;
 
@@ -378,7 +429,8 @@ export function DocumentView({ sessionId, active }: { sessionId: string; active:
                 onToggleRight={() => setRightTabState(rightTab ? null : lastRight.current)}
                 onReadMode={() => setReadMode(true)}
                 onFullScreen={() => viewerRef.current?.fullScreen()}
-                onGoTo={() => { pageInputRef.current?.focus(); pageInputRef.current?.select(); }} />
+                onGoTo={() => { pageInputRef.current?.focus(); pageInputRef.current?.select(); }}
+                reading={!!reading} onRead={startReading} onPause={togglePause} onStop={stopRead} />
               <div className="sep" />
             </>
           )}
@@ -416,7 +468,7 @@ export function DocumentView({ sessionId, active }: { sessionId: string; active:
                 if (pw) passwordRef.current = pw;
                 return pw;
               }}
-              onLoaded={(p) => { setPdf(p); setCount(p.numPages); }}
+              onLoaded={(p) => { setPdf(p); setCount(p.numPages); setTimeout(runGoto, 400); }}
               onPageChange={(p) => { setPage(p); setPageInput(String(p)); }}
               onScaleChange={(s) => setScaleText(Math.round(s * 100) + "%")}
               onFindCount={(c, t) => setFindCount([c, t])}
@@ -467,6 +519,13 @@ export function DocumentView({ sessionId, active }: { sessionId: string; active:
                 <label className="check" style={{ margin: 0 }} title="Match case"><input type="checkbox" checked={findCase} onChange={(e) => setFindCase(e.target.checked)} />Aa</label>
                 <label className="check" style={{ margin: 0 }} title="Whole words"><input type="checkbox" checked={findWord} onChange={(e) => setFindWord(e.target.checked)} />W</label>
                 <button className="icon-btn" onClick={closeFind}><X size={15} /></button>
+              </div>
+            )}
+            {reading && (
+              <div className="speak-bar" role="status" aria-label="Read Out Loud">
+                <Volume2 size={16} /> <span>Reading page {reading.page}{reading.toEnd ? " (to the end)" : ""}{reading.paused ? " · paused" : ""}</span>
+                <button className="btn sm" title="Pause / resume (Ctrl+Shift+C)" onClick={togglePause}>{reading.paused ? "Resume" : "Pause"}</button>
+                <button className="btn sm" title="Stop (Ctrl+Shift+E)" onClick={stopRead}>Stop</button>
               </div>
             )}
             {readMode && (
@@ -530,6 +589,7 @@ const ALL_TOOLS: { id: string; label: string; icon: any; more?: boolean }[] = [
   { id: "ocr", label: "Recognize text (OCR)", icon: ScanText },
   { id: "merge", label: "Combine files", icon: Combine },
   { id: "compare", label: "Compare files", icon: FileSearch },
+  { id: "search", label: "Search across files", icon: Search },
   { id: "print", label: "Print", icon: Printer },
   { id: "split", label: "Split", icon: Scissors, more: true },
   { id: "create", label: "Create PDF", icon: FilePlus2, more: true },
@@ -575,6 +635,7 @@ function ViewMenu(props: {
   display: DisplayMode; showLeft: boolean; showRight: boolean;
   onDisplay: (d: DisplayMode) => void; onZoom: (z: string) => void; onRotate: (d: number) => void;
   onToggleLeft: () => void; onToggleRight: () => void; onReadMode: () => void; onFullScreen: () => void; onGoTo: () => void;
+  reading: boolean; onRead: (toEnd: boolean) => void; onPause: () => void; onStop: () => void;
 }) {
   const [open, setOpen] = useState(false);
   useEffect(() => {
@@ -618,6 +679,12 @@ function ViewMenu(props: {
             <div className="sep" />
             {item("Read mode", props.onReadMode, { kbd: "Ctrl+H", icon: BookOpen })}
             {item("Full screen mode", props.onFullScreen, { kbd: "Ctrl+L", icon: Expand })}
+            <div className="sep" />
+            <div className="menu-label">Read out loud</div>
+            {item("Read this page", () => props.onRead(false), { kbd: "Ctrl+Shift+V", icon: Volume2 })}
+            {item("Read to end of document", () => props.onRead(true), { kbd: "Ctrl+Shift+B" })}
+            {item("Pause / resume", props.onPause, { kbd: "Ctrl+Shift+C", disabled: !props.reading })}
+            {item("Stop", props.onStop, { kbd: "Ctrl+Shift+E", disabled: !props.reading })}
           </div>
         </>
       )}

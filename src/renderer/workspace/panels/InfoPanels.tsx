@@ -76,6 +76,7 @@ export function PropertiesPanel() {
           </div>
         </>
       )}
+      <InitialView />
       <div className="row" style={{ margin: "14px 0 6px" }}>
         <h3 className="grow">Fonts</h3>
         {!fonts && <button className="btn sm" onClick={() => ws.query("doc.fonts", {}).then((f: any) => setFonts(f.fonts))}>Show</button>}
@@ -177,6 +178,58 @@ export function AttachmentsPanel() {
         </div>
       ))}
       {list.length > 0 && <div className="panel-pad subtle">Attached files can be harmful. NayanPDF never opens them automatically.</div>}
+    </div>
+  );
+}
+
+/** Acrobat's Document Properties > Initial View: what a reader sees when the file opens. */
+function InitialView() {
+  const ws = useWs();
+  const [v, setV] = useState<any>(null);
+  const [form, setForm] = useState<any>(null);
+  useEffect(() => {
+    ws.query("meta.getInitialView", {}).then((r: any) => { setV(r); setForm(r); }).catch(() => undefined);
+  }, [ws.revision]);
+  if (!form) return null;
+  const changed = JSON.stringify(v) !== JSON.stringify(form);
+  const zoomValue = typeof form.zoom === "number" ? "custom" : form.zoom;
+  return (
+    <div className="initial-view">
+      <div className="row" style={{ margin: "14px 0 6px" }}><h3 className="grow">Initial view</h3></div>
+      <p className="subtle" style={{ marginTop: 0 }}>Saved in the PDF: how it opens in NayanPDF, Acrobat and most other viewers.</p>
+      <Field label="Navigation panel">
+        <select className="input sm" aria-label="Initial navigation panel" value={form.pageMode} onChange={(e) => setForm({ ...form, pageMode: e.target.value })}>
+          <option value="UseNone">Page only</option><option value="UseOutlines">Bookmarks panel and page</option>
+          <option value="UseThumbs">Page thumbnails and page</option><option value="UseAttachments">Attachments panel and page</option>
+        </select>
+      </Field>
+      <Field label="Page layout">
+        <select className="input sm" aria-label="Initial page layout" value={form.pageLayout} onChange={(e) => setForm({ ...form, pageLayout: e.target.value })}>
+          <option value="">Default</option><option value="SinglePage">Single page</option><option value="OneColumn">Single page continuous</option>
+          <option value="TwoPageLeft">Two-up (facing)</option><option value="TwoColumnLeft">Two-up continuous (facing)</option>
+          <option value="TwoPageRight">Two-up (cover page)</option><option value="TwoColumnRight">Two-up continuous (cover page)</option>
+        </select>
+      </Field>
+      <div className="grid2">
+        <Field label="Magnification">
+          <select className="input sm" aria-label="Initial magnification" value={zoomValue} onChange={(e) => setForm({ ...form, zoom: e.target.value === "custom" ? 100 : e.target.value })}>
+            <option value="default">Default</option><option value="actual">Actual size</option><option value="fitPage">Fit page</option>
+            <option value="fitWidth">Fit width</option><option value="fitVisible">Fit visible</option><option value="custom">Percentage...</option>
+          </select>
+        </Field>
+        <Field label="Open to page">
+          <input className="input sm" aria-label="Open to page" type="number" min={1} max={ws.pdf?.numPages || 9999} value={form.openPage} onChange={(e) => setForm({ ...form, openPage: Math.max(1, parseInt(e.target.value) || 1) })} />
+        </Field>
+      </div>
+      {zoomValue === "custom" && (
+        <Field label="Percentage"><input className="input sm" type="number" min={5} max={6400} value={form.zoom} onChange={(e) => setForm({ ...form, zoom: Math.max(5, Math.min(6400, parseInt(e.target.value) || 100)) })} /></Field>
+      )}
+      <label className="check"><input type="checkbox" checked={!!form.displayDocTitle} onChange={(e) => setForm({ ...form, displayDocTitle: e.target.checked })} /> Show the document title instead of the file name</label>
+      <div className="row">
+        <div className="grow" />
+        <button className="btn sm" disabled={!changed} onClick={() => setForm(v)}>Reset</button>
+        <button className="btn sm primary" disabled={!changed} onClick={() => ws.apply("meta.initialView", form, "Set initial view")}>Apply</button>
+      </div>
     </div>
   );
 }

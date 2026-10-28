@@ -79,6 +79,9 @@ export interface Settings {
   defaultLayout: "auto" | "single" | "continuous" | "two" | "twoContinuous";
   /** Navigation panel when a document opens: as the PDF asks (Acrobat's behaviour), always (thumbnails), or never. */
   navPanelOnOpen: "document" | "always" | "never";
+  /** Read Out Loud: voice name ("" = the system default) and speed. Voices are the ones installed in Windows. */
+  readVoice: string;
+  readRate: number;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -102,6 +105,8 @@ export const DEFAULT_SETTINGS: Settings = {
   defaultZoom: "auto",
   defaultLayout: "auto",
   navPanelOnOpen: "document",
+  readVoice: "",
+  readRate: 1,
 };
 
 export interface RecentFile {

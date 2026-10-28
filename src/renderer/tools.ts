@@ -1,6 +1,6 @@
 import {
   ArrowLeftRight, Combine, FileCog, FileDown, FileImage, FileInput, FileLock2, FilePen, FilePlus2, FileSearch, FileSignature, FileType2,
-  FormInput, Highlighter, Images, LayoutGrid, ScanText, Scissors, Shredder, Stamp, Tags, Wrench,
+  FormInput, Highlighter, Images, LayoutGrid, ScanText, Scissors, Shredder, Stamp, Tags, Wrench, TextSearch,
 } from "lucide-react";
 import type { ToolId } from "./store";
 
@@ -28,6 +28,7 @@ export const TOOLS: ToolDef[] = [
   { id: "protect", title: "Protect PDF", desc: "Passwords, permissions, unlock", icon: FileLock2, color: "#495057" },
   { id: "redact", title: "Redact PDF", desc: "Permanently remove sensitive content", icon: Shredder, color: "#c92a2a", docMode: "redact" },
   { id: "compare", title: "Compare PDFs", desc: "Find text and visual differences", icon: FileSearch, color: "#9c36b5" },
+  { id: "search", title: "Search Across Files", desc: "Find words in a folder of PDFs", icon: TextSearch, color: "#0b7285" },
   { id: "extractImages", title: "Extract Images", desc: "Save embedded pictures", icon: Images, color: "#087f5b" },
   { id: "forms", title: "Fill PDF Forms", desc: "Fill, save and flatten forms", icon: FormInput, color: "#1971c2", docMode: "forms" },
   { id: "watermark", title: "Watermark & Numbers", desc: "Watermarks, headers, page numbers, Bates", icon: Stamp, color: "#a61e4d" },

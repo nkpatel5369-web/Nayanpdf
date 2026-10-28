@@ -17,6 +17,7 @@ from ..registry import method
 from ..util.geometry import fitz_to_pdf_rect, to_fitz_point, to_fitz_rect
 from ..util.io import OutputFile, require_file, validate_pdf
 from ..util.pdf import doc_is_signed, hex_to_rgb, open_pdf, parse_pages, rgb_to_hex, save_doc
+from .review import add_reply, set_state, thread_children, thread_info
 
 TYPE_NAMES = {
     pymupdf.PDF_ANNOT_TEXT: "note", pymupdf.PDF_ANNOT_FREE_TEXT: "freetext", pymupdf.PDF_ANNOT_LINE: "line",
@@ -80,7 +81,9 @@ def list_annots(ctx, path: str, password: str | None = None, page: int | None = 
             for a in p.annots():
                 if a.type[0] in (pymupdf.PDF_ANNOT_POPUP, pymupdf.PDF_ANNOT_LINK, pymupdf.PDF_ANNOT_WIDGET):
                     continue
-                out.append(_annot_dict(p, a))
+                d = _annot_dict(p, a)
+                d.update(thread_info(doc, a))
+                out.append(d)
         return {"annotations": out}
     finally:
         doc.close()
@@ -320,11 +323,28 @@ def apply(ctx, path: str, output: str, ops: list, password: str | None = None, o
             if kind == "add":
                 a = _add(page, op, author, space)
                 created.append({"page": pno, "id": a.xref})
+            elif kind in ("reply", "status", "mark"):
+                parent = page.load_annot(int(op["id"]))
+                if parent is None:
+                    raise invalid("The comment no longer exists.")
+                if kind == "reply":
+                    a = add_reply(page, parent, str(op.get("contents", "")), author)
+                elif kind == "status":
+                    a = set_state(page, parent, str(op.get("state", "")), author, "Review")
+                else:
+                    a = set_state(page, parent, "Marked" if op.get("marked", True) else "Unmarked", author, "Marked")
+                created.append({"page": pno, "id": a.xref})
             elif kind in ("update", "delete"):
                 a = page.load_annot(int(op["id"]))
                 if a is None:
                     raise invalid("The annotation no longer exists.")
                 if kind == "delete":
+                    # A comment's replies and review states go with it, as in Acrobat.
+                    for child in thread_children(page, a.xref):
+                        c = page.load_annot(child)
+                        if c is not None:
+                            page.delete_annot(c)
+                    a = page.load_annot(int(op["id"]))
                     page.delete_annot(a)
                 else:
                     if op.get("rect") is not None:

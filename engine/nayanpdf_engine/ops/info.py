@@ -105,6 +105,7 @@ def info(ctx, path: str, password: str | None = None):
             "likelyScanned": text_pages == 0,
             "textSampled": {"pagesWithText": text_pages, "sampled": len(sample)},
             "hasXmp": bool(doc.get_xml_metadata()),
+            "displayDocTitle": doc.xref_get_key(doc.pdf_catalog(), "ViewerPreferences/DisplayDocTitle") == ("bool", "true"),
         }
     finally:
         doc.close()

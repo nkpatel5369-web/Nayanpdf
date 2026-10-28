@@ -24,6 +24,7 @@ const FILTERS: Record<string, Electron.FileFilter[]> = {
   pfx: [{ name: "Certificates (PKCS#12)", extensions: ["pfx", "p12"] }],
   cert: [{ name: "Certificates", extensions: ["cer", "crt", "pem", "der"] }],
   dll: [{ name: "PKCS#11 driver", extensions: ["dll", "so", "dylib"] }],
+  xfdf: [{ name: "Comments (XFDF)", extensions: ["xfdf"] }],
   any: [
     { name: "Supported files", extensions: ["pdf", "png", "jpg", "jpeg", "tif", "tiff", "bmp", "gif", "webp", "doc", "docx", "odt", "rtf", "xls", "xlsx", "ods", "csv", "ppt", "pptx", "odp", "txt", "html", "htm"] },
   ],

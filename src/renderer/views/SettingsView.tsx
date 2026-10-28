@@ -5,6 +5,7 @@ import { api, formatBytes } from "../api";
 import { useApp } from "../store";
 import { Check, Field, Notice, Seg, Spinner } from "../components/ui";
 import { LANG_NAMES } from "./tools/BasicTools";
+import { speechVoices } from "../workspace/ReadAloud";
 
 export function SettingsView() {
   const settings = useApp((s) => s.settings);
@@ -56,6 +57,8 @@ export function SettingsView() {
             <Seg value={settings.navPanelOnOpen} onChange={(v) => save({ navPanelOnOpen: v })} options={[{ value: "document", label: "As the PDF requests" }, { value: "never", label: "Never" }, { value: "always", label: "Always" }]} />
           </Field>
         </div>
+
+        <ReadAloudSettings settings={settings} save={save} />
 
         <div className="card card-pad" style={{ marginBottom: 14 }}>
           <h3 style={{ marginBottom: 12 }}>Files and folders</h3>
@@ -139,6 +142,33 @@ export function SettingsView() {
           <p className="subtle">NayanPDF is free software under the GNU AGPL v3. Third-party component licences are in the installation folder (resources/licenses).</p>
         </div>
       </div>
+    </div>
+  );
+}
+
+function ReadAloudSettings({ settings, save }: { settings: Settings; save: (p: Partial<Settings>) => void }) {
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[] | null>(null);
+  useEffect(() => {
+    speechVoices().then(setVoices).catch(() => setVoices([]));
+  }, []);
+  return (
+    <div className="card card-pad" style={{ marginBottom: 14 }}>
+      <h3 style={{ marginBottom: 12 }}>Read Out Loud</h3>
+      {voices && voices.length === 0 && <Notice kind="info">No speech voices are installed on this computer. Windows lists its voices under Settings &gt; Time &amp; language &gt; Speech.</Notice>}
+      {voices && voices.length > 0 && (
+        <div className="grid2">
+          <Field label="Voice" hint="Voices installed in Windows. They work offline.">
+            <select className="input" aria-label="Read Out Loud voice" value={settings.readVoice} onChange={(e) => save({ readVoice: e.target.value })}>
+              <option value="">System default</option>
+              {voices.map((v) => <option key={v.name} value={v.name}>{v.name} ({v.lang})</option>)}
+            </select>
+          </Field>
+          <Field label={`Speed: ${settings.readRate.toFixed(1)}x`}>
+            <input type="range" min={0.5} max={2} step={0.1} value={settings.readRate} onChange={(e) => save({ readRate: parseFloat(e.target.value) })} />
+          </Field>
+        </div>
+      )}
+      <p className="subtle">In a document: View &gt; Read out loud, or Ctrl+Shift+V (this page), Ctrl+Shift+B (to the end), Ctrl+Shift+C (pause), Ctrl+Shift+E (stop).</p>
     </div>
   );
 }

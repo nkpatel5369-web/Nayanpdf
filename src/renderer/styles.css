@@ -431,3 +431,24 @@ body.read-mode .ws { grid-template-rows: 1fr; }
 .tab.home-tab { font-weight: 600; gap: 6px; }
 .app-menu { min-width: 280px; }
 .app-menu > button:disabled { opacity: .45; cursor: default; background: none; color: var(--text); }
+.ov-link { position: absolute; outline: 1.5px dashed rgba(28, 110, 255, 0.8); background: rgba(28, 110, 255, 0.08); pointer-events: auto; }
+.ov-link .rm { position: absolute; right: -9px; top: -9px; width: 18px; height: 18px; border-radius: 50%; background: var(--accent); color: #fff; display: grid; place-items: center; font-size: 11px; cursor: pointer; border: none; }
+.link-pop { display: flex; flex-direction: column; gap: 6px; align-items: stretch; }
+.link-pop .check { margin: 0; }
+.comment-card .comment-text { margin-top: 4px; font-size: 12.5px; white-space: pre-wrap; }
+.comment-card .comment-text.ellipsis { white-space: nowrap; }
+.comment-card .replies { margin: 6px 0 0 18px; display: flex; flex-direction: column; gap: 4px; border-left: 2px solid var(--border); padding-left: 8px; font-size: 12px; }
+.comment-card .thread-actions { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+.comment-card input[type="checkbox"] { margin: 0 2px 0 0; }
+.badge.status-accepted, .badge.status-completed { background: rgba(31, 138, 76, 0.15); color: var(--success); }
+.badge.status-rejected { background: rgba(198, 47, 47, 0.14); color: var(--danger); }
+.badge.status-cancelled { background: var(--surface-2); color: var(--text-3); }
+.comment-filters { display: flex; flex-direction: column; gap: 6px; padding-top: 0; }
+.search-file { border-top: 1px solid var(--border); padding: 8px 0 4px; }
+.search-file-head { cursor: pointer; padding: 2px 0 4px; }
+.search-hit { display: flex; gap: 10px; width: 100%; text-align: left; border: none; background: none; padding: 5px 8px; border-radius: 6px; cursor: pointer; color: var(--text); font-size: 12.5px; }
+.search-hit:hover { background: var(--accent-soft); }
+.search-hit .subtle { flex: none; min-width: 48px; }
+.search-hit .ctx { min-width: 0; }
+.search-hit mark { background: #ffe066; color: #000; border-radius: 2px; padding: 0 1px; }
+.speak-bar { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); z-index: 33; display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-lg); font-size: 12.5px; }
