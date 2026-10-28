@@ -36,10 +36,16 @@ def _fields(ctx, path):
     return {f["name"]: f for f in forms.list_fields(ctx, path)["fields"]}
 
 
-def _all_types(ctx):
-    src = out("fd_blank.pdf")
+def _contents(path):
+    with pymupdf.open(path) as d:
+        return d[0].read_contents()
+
+
+def _all_types(ctx, tag):
+    # Each test writes its own files: on Windows a file still open elsewhere cannot be replaced.
+    src = out(f"fd_blank_{tag}.pdf")
     _blank_form(src)
-    p1 = out("fd_fields.pdf")
+    p1 = out(f"fd_fields_{tag}.pdf")
     r = formdesign.design(ctx, src, p1, [
         {"op": "add", "type": "text", "page": 1, "rect": [100, 600, 300, 620], "name": "Client name", "tooltip": "Full name", "required": True},
         {"op": "add", "type": "checkbox", "page": 1, "rect": [100, 570, 112, 582]},
@@ -53,7 +59,7 @@ def _all_types(ctx):
 
 
 def test_every_field_type_is_created_with_its_properties(ctx):
-    src, p1, r = _all_types(ctx)
+    src, p1, r = _all_types(ctx, "types")
     assert [c["name"] for c in r["created"]] == ["Client name", "Check Box1", "Scheme", "Scheme", "Dropdown1", "List Box1", "Signature1"]
     f = _fields(ctx, p1)
     assert {n: x["type"] for n, x in f.items()} == {"Client name": "text", "Check Box1": "checkbox", "Scheme": "radio",
@@ -65,11 +71,11 @@ def test_every_field_type_is_created_with_its_properties(ctx):
     assert f["Dropdown1"]["options"] == ["Q1", "Q2", "Q3", "Q4"]
     assert f["List Box1"]["options"] == ["Audit", "Tax"]
     # The page text is untouched.
-    assert pymupdf.open(p1)[0].read_contents() == pymupdf.open(src)[0].read_contents()
+    assert _contents(p1) == _contents(src)
 
 
 def test_radio_group_fills_one_button_and_survives_reopening(ctx):
-    _, p1, _ = _all_types(ctx)
+    _, p1, _ = _all_types(ctx, "radio")
     p2 = out("fd_radio_added.pdf")
     formdesign.design(ctx, p1, p2, [{"op": "add", "type": "radio", "page": 1, "name": "Scheme",
                                       "buttons": [{"rect": [220, 540, 232, 552], "export": "Exempt"}]},
@@ -106,7 +112,7 @@ def test_radio_group_fills_one_button_and_survives_reopening(ctx):
 
 
 def test_rename_properties_move_and_delete(ctx):
-    _, p1, _ = _all_types(ctx)
+    _, p1, _ = _all_types(ctx, "change")
     f = _fields(ctx, p1)
     first_radio = f["Scheme"]["widgets"][0]["xref"]
     p2 = out("fd_changed.pdf")
@@ -140,7 +146,7 @@ def test_rename_properties_move_and_delete(ctx):
 
 
 def test_duplicate_names_and_bad_input_are_refused(ctx):
-    _, p1, _ = _all_types(ctx)
+    _, p1, _ = _all_types(ctx, "bad")
     bad = [
         [{"op": "add", "type": "text", "page": 1, "rect": [10, 10, 100, 30], "name": "Scheme"}],
         [{"op": "add", "type": "radio", "page": 1, "name": "Scheme", "buttons": [{"rect": [10, 10, 22, 22], "export": "Regular"}]}],
