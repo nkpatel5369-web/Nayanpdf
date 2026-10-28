@@ -4,7 +4,7 @@ What was done to establish that NayanPDF works without an internet connection an
 
 ## Bottom line
 
-- Every processing feature has been executed with **no network available at all** (Linux network namespace, no route to any host): 105 of 105 engine tests passed, covering OCR, Office conversion, PDF/A, digital signing and verification, redaction, compression, print preparation and every page operation. The full 29-scenario UI test, including text selection, markup, printing and saving, also passed under the same conditions (and its earlier 25-scenario version passed three times in a row).
+- Every processing feature has been executed with **no network available at all** (Linux network namespace, no route to any host): 105 of 105 engine tests passed, covering OCR, Office conversion, PDF/A, digital signing and verification, redaction, compression, print preparation and every page operation. The full 32-scenario UI test, including text selection, markup, printing, saving and the Acrobat view modes, also passed under the same conditions (and its earlier 25-scenario version passed three times in a row).
 - Four channels by which a desktop PDF tool can leak traffic without the user noticing have been closed and each is covered by an automated test that fails if the protection is removed: remote images in Office files, remote resources in HTML, background requests from the user interface, and background downloads by the browser engine itself (a spell-check dictionary download found on Linux on 15 October 2026, §2.4).
 - On Windows, the **installed** application was tested with Windows Firewall blocking all outbound traffic for NayanPDF and every bundled engine: its self-test and the full engine suite passed, and while the app ran and displayed a document no NayanPDF process opened a single connection to a non-local address.
 
@@ -24,7 +24,7 @@ What was done to establish that NayanPDF works without an internet connection an
 
 ## 2. Checks executed and their results
 
-All executed on the Linux development build on 13–15 October 2026. The engine, its Python libraries, Tesseract, LibreOffice and Ghostscript on Linux are the same projects as the bundled Windows builds, but not the same binaries.
+All executed on the Linux development build on 13–28 October 2026. The engine, its Python libraries, Tesseract, LibreOffice and Ghostscript on Linux are the same projects as the bundled Windows builds, but not the same binaries.
 
 ### 2.1 Entire engine test suite with no network
 
@@ -54,7 +54,7 @@ Scenario "HTML to PDF renders offline and never fetches remote resources" in `sc
 
 ### 2.4 User-interface network activity (UI end-to-end test)
 
-After all 29 UI scenarios (opening, editing, selecting and marking up text, redacting, signing, converting, OCR, printing, saving, batch, settings), the test makes two checks:
+After all 32 UI scenarios (opening, editing, selecting and marking up text, redacting, signing, converting, OCR, printing, saving, view modes including full screen, batch, settings), the test makes two checks:
 
 - The browser's own resource log: **0 requests** to anything other than the app's local schemes.
 - Since 15 October 2026, on Linux, every app process (browser engine, GPU and utility processes, the Python engine) is started with its proxy setting pointing at a local recording proxy that refuses and logs every request. Any logged attempt fails the test. Result: **0 attempts**.
@@ -63,7 +63,7 @@ The second check was added because the first cannot see requests the browser eng
 
 ### 2.5 The whole UI test with no network
 
-The complete UI test (§2.4) was run inside a network namespace that has only a loopback interface (needed by the test driver to talk to the application). Every external address is unreachable. Result on 15 October 2026: **29 / 29 passed**, covering editing, text selection and markup, saving, annotation, redaction, signing (including certificate signing), conversion, OCR, printing, compression, merging, splitting, comparison and batch processing. The earlier 25-scenario version passed three times in a row under the same conditions.
+The complete UI test (§2.4) was run inside a network namespace that has only a loopback interface (needed by the test driver to talk to the application). Every external address is unreachable. Result on 28 October 2026: **32 / 32 passed**, covering editing, text selection and markup, saving, view modes, annotation, redaction, signing (including certificate signing), conversion, OCR, printing, compression, merging, splitting, comparison and batch processing. The earlier 25-scenario version passed three times in a row under the same conditions.
 
 ### 2.6 Static scan of the code
 
@@ -75,7 +75,7 @@ Some bundled third-party libraries contain network code they never use in NayanP
 
 ## 3. Windows acceptance test (executed)
 
-`scripts/win-acceptance.ps1`, run by `.github/workflows/windows-installer.yml` on a clean GitHub Actions machine (Windows Server 2025, x64), performs the brief's §29 acceptance procedure. Result for builds 10 and 11 (15 October 2026): **67 of 67 checks passed** each (build 7: 63 of 63; build 3: 62 of 62, before later checks were added).
+`scripts/win-acceptance.ps1`, run by `.github/workflows/windows-installer.yml` on a clean GitHub Actions machine (Windows Server 2025, x64), performs the brief's §29 acceptance procedure. Result for builds 10, 11 (15 October 2026) and 12 (28 October 2026): **67 of 67 checks passed** each (build 7: 63 of 63; build 3: 62 of 62, before later checks were added).
 
 | Step | Result |
 |---|---|
@@ -87,7 +87,7 @@ Some bundled third-party libraries contain network code they never use in NayanP
 | Electron fuses read back from the installed `NayanPDF.exe` (after install and after reinstall) | Run-as-Node off, `NODE_OPTIONS` ignored, inspector arguments ignored, ASAR integrity check on, app loaded only from its ASAR archive, no extra `file:` privileges |
 | Uninstall (user document and settings must survive), then reinstall and repeat the offline self-test | Pass |
 
-Separately, the 29-scenario UI test passed on Windows against the development build with the bundled Windows runtime (build 11). On Windows that test checks the page-level request log; traffic from the browser engine's own processes is covered by the connection sampling above.
+Separately, the 32-scenario UI test passed on Windows against the development build with the bundled Windows runtime (build 12). On Windows that test checks the page-level request log; traffic from the browser engine's own processes is covered by the connection sampling above.
 
 ## 4. How you can verify it yourself on Windows
 

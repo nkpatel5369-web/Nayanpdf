@@ -12,7 +12,7 @@ A fully offline PDF editor and document toolkit for Windows 10 and 11 (64-bit). 
 ## Current delivery status
 
 - **Windows installer:** built, installed and tested on a clean Windows machine by `.github/workflows/windows-installer.yml`. Every successful build is published as a GitHub pre-release (`v1.0.0-build.N`) with `NayanPDF_Setup.exe`, its SHA-256 and the acceptance report. Use the newest pre-release.
-- **Evidence on Windows (build 11):** the 105 engine tests pass against the bundled runtime and again against the installed copy with outbound traffic blocked; the 67-point acceptance test covering install, the security switches compiled into `NayanPDF.exe`, offline self-test, app launch with zero network connections and zero listening ports, uninstall and reinstall passes; and the 29-scenario UI test, including text selection, markup, printing and saving, passes.
+- **Evidence on Windows (build 12):** the 105 engine tests pass against the bundled runtime and again against the installed copy with outbound traffic blocked; the 67-point acceptance test covering install, the security switches compiled into `NayanPDF.exe`, offline self-test, app launch with zero network connections and zero listening ports, uninstall and reinstall passes; and the 32-scenario UI test, including text selection, markup, printing, saving and the Acrobat view modes (full screen included), passes.
 - **Not yet verified:** installation under a standard (non-administrator) Windows account, and Windows 10 or Windows 11 desktop editions specifically. The CI machine is Windows Server 2025 (Windows 11 kernel 10.0.26100).
 
 ## 1. Installing
@@ -30,7 +30,11 @@ During installation NayanPDF registers itself as an available program for `.pdf`
 
 ### Opening documents
 
-Open with **Open** (Ctrl+O), by dropping files on the window, from the recent list on Home, or with "Open with → NayanPDF" in Explorer. Each document opens in its own tab. Password-protected files ask for the password.
+Open with **Open** (Ctrl+O), by dropping files on the window, from the recent list on Home, or with "Open with → NayanPDF" in Explorer. Each document opens in its own tab (Ctrl+Tab moves between them). Password-protected files ask for the password.
+
+A document opens with only its pages on screen, at Acrobat's *Automatic* zoom. As in Acrobat, a PDF can ask to open with its bookmarks, thumbnails or attachments showing, in a two-page layout or on a given page, and NayanPDF honours that. Many PDFs exported from Word or LibreOffice ask for their bookmarks. If you never want the panel, choose Settings → Page display → *Navigation panel when a document opens* → **Never**. F4 shows or hides the navigation panel, Shift+F4 the tools panel and Ctrl+D the document properties.
+
+The **View** menu holds the page display options (single page, single page continuous, two page, two page scrolling, cover page), the zoom presets, rotate view, go to page, both panels, **Read mode** (Ctrl+H: toolbars hidden, Esc to leave) and **Full screen** (Ctrl+L: one page at a time on black, arrow keys to turn pages, Esc to leave). Hold the space bar and drag to move the page.
 
 ### The document workspace
 
@@ -77,7 +81,15 @@ Results go next to the source file unless you choose another folder (or set a de
 
 ### Keyboard shortcuts
 
-Ctrl+O open, Ctrl+S save, Ctrl+Shift+S save as, Ctrl+P print, Ctrl+F search, Ctrl+A select the page's text, Ctrl+C copy, Ctrl+Z undo, Ctrl+Y or Ctrl+Shift+Z redo, Ctrl+Plus / Ctrl+Minus zoom, Ctrl+0 fit width, Ctrl+W close tab. Shortcuts are ignored while you are typing in a text field.
+The assignments follow Acrobat on Windows. Shortcuts are ignored while you are typing in a text field.
+
+| Area | Shortcuts |
+|---|---|
+| Files | Ctrl+O open, Ctrl+S save, Ctrl+Shift+S save as, Ctrl+P print, Ctrl+W or Ctrl+F4 close the document, Ctrl+Tab / Ctrl+Shift+Tab next / previous document, Ctrl+K settings |
+| Editing | Ctrl+Z undo, Ctrl+Y or Ctrl+Shift+Z redo, Ctrl+A select the page's text, Ctrl+C copy, Ctrl+F find |
+| Zoom | Ctrl+= / Ctrl+- zoom in / out, Ctrl+1 actual size, Ctrl+0 fit page, Ctrl+2 fit width |
+| Pages | Home / End first / last page, Left / Right arrow previous / next page, PageUp / PageDown (one page at a time in single-page layouts), Ctrl+Shift+N go to page, Ctrl+Shift+Plus / Ctrl+Shift+Minus rotate the view |
+| Panels and modes | F4 navigation panel, Shift+F4 tools panel, Ctrl+D document properties, Ctrl+H read mode, Ctrl+L full screen, Esc leave read mode or full screen, hold Space and drag to move the page |
 
 ### Where NayanPDF keeps its data
 
@@ -168,7 +180,7 @@ npm start              # runs the app; set NAYANPDF_PYTHON to your Python if it 
 
 ```
 python -m pytest engine/tests -q        # engine: 105 tests on synthetic documents
-node scripts/ui-e2e.mjs                 # UI end-to-end: 29 scenarios (Linux: run under xvfb-run)
+node scripts/ui-e2e.mjs                 # UI end-to-end: 32 scenarios (Linux: run under xvfb-run)
 ```
 
 The engine tests generate their own fixtures (financial statements, bank statements spanning pages, scans, forms, encrypted and damaged files) under `engine/tests/_fixtures`; no real client document is used. The UI test needs the engine fixtures, so run the engine tests first. It drives the real application and writes screenshots and `results.json` to `test-results/ui`.
