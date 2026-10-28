@@ -4,10 +4,10 @@ import { DEFAULT_SETTINGS } from "@shared/ipc";
 
 export type ToolId =
   | "merge" | "split" | "compress" | "convert" | "organize" | "ocr" | "create" | "annotate" | "sign" | "protect"
-  | "redact" | "compare" | "extractImages" | "forms" | "prepareForm" | "edit" | "watermark" | "metadata" | "utilities" | "batch" | "search";
+  | "redact" | "compare" | "extractImages" | "forms" | "prepareForm" | "edit" | "watermark" | "metadata" | "utilities" | "batch" | "search" | "scan";
 
 export type MainView = { kind: "home" } | { kind: "tool"; tool: ToolId; args?: any } | { kind: "doc"; sessionId: string }
-  | { kind: "batch" } | { kind: "settings" } | { kind: "convert" };
+  | { kind: "batch" } | { kind: "actions" } | { kind: "settings" } | { kind: "convert" };
 
 export interface OpenDoc {
   state: DocState;

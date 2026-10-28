@@ -1,6 +1,6 @@
-// NayanPDF main process.
+// X PDF main process.
 import { app, BrowserWindow, dialog, Menu, protocol, screen, session, shell } from "electron";
-import { existsSync, readdirSync, rmSync, statSync } from "node:fs";
+import { cpSync, existsSync, readdirSync, rmSync, statSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { extname, join, normalize, resolve, sep } from "node:path";
 import { access } from "./access";
@@ -16,6 +16,26 @@ import { testAnswer } from "./testhooks";
 // Automated UI tests use a throw-away profile so they never touch a real user's
 // settings or saved signatures. Ignored by the installed (packaged) application.
 if (!app.isPackaged && process.env.NAYANPDF_TEST_USERDATA) app.setPath("userData", process.env.NAYANPDF_TEST_USERDATA);
+else migrateUserData();
+
+/**
+ * This app was called NayanPDF before 1.1, and Electron keeps settings, recent
+ * files, saved signatures and saved actions in a folder named after the app.
+ * On the first start after the rename the old folder is copied whole, including
+ * "Local State", which holds the key that protects the saved signatures. It runs
+ * before Chromium opens anything in the new folder. The old folder is kept.
+ */
+function migrateUserData() {
+  try {
+    const current = app.getPath("userData");
+    const legacy = join(app.getPath("appData"), "NayanPDF");
+    if (legacy === current || !existsSync(join(legacy, "settings.json")) || existsSync(join(current, "settings.json"))) return;
+    cpSync(legacy, current, { recursive: true, force: true });
+  } catch {
+    // Could not copy (disk full, permissions): keep using the old folder as it is.
+    app.setPath("userData", join(app.getPath("appData"), "NayanPDF"));
+  }
+}
 
 // ---------------------------------------------------------------- hardening
 // Linux test containers run as root, where Chromium's sandbox cannot start; this
@@ -153,7 +173,7 @@ function createWindow() {
     height: Math.min(920, wa.height),
     minWidth: 1000,
     minHeight: 640,
-    title: "NayanPDF",
+    title: "X PDF",
     show: false,
     backgroundColor: "#0f172a",
     autoHideMenuBar: true,

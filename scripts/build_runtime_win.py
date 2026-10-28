@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Assemble the offline Windows runtime that is bundled into NayanPDF_Setup.exe.
+"""Assemble the offline Windows runtime that is bundled into X-PDF_Setup.exe.
 
 Produces runtime/win/:
     python/        CPython 3.13 (official NuGet distribution) + engine wheels
@@ -97,7 +97,7 @@ def download(url: str, dest: Path, expected: str | None = None) -> Path:
         try:
             log("download", url)
             tmp = dest.with_suffix(dest.suffix + ".part")
-            req = urllib.request.Request(url, headers={"User-Agent": "NayanPDF-build/1.0"})
+            req = urllib.request.Request(url, headers={"User-Agent": "X-PDF-build/1.0"})
             with urllib.request.urlopen(req, timeout=300) as r, open(tmp, "wb") as fh:
                 shutil.copyfileobj(r, fh, 1 << 20)
             tmp.replace(dest)
@@ -179,7 +179,7 @@ def build_python():
     for pkg in ("numpy", "cv2", "pikepdf", "lxml", "PIL", "cryptography", "fontTools"):
         for t in (site / pkg).glob("**/tests"):
             shutil.rmtree(t, ignore_errors=True)
-    # OpenCV's FFmpeg plug-in is only used for video I/O (never by NayanPDF): drop it.
+    # OpenCV's FFmpeg plug-in is only used for video I/O (never by X PDF): drop it.
     for f in (site / "cv2").glob("opencv_videoio_ffmpeg*.dll"):
         f.unlink()
     # Isolated mode (-I) ignores PYTHONPATH; the default ._pth-less layout already includes site-packages.
@@ -314,12 +314,28 @@ def build_ghostscript():
 
 # --------------------------------------------------------------------- libreoffice
 def latest_libreoffice() -> str:
-    with urllib.request.urlopen(LIBREOFFICE_BASE, timeout=60) as r:
-        html = r.read().decode("utf-8", "replace")
-    vers = sorted({tuple(int(x) for x in v.split(".")) for v in re.findall(r'href="(\d+\.\d+\.\d+)/"', html)})
-    if not vers:
-        raise SystemExit("could not determine the current LibreOffice version")
-    return ".".join(map(str, vers[-1]))
+    # The download index is occasionally unavailable (HTTP 502). Retry, then fall
+    # back to the newest installer already in the cache rather than fail the build.
+    last = None
+    for wait in (0, 2, 4, 8, 16):
+        time.sleep(wait)
+        try:
+            with urllib.request.urlopen(LIBREOFFICE_BASE, timeout=60) as r:
+                html = r.read().decode("utf-8", "replace")
+            vers = sorted({tuple(int(x) for x in v.split(".")) for v in re.findall(r'href="(\d+\.\d+\.\d+)/"', html)})
+            if vers:
+                return ".".join(map(str, vers[-1]))
+            last = "no versions listed"
+        except Exception as e:  # noqa: BLE001
+            last = e
+            log("LibreOffice version index unavailable:", e)
+    cached = sorted((tuple(int(x) for x in m.group(1).split(".")), m.group(1))
+                    for f in CACHE.glob("LibreOffice_*_Win_x86-64.msi")
+                    if (m := re.match(r"LibreOffice_(\d+\.\d+\.\d+)_Win_x86-64\.msi$", f.name)))
+    if cached:
+        log("using the cached LibreOffice", cached[-1][1], "because the version index failed:", last)
+        return cached[-1][1]
+    raise SystemExit(f"could not determine the current LibreOffice version: {last}")
 
 
 def verify_authenticode(path: Path, publisher_hint: str):
@@ -360,7 +376,13 @@ def build_libreoffice(msi_path: str | None):
                 expected = r.read().decode().split()[0].strip().lower()
         except Exception as e:  # noqa: BLE001
             log("no published .sha256 available:", e)
-        msi = download(source, CACHE / name, expected)
+        if expected is None and (CACHE / name).exists():
+            # No published checksum to compare against: reuse the cached installer.
+            # Its Authenticode signature is still verified below.
+            log("using cached", name)
+            msi = CACHE / name
+        else:
+            msi = download(source, CACHE / name, expected)
     signer = None
     if IS_WIN:
         signer = verify_authenticode(msi, "Document Foundation")
@@ -410,7 +432,7 @@ def build_assets():
             log("optional font not available:", name)
     lic = OUT / "assets" / "licenses"
     lic.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(ROOT / "LICENSE", lic / "NayanPDF-LICENSE.txt")
+    shutil.copy2(ROOT / "LICENSE", lic / "X-PDF-LICENSE.txt")
     shutil.copy2(ROOT / "docs" / "DEPENDENCIES.md", lic / "DEPENDENCIES.md")
     site = OUT / "python" / "Lib" / "site-packages"
     py_lic = lic / "python-packages"

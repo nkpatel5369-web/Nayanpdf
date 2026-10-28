@@ -39,6 +39,12 @@ export const INVOKE_CHANNELS = [
   "signatures:list",
   "signatures:save",
   "signatures:delete",
+  "actions:list",
+  "actions:save",
+  "actions:delete",
+  "scan:devices",
+  "scan:start",
+  "scan:cancel",
   "convert:htmlToPdf",
   "window:confirm",
 ] as const;
@@ -51,6 +57,7 @@ export const EVENT_CHANNELS = [
   "app:openFiles",
   "settings:changed",
   "menu:command",
+  "scan:page",
 ] as const;
 export type EventChannel = (typeof EVENT_CHANNELS)[number];
 

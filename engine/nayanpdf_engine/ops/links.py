@@ -1,7 +1,7 @@
 """Links: list, add and remove.
 
 A link either goes to a page of the same document or holds a web address.
-NayanPDF never follows web addresses itself (it has no network access); they
+X PDF never follows web addresses itself (it has no network access); they
 are stored for readers who open the file elsewhere.
 """
 

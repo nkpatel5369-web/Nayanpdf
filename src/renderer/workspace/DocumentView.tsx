@@ -3,7 +3,7 @@ import {
   ChevronDown, ChevronLeft, ChevronRight, Eye, FilePen, FormInput, Highlighter, LayoutGrid, Maximize, MoveHorizontal, PanelLeft, PanelRight,
   Printer, Redo2, RotateCw, RotateCcw, Save, Search, Shredder, Signature, Stamp, Undo2, X, ZoomIn, ZoomOut, Info, FileDown, ArrowLeftRight, Lock,
   BookOpen, Check as CheckIcon, Expand, Volume2, GalleryThumbnails, Bookmark, Paperclip, MessageSquare, MousePointer2, StickyNote, PenLine, Type,
-  ArrowLeft, Combine, FileSearch, ScanText, Scissors, Images, Tags, Wrench, FilePlus2, Layers, ClipboardList,
+  ArrowLeft, Combine, FileSearch, ScanText, Scissors, Images, Tags, Wrench, FilePlus2, Layers, ClipboardList, ListChecks, ScanLine,
 } from "lucide-react";
 import { api, baseName, dirName, joinPath, stem, waitForJob } from "../api";
 import { errorText, useApp } from "../store";
@@ -398,6 +398,7 @@ export function DocumentView({ sessionId, active }: { sessionId: string; active:
       case "edit": case "comment": case "pages": case "forms": case "prepare": case "redact": case "sign": return setMode(id as Mode);
       case "protect": case "stamp": case "print": return setDialog(id as any);
       case "batch": return setView({ kind: "batch" });
+      case "actions": return setView({ kind: "actions" });
       default: return setView({ kind: "tool", tool: id as any, args: { sessionId } });
     }
   };
@@ -597,10 +598,12 @@ const ALL_TOOLS: { id: string; label: string; icon: any; more?: boolean }[] = [
   { id: "print", label: "Print", icon: Printer },
   { id: "split", label: "Split", icon: Scissors, more: true },
   { id: "create", label: "Create PDF", icon: FilePlus2, more: true },
+  { id: "scan", label: "Scan to PDF", icon: ScanLine, more: true },
   { id: "extractImages", label: "Extract images", icon: Images, more: true },
   { id: "metadata", label: "Document properties & metadata", icon: Tags, more: true },
   { id: "utilities", label: "More utilities (PDF/A, repair, attachments...)", icon: Wrench, more: true },
   { id: "batch", label: "Batch processing", icon: Layers, more: true },
+  { id: "actions", label: "Saved actions", icon: ListChecks, more: true },
 ];
 
 function AllTools({ onPick }: { onPick: (id: string) => void }) {

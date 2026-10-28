@@ -265,7 +265,7 @@ export function OrganizePages() {
           {Object.keys(sources).length > 0 && (
             <div className="subtle" style={{ marginTop: 6 }}>{Object.entries(sources).map(([id, s]) => `${id} = ${s.name}`).join(" · ")}</div>
           )}
-          <Notice kind="info">After processing NayanPDF re-reads the result and verifies the page count and order. You can undo before saving.</Notice>
+          <Notice kind="info">After processing X PDF re-reads the result and verifies the page count and order. You can undo before saving.</Notice>
         </Modal>
       )}
     </div>

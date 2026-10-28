@@ -57,7 +57,7 @@ def open_pdf(path: str, password: str | None = None, require: Iterable[str] = ()
 
     ``require`` lists permission classes the operation needs. If the document
     restricts any of them and the caller did not authenticate with the owner
-    password, PERMISSION_RESTRICTED is raised. NayanPDF does not bypass
+    password, PERMISSION_RESTRICTED is raised. X PDF does not bypass
     restrictions it is not authorised to lift.
     """
     require_file(path)

@@ -164,7 +164,7 @@ export function CompressTool(props: { args?: any }) {
           </div>
         )}
         <div className="divider" />
-        <Field label="Target size (optional, KB)" hint="NayanPDF tries progressively stronger settings and stops at the first result under the target. Some files cannot reach a small target without unacceptable quality loss; you are told if so.">
+        <Field label="Target size (optional, KB)" hint="X PDF tries progressively stronger settings and stops at the first result under the target. Some files cannot reach a small target without unacceptable quality loss; you are told if so.">
           <input className="input" style={{ width: 160 }} type="number" placeholder="e.g. 900" value={target} onChange={(e) => setTarget(e.target.value)} />
         </Field>
         <Check checked={gray} onChange={setGray}>Convert images to greyscale</Check>
@@ -302,7 +302,7 @@ export function ProtectTool(props: { args?: any }) {
         )}
         {mode === "unlock" && (
           <>
-            <Field label="Document password" hint="To remove all protection you need the permissions (owner) password, or an open password when no separate restrictions exist. NayanPDF does not crack or bypass passwords.">
+            <Field label="Document password" hint="To remove all protection you need the permissions (owner) password, or an open password when no separate restrictions exist. X PDF does not crack or bypass passwords.">
               <input className="input" type="password" value={unlockPw} onChange={(e) => setUnlockPw(e.target.value)} />
             </Field>
           </>

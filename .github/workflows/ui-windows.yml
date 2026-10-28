@@ -46,6 +46,8 @@ jobs:
         with:
           path: runtime/cache
           key: runtime-cache-${{ hashFiles('scripts/build_runtime_win.py', 'engine/requirements-win.txt') }}
+          # A changed build script still starts from the previous downloads.
+          restore-keys: runtime-cache-
 
       - name: Assemble offline runtime and build the app
         run: |

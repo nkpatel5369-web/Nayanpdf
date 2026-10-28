@@ -82,14 +82,14 @@ export function toolPaths(): ToolPaths {
 let tmpRoot: string | undefined;
 export function appTempRoot(): string {
   if (!tmpRoot) {
-    tmpRoot = join(app.getPath("temp"), "NayanPDF", `s${process.pid}`);
+    tmpRoot = join(app.getPath("temp"), "X-PDF", `s${process.pid}`);
     mkdirSync(tmpRoot, { recursive: true });
   }
   return tmpRoot;
 }
 
 export function appTempBase(): string {
-  return join(app.getPath("temp"), "NayanPDF");
+  return join(app.getPath("temp"), "X-PDF");
 }
 
 export function userDataFile(name: string): string {

@@ -128,7 +128,7 @@ def fill(ctx, path: str, output: str, values: dict, flatten: bool = False, passw
         raise invalid("values must be an object of field name to value.")
     doc = open_pdf(path, password, require=["form"])
     if _has_xfa(doc):
-        ctx.warn("This form contains XFA data. NayanPDF fills the standard AcroForm fields; XFA-only content may not update.")
+        ctx.warn("This form contains XFA data. X PDF fills the standard AcroForm fields; XFA-only content may not update.")
     if doc_is_signed(doc):
         ctx.warn("This document is digitally signed. Filling fields after signing may be reported as a change by signature validators.")
     changed = 0

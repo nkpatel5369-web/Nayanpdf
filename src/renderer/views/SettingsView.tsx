@@ -108,7 +108,7 @@ export function SettingsView() {
         <div className="card card-pad" style={{ marginBottom: 14 }}>
           <h3 style={{ marginBottom: 12 }}>Temporary files</h3>
           <p className="muted" style={{ marginTop: 0 }}>Edits are kept as temporary revisions while documents are open so you can undo. {temp ? `Currently ${formatBytes(temp.bytes)}.` : ""}</p>
-          <Check checked={settings.clearTempOnExit} onChange={(v) => save({ clearTempOnExit: v })}>Delete temporary files when NayanPDF closes</Check>
+          <Check checked={settings.clearTempOnExit} onChange={(v) => save({ clearTempOnExit: v })}>Delete temporary files when X PDF closes</Check>
           <button className="btn" onClick={async () => { await api.tempClear(); setTemp(await api.tempUsage()); }}>Clean up leftovers now</button>
         </div>
 
@@ -130,7 +130,7 @@ export function SettingsView() {
         <div className="card card-pad">
           <h3 style={{ marginBottom: 12 }}>About</h3>
           <table className="tbl"><tbody>
-            <tr><td>NayanPDF</td><td>{caps?.version}</td></tr>
+            <tr><td>X PDF</td><td>{caps?.version}</td></tr>
             <tr><td>Platform</td><td>{caps?.platform} · Electron {caps?.electron} · Chromium {caps?.chrome}</td></tr>
             <tr><td>PDF engine</td><td>PyMuPDF {caps?.capabilities?.pymupdf} / MuPDF {caps?.capabilities?.mupdf}</td></tr>
             <tr><td>OCR</td><td>{caps?.capabilities?.tesseract ? "Tesseract (bundled)" : "Not available"}</td></tr>
@@ -138,8 +138,8 @@ export function SettingsView() {
             <tr><td>PDF/A</td><td>{caps?.capabilities?.ghostscript ? "Ghostscript (bundled)" : "Not available"}</td></tr>
             <tr><td>Saved signatures</td><td>{caps?.signaturesProtected ? "Encrypted with your Windows account" : "Stored unencrypted (OS key store unavailable)"}</td></tr>
           </tbody></table>
-          <Notice kind="ok">NayanPDF works fully offline: no account, no activation, no telemetry, no update checks.</Notice>
-          <p className="subtle">NayanPDF is free software under the GNU AGPL v3. Third-party component licences are in the installation folder (resources/licenses).</p>
+          <Notice kind="ok">X PDF works fully offline: no account, no activation, no telemetry, no update checks.</Notice>
+          <p className="subtle">X PDF is free software under the GNU AGPL v3. Third-party component licences are in the installation folder (resources/licenses).</p>
         </div>
       </div>
     </div>

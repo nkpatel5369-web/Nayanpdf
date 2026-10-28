@@ -1,13 +1,13 @@
-; NayanPDF installer customisation (included by electron-builder).
+; X PDF installer customisation (included by electron-builder).
 
-; Finish page: "Run NayanPDF" plus an optional "Create a desktop shortcut" box.
+; Finish page: "Run X PDF" plus an optional "Create a desktop shortcut" box.
 !macro customFinishPage
   Function StartApp
     ${StdUtils.ExecShellAsUser} $0 "$launchLink" "open" ""
   FunctionEnd
 
   Function NayanCreateDesktopShortcut
-    CreateShortCut "$DESKTOP\NayanPDF.lnk" "$INSTDIR\NayanPDF.exe" "" "$INSTDIR\NayanPDF.exe" 0
+    CreateShortCut "$DESKTOP\X PDF.lnk" "$INSTDIR\X-PDF.exe" "" "$INSTDIR\X-PDF.exe" 0
   FunctionEnd
 
   !define MUI_FINISHPAGE_RUN
@@ -21,11 +21,15 @@
 
 !macro customInstall
   ; Nothing is downloaded during installation: every component is inside this installer.
+  ; Shortcuts left by NayanPDF (this app's name before 1.1) would point to a
+  ; program the upgrade has removed.
+  Delete "$DESKTOP\NayanPDF.lnk"
+  Delete "$SMPROGRAMS\NayanPDF.lnk"
 !macroend
 
 !macro customUnInstall
-  ; Remove the optional desktop shortcut and NayanPDF's own temporary files.
+  ; Remove the optional desktop shortcut and X PDF's own temporary files.
   ; Settings, saved signatures and every user document are left untouched.
-  Delete "$DESKTOP\NayanPDF.lnk"
-  RMDir /r "$TEMP\NayanPDF"
+  Delete "$DESKTOP\X PDF.lnk"
+  RMDir /r "$TEMP\X-PDF"
 !macroend

@@ -1,7 +1,7 @@
 appId: in.nayanpdf.desktop
-productName: NayanPDF
-executableName: NayanPDF
-copyright: Copyright (c) 2026 NayanPDF contributors
+productName: X PDF
+executableName: X-PDF
+copyright: Copyright (c) 2026 X PDF contributors
 directories:
   output: release
   buildResources: build
@@ -38,7 +38,7 @@ win:
       arch:
         - x64
   icon: build/icon.ico
-  legalTrademarks: NayanPDF
+  legalTrademarks: X PDF
   requestedExecutionLevel: asInvoker
   signAndEditExecutable: true
   verifyUpdateCodeSignature: false
@@ -49,10 +49,10 @@ nsis:
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: false
   createStartMenuShortcut: true
-  shortcutName: NayanPDF
+  shortcutName: X PDF
   menuCategory: false
-  artifactName: NayanPDF_Setup.exe
-  uninstallDisplayName: NayanPDF
+  artifactName: X-PDF_Setup.exe
+  uninstallDisplayName: X PDF
   deleteAppDataOnUninstall: false
   include: build/installer.nsh
   license: build/license.txt
@@ -63,7 +63,7 @@ nsis:
   runAfterFinish: true
 fileAssociations:
   - ext: pdf
-    name: NayanPDF.Document
+    name: X-PDF.Document
     description: PDF Document
     role: Editor
 publish: null

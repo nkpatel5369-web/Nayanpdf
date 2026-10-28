@@ -55,6 +55,13 @@ export const api = {
   signatures: () => call<any[]>("signatures:list"),
   saveSignature: (name: string, kind: "signature" | "initials", png: string) => call("signatures:save", { name, kind, png }),
   deleteSignature: (id: string) => call<any[]>("signatures:delete", id),
+  scanners: () => call<{ available: boolean; reason?: string; devices: { id: string; name: string }[] }>("scan:devices"),
+  scan: (o: { deviceId: string; source: "flatbed" | "feeder"; colour: "color" | "gray" | "bw"; dpi: number }) =>
+    call<{ pages: { path: string; thumb: string; width: number; height: number }[] }>("scan:start", o),
+  cancelScan: () => call("scan:cancel"),
+  actions: () => call<SavedAction[]>("actions:list"),
+  saveAction: (a: Partial<SavedAction> & { name: string; steps: any[] }) => call<SavedAction[]>("actions:save", a),
+  deleteAction: (id: string) => call<SavedAction[]>("actions:delete", id),
   htmlToPdf: (path: string, output: string, opts: Record<string, any>) => call("convert:htmlToPdf", { path, output, ...opts }),
   confirm: (title: string, message: string, detail?: string, buttons?: string[], type: "warning" | "question" = "warning") =>
     call<number>("window:confirm", { title, message, detail, buttons, type }),
@@ -105,4 +112,13 @@ export function formatBytes(n?: number): string {
   if (abs < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
   if (abs < 1024 ** 3) return `${(n / 1024 / 1024).toFixed(2)} MB`;
   return `${(n / 1024 ** 3).toFixed(2)} GB`;
+}
+
+export interface SavedAction {
+  id: string;
+  name: string;
+  description: string;
+  steps: Record<string, any>[];
+  naming: string;
+  updatedAt: number;
 }

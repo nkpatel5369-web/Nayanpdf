@@ -1,4 +1,6 @@
 import React, { useEffect } from "react";
+import { BrandMark } from "./components/BrandMark";
+import { ActionsView } from "./views/ActionsView";
 import { Activity, FolderOpen, Home as HomeIcon, Layers, Moon, Settings as SettingsIcon, Sun, Wrench, X, ArrowLeftRight, Menu as MenuIcon } from "lucide-react";
 import type { DocState, JobInfo, Settings } from "@shared/ipc";
 import { api, on } from "./api";
@@ -114,8 +116,8 @@ export function App() {
       <div className="topbar">
         <AppMenu closeTab={closeTab} />
         <div className="brand" onClick={() => setView({ kind: "home" })} title="Home">
-          <div className="brand-mark">N</div>
-          NayanPDF
+          <BrandMark />
+          X PDF
         </div>
         <div className="tabs">
           <div className={"tab home-tab" + (view.kind === "home" ? " active" : "")} onClick={() => setView({ kind: "home" })} title="Home">
@@ -172,6 +174,7 @@ export function App() {
           {view.kind === "home" && <Home />}
           {view.kind === "tool" && <ToolView tool={view.tool} args={view.args} />}
           {view.kind === "batch" && <BatchView />}
+          {view.kind === "actions" && <ActionsView />}
           {view.kind === "settings" && <SettingsView />}
           {docOrder.map((id) => (
             <div key={id} className={"doc-pane" + (view.kind === "doc" && view.sessionId === id ? " active" : "")} style={{ display: view.kind === "doc" && view.sessionId === id ? "block" : "none", height: "100%" }}>
@@ -202,6 +205,7 @@ function AppMenu({ closeTab }: { closeTab: (id: string) => void }) {
   const doc = (cmd: string) => docId && window.dispatchEvent(new CustomEvent("nayan:doc-command", { detail: { sessionId: docId, cmd } }));
   const items: ({ label: string; kbd?: string; run: () => void; needsDoc?: boolean } | "sep")[] = [
     { label: "Create PDF...", run: () => setView({ kind: "tool", tool: "create" }) },
+    { label: "Scan to PDF...", run: () => setView({ kind: "tool", tool: "scan" }) },
     { label: "Open...", kbd: "Ctrl+O", run: () => pickAndOpen() },
     { label: "Save", kbd: "Ctrl+S", needsDoc: true, run: () => doc("save") },
     { label: "Save As...", kbd: "Ctrl+Shift+S", needsDoc: true, run: () => doc("saveAs") },
@@ -214,6 +218,7 @@ function AppMenu({ closeTab }: { closeTab: (id: string) => void }) {
     { label: "Search across files...", kbd: "Ctrl+Shift+F", run: () => setView({ kind: "tool", tool: "search" }) },
     { label: "Combine files", run: () => setView({ kind: "tool", tool: "merge" }) },
     { label: "Batch processing", run: () => setView({ kind: "batch" }) },
+    { label: "Saved actions", run: () => setView({ kind: "actions" }) },
     "sep",
     { label: "Preferences", kbd: "Ctrl+K", run: () => setView({ kind: "settings" }) },
     { label: "Exit", kbd: "Ctrl+Q", run: () => window.close() },

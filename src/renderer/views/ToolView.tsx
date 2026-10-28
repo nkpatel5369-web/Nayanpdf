@@ -6,6 +6,7 @@ import { CompressTool, ExtractImagesTool, MergeTool, MetadataTool, OcrTool, Prot
 import { ConvertTool, CreateTool } from "./tools/ConvertTools";
 import { CompareTool, DocModeTool, UtilitiesTool } from "./tools/MoreTools";
 import { SearchTool } from "./tools/SearchTool";
+import { ScanTool } from "./tools/ScanTool";
 
 export function ToolView({ tool, args }: { tool: ToolId; args?: any }) {
   const setView = useApp((s) => s.setView);
@@ -25,6 +26,7 @@ export function ToolView({ tool, args }: { tool: ToolId; args?: any }) {
       case "metadata": return <MetadataTool args={args} />;
       case "utilities": return <UtilitiesTool args={args} />;
       case "search": return <SearchTool />;
+      case "scan": return <ScanTool />;
       default: return t ? <DocModeTool tool={t} /> : null;
     }
   })();

@@ -1,6 +1,6 @@
 """Annotations and review markup.
 
-Annotations are real PDF annotation objects (editable/deletable in NayanPDF,
+Annotations are real PDF annotation objects (editable/deletable in X PDF,
 Acrobat and other viewers). Flattening burns them into the page content and
 removes their independent editability; the UI warns before doing so.
 """

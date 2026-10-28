@@ -14,6 +14,7 @@ import { htmlToPdf, printPlan, PrintJob } from "./output";
 import { appTempBase, appTempRoot } from "./paths";
 import * as store from "./store";
 import { testAnswer } from "./testhooks";
+import { cancelScan, listScanners, scan } from "./scan";
 
 const FILTERS: Record<string, Electron.FileFilter[]> = {
   pdf: [{ name: "PDF documents", extensions: ["pdf"] }],
@@ -36,10 +37,10 @@ const ENGINE_QUERIES = new Set([
   "doc.probe", "doc.info", "pages.thumbnail", "forms.list", "sign.certificateInfo", "sign.pkcs11List", "ocr.languages",
   "engine.capabilities", "redact.patterns", "stamp.presets", "sign.typedImage", "sign.cleanImage", "compare.run",
   "security.inspect", "sign.verify", "compress.analyze", "meta.get", "attachments.list", "bookmarks.get", "doc.pageSizes",
-  "security.integrity", "util.pdfaCheck", "blank.detect", "redact.search",
+  "security.integrity", "util.pdfaCheck", "blank.detect", "redact.search", "action.validate",
 ]);
 
-// Files NayanPDF will hand to the operating system to open. Executables and
+// Files X PDF will hand to the operating system to open. Executables and
 // scripts (e.g. extracted attachments) are never launched.
 const OPENABLE = new Set([".pdf", ".docx", ".doc", ".xlsx", ".xls", ".csv", ".pptx", ".ppt", ".txt", ".html", ".htm", ".md",
   ".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".webp", ".gif", ".odt", ".ods", ".odp", ".rtf"]);
@@ -83,7 +84,7 @@ const handlers: Record<string, Handler> = {
   "app:info": async () => {
     const caps = await enginePool.queryCall("engine.capabilities", {}).catch((e) => ({ error: e.message }));
     return {
-      name: "NayanPDF",
+      name: "X PDF",
       version: app.getVersion(),
       electron: process.versions.electron,
       chrome: process.versions.chrome,
@@ -202,7 +203,7 @@ const handlers: Record<string, Handler> = {
   "files:openWithSystem": async (_e, payload) => {
     const p = str(payload, "path");
     if (!access.canRead(p)) throw new AccessDenied("Not permitted.");
-    if (!OPENABLE.has(extname(p).toLowerCase())) throw new EngineError("NOT_SUPPORTED", "For safety, NayanPDF only opens document and image files. Use 'Show in folder' instead.");
+    if (!OPENABLE.has(extname(p).toLowerCase())) throw new EngineError("NOT_SUPPORTED", "For safety, X PDF only opens document and image files. Use 'Show in folder' instead.");
     const err = await shell.openPath(p);
     if (err) throw new EngineError("OPERATION_FAILED", err);
     return true;
@@ -341,6 +342,32 @@ const handlers: Record<string, Handler> = {
     store.deleteSignature(str(payload, "id"));
     return store.listSignatures();
   },
+  "scan:devices": () => listScanners(),
+  "scan:start": (e, payload) => {
+    const p = obj(payload);
+    const source = p.source === "feeder" ? "feeder" : "flatbed";
+    const colour = p.colour === "gray" || p.colour === "bw" ? p.colour : "color";
+    const dpi = [100, 150, 200, 300, 400, 600].includes(Number(p.dpi)) ? Number(p.dpi) : 300;
+    return scan({ deviceId: str(p.deviceId, "scanner", 300), source, colour, dpi }, BrowserWindow.fromWebContents(e.sender));
+  },
+  "scan:cancel": () => cancelScan(),
+  "actions:list": () => store.listActions(),
+  "actions:save": (_e, payload) => {
+    const p = obj(payload);
+    const steps = Array.isArray(p.steps) ? p.steps : [];
+    if (!steps.length || steps.length > 20 || !steps.every((s: any) => s && typeof s === "object" && typeof s.op === "string")) {
+      throw new EngineError("INVALID_ARGUMENT", "An action needs 1 to 20 steps.");
+    }
+    if (JSON.stringify(steps).length > 64_000) throw new EngineError("INVALID_ARGUMENT", "The action is too large.");
+    return store.saveAction({
+      id: typeof p.id === "string" ? p.id.slice(0, 20) : undefined,
+      name: str(p.name, "name", 80).trim() || "Action",
+      description: typeof p.description === "string" ? p.description.slice(0, 300) : "",
+      steps,
+      naming: typeof p.naming === "string" && p.naming.trim() ? p.naming.slice(0, 120) : "{name}_processed",
+    });
+  },
+  "actions:delete": (_e, payload) => store.deleteAction(str(payload, "id", 20)),
   "convert:htmlToPdf": (_e, payload) => {
     const p = obj(payload);
     return htmlToPdf(str(p.path, "path"), str(p.output, "output"), { pageSize: p.pageSize, landscape: !!p.landscape, margin: Number(p.margin), overwrite: !!p.overwrite });
@@ -352,7 +379,7 @@ const handlers: Record<string, Handler> = {
     if (t.hit) return t.value;
     const r = await dialog.showMessageBox(win(e), {
       type: p.type === "warning" ? "warning" : "question",
-      title: String(p.title || "NayanPDF"),
+      title: String(p.title || "X PDF"),
       message: String(p.message || ""),
       detail: p.detail ? String(p.detail) : undefined,
       buttons,

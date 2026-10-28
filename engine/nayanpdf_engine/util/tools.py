@@ -87,7 +87,7 @@ def resources_dir() -> str:
 
 def require_tool(path: str | None, name: str) -> str:
     if not path:
-        raise EngineError(TOOL_MISSING, f"The {name} component is not installed with this copy of NayanPDF.")
+        raise EngineError(TOOL_MISSING, f"The {name} component is not installed with this copy of X PDF.")
     return path
 
 

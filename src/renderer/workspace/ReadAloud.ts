@@ -40,7 +40,7 @@ export async function readAloud(pdf: any, start: number, toEnd: boolean, goTo: (
   const toast = useApp.getState().toast;
   const voices = await speechVoices();
   if (!synth || !voices.length) {
-    toast({ kind: "warning", title: "No speech voices are installed", body: "Windows: Settings > Time & language > Speech lists the installed voices. NayanPDF uses them offline; it never downloads voices." });
+    toast({ kind: "warning", title: "No speech voices are installed", body: "Windows: Settings > Time & language > Speech lists the installed voices. X PDF uses them offline; it never downloads voices." });
     onState(null);
     return;
   }

@@ -585,7 +585,7 @@ def to_excel(ctx, path: str, output: str, pages=None, strategy: str = "auto", la
             t["sheet"] = ws.title
 
     rs = wb.create_sheet("Extraction Report", 0)
-    rs.append(["NayanPDF table extraction report"])
+    rs.append(["X PDF table extraction report"])
     rs["A1"].font = Font(bold=True, size=13)
     rs.append(["Source", os.path.basename(path)])
     rs.append(["Note", "Values were converted to numbers/dates only where the text matched an exact numeric or date pattern. "
@@ -1097,7 +1097,7 @@ def office_to_pdf_file(ctx, src: str, target_tmp: str, singlePageSheets: bool = 
     shutil.move(produced, target_tmp)
 
 
-# LibreOffice settings written into every private profile NayanPDF uses: never fetch
+# LibreOffice settings written into every private profile X PDF uses: never fetch
 # linked content (images or data referenced by URL), never update links, no update
 # check, and macros never run. Unknown paths are ignored by LibreOffice.
 _LO_ITEMS = [

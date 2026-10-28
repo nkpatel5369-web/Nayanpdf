@@ -26,6 +26,7 @@ from .registry import METHODS, Context, dumps, log
 def _load_ops() -> None:
     # Importing registers every @method.
     from .ops import (  # noqa: F401
+        actions,
         annotate,
         compare,
         compress,

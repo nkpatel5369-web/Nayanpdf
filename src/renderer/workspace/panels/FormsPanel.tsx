@@ -43,7 +43,7 @@ export function FormsPanel() {
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       <div className="panel-pad" style={{ paddingBottom: 0 }}>
         <h3>Form fields ({fields.length})</h3>
-        {xfa && <Notice kind="warn">This form also contains XFA data. NayanPDF fills the standard (AcroForm) fields.</Notice>}
+        {xfa && <Notice kind="warn">This form also contains XFA data. X PDF fills the standard (AcroForm) fields.</Notice>}
       </div>
       <div className="side-body panel-pad">
         {fields.map((f) => {

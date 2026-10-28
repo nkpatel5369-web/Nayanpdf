@@ -1,6 +1,6 @@
 import {
   ArrowLeftRight, Combine, FileCog, FileDown, FileImage, FileInput, FileLock2, FilePen, FilePlus2, FileSearch, FileSignature, FileType2,
-  FormInput, Highlighter, Images, LayoutGrid, ScanText, Scissors, Shredder, Stamp, Tags, Wrench, TextSearch, ClipboardList,
+  FormInput, Highlighter, Images, LayoutGrid, ScanText, Scissors, Shredder, Stamp, Tags, Wrench, TextSearch, ClipboardList, ScanLine,
 } from "lucide-react";
 import type { ToolId } from "./store";
 
@@ -23,6 +23,7 @@ export const TOOLS: ToolDef[] = [
   { id: "organize", title: "Organize Pages", desc: "Reorder, rotate, insert, delete", icon: LayoutGrid, color: "#f08c00", docMode: "pages" },
   { id: "ocr", title: "OCR PDF", desc: "Make scanned documents searchable", icon: ScanText, color: "#0c8599" },
   { id: "create", title: "Create PDF", desc: "From Office files, images, text, HTML", icon: FilePlus2, color: "#5c940d" },
+  { id: "scan", title: "Scan to PDF", desc: "From the scanner on this PC, searchable", icon: ScanLine, color: "#0b7285" },
   { id: "annotate", title: "Annotate PDF", desc: "Highlight, comment, draw, stamp", icon: Highlighter, color: "#e8590c", docMode: "comment" },
   { id: "sign", title: "Sign PDF", desc: "Signature images and digital signatures", icon: FileSignature, color: "#364fc7", docMode: "sign" },
   { id: "protect", title: "Protect PDF", desc: "Passwords, permissions, unlock", icon: FileLock2, color: "#495057" },

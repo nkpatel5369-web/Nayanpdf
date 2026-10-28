@@ -170,3 +170,50 @@ export function deleteSignature(id: string): void {
 export function signaturesProtected(): boolean {
   return safeStorage.isEncryptionAvailable();
 }
+
+// ---------------------------------------------------------------- saved actions
+// An action is a named list of steps (Acrobat's Action Wizard). Stored as plain
+// JSON: it holds settings only. Passwords are removed before writing; a
+// "protect" step asks for its password each time the action runs.
+export interface SavedAction {
+  id: string;
+  name: string;
+  description: string;
+  steps: Record<string, unknown>[];
+  naming: string;
+  updatedAt: number;
+}
+
+const SECRET_KEYS = new Set(["userPassword", "ownerPassword", "password"]);
+
+function withoutSecrets(v: unknown, depth = 0): unknown {
+  if (depth > 6 || v === null || typeof v !== "object") return v;
+  if (Array.isArray(v)) return v.map((x) => withoutSecrets(x, depth + 1));
+  return Object.fromEntries(Object.entries(v as Record<string, unknown>).filter(([k]) => !SECRET_KEYS.has(k)).map(([k, x]) => [k, withoutSecrets(x, depth + 1)]));
+}
+
+export function listActions(): SavedAction[] {
+  const list = readJson<SavedAction[]>(userDataFile("actions.json"), []);
+  return Array.isArray(list) ? list : [];
+}
+
+export function saveAction(a: Omit<SavedAction, "id" | "updatedAt"> & { id?: string }): SavedAction[] {
+  const list = listActions();
+  const item: SavedAction = {
+    id: a.id && list.some((x) => x.id === a.id) ? a.id : Math.random().toString(36).slice(2, 10),
+    name: a.name,
+    description: a.description,
+    steps: withoutSecrets(a.steps) as Record<string, unknown>[],
+    naming: a.naming,
+    updatedAt: Date.now(),
+  };
+  const next = [item, ...list.filter((x) => x.id !== item.id)].slice(0, 100);
+  writeJsonAtomic(userDataFile("actions.json"), next);
+  return next;
+}
+
+export function deleteAction(id: string): SavedAction[] {
+  const next = listActions().filter((x) => x.id !== id);
+  writeJsonAtomic(userDataFile("actions.json"), next);
+  return next;
+}

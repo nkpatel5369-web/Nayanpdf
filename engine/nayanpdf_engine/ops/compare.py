@@ -255,7 +255,7 @@ def report(ctx, pathA: str, pathB: str, output: str, passwordA: str | None = Non
     sp = out_doc.new_page(width=842, height=595)
     import os
 
-    lines = [f"NayanPDF comparison report", "", f"A: {os.path.basename(pathA)} ({res['pageCountA']} pages)",
+    lines = [f"X PDF comparison report", "", f"A: {os.path.basename(pathA)} ({res['pageCountA']} pages)",
              f"B: {os.path.basename(pathB)} ({res['pageCountB']} pages)", "",
              "Differences found: " + (", ".join(f"{k}: {v}" for k, v in res["summary"].items()) or "none"),
              "Methods: " + ", ".join(res["methods"]),

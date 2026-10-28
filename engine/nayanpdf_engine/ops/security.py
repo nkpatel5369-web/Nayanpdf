@@ -1,6 +1,6 @@
 """Password protection, authorised removal, permission and integrity inspection.
 
-NayanPDF only removes protection when the caller supplies a password that
+X PDF only removes protection when the caller supplies a password that
 grants the necessary rights. It never attempts to guess, crack or bypass
 passwords.
 """

@@ -27,7 +27,7 @@ const JOB_METHODS = new Set([
   "util.repair", "util.linearize", "util.pdfa", "bookmarks.set", "labels.set", "attachments.add",
   "attachments.extract", "attachments.delete", "images.extract", "pagesize.standardize", "pagesize.crop",
   "compare.run", "edit.replaceAll", "edit.text", "edit.insertText", "edit.insertImage", "edit.image", "annot.apply", "selftest.run",
-  "annot.exportXfdf", "annot.summary", "annot.exportList", "search.files",
+  "annot.exportXfdf", "annot.summary", "annot.exportList", "search.files", "action.run",
 ]);
 
 class JobManager {

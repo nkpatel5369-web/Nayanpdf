@@ -1,12 +1,14 @@
 <#
-  NayanPDF Windows acceptance test.
+  X PDF Windows acceptance test.
 
   Runs on a Windows machine (used by CI on windows-latest):
-    1. Silent per-user install of NayanPDF_Setup.exe
+    0. With -PreviousInstaller: install NayanPDF 1.0, then X PDF over it; one
+       installation left, old program and shortcuts gone, settings carried over
+    1. Silent per-user install of X-PDF_Setup.exe
     2. Verifies executable, bundled engines, Start Menu shortcut, uninstall registration
-    3. Blocks outbound network access for every NayanPDF executable (Windows Firewall)
+    3. Blocks outbound network access for every X PDF executable (Windows Firewall)
     4. Runs the engine self-test and the full engine test suite with the INSTALLED runtime
-    5. Launches the installed NayanPDF.exe (home screen, then with a PDF), captures
+    5. Launches the installed X-PDF.exe (home screen, then with a PDF), captures
        screenshots, and records any network connections made by its processes
     6. Silent uninstall: verifies removal while user documents and settings survive
     7. Reinstall and re-verify
@@ -17,7 +19,10 @@ param(
   [Parameter(Mandatory = $true)][string]$Installer,
   [string]$ReportDir = "acceptance",
   [string]$RepoRoot = (Resolve-Path "$PSScriptRoot\..").Path,
-  [string]$TestDeps = ""
+  [string]$TestDeps = "",
+  # An installer of the previous release (NayanPDF, the name before 1.1): when
+  # given, the upgrade from it is tested first.
+  [string]$PreviousInstaller = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -25,8 +30,8 @@ New-Item -ItemType Directory -Force -Path $ReportDir | Out-Null
 $ReportDir = (Resolve-Path $ReportDir).Path
 $Installer = (Resolve-Path $Installer).Path
 $results = New-Object System.Collections.ArrayList
-$InstallDir = Join-Path $env:LOCALAPPDATA "Programs\NayanPDF"
-$StartMenu = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\NayanPDF.lnk"
+$InstallDir = Join-Path $env:LOCALAPPDATA "Programs\X PDF"
+$StartMenu = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\X PDF.lnk"
 
 function Record([string]$name, [bool]$ok, [string]$detail = "", [bool]$required = $true) {
   $null = $results.Add([pscustomobject]@{ check = $name; ok = $ok; required = $required; detail = $detail })
@@ -44,12 +49,51 @@ function Install-App([string]$label) {
 
 function Get-UninstallEntry {
   Get-ChildItem "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall" -ErrorAction SilentlyContinue |
-    ForEach-Object { Get-ItemProperty $_.PSPath } | Where-Object { $_.DisplayName -like "NayanPDF*" } | Select-Object -First 1
+    ForEach-Object { Get-ItemProperty $_.PSPath } | Where-Object { $_.DisplayName -like "X PDF*" } | Select-Object -First 1
+}
+
+# The folder the installer chose, from its uninstall registration (an upgrade may
+# keep the previous folder).
+function Sync-InstallDir {
+  $u = Get-UninstallEntry
+  if ($u -and $u.UninstallString -match '^"?([^"]+\\)[^"\\]+\.exe') { $script:InstallDir = $Matches[1].TrimEnd('\') }
+}
+
+function Test-Upgrade {
+  $legacyDir = Join-Path $env:LOCALAPPDATA "Programs\NayanPDF"
+  $legacyData = Join-Path $env:APPDATA "NayanPDF"
+  $p = Start-Process -FilePath $PreviousInstaller -ArgumentList "/S" -Wait -PassThru
+  Start-Sleep -Seconds 3
+  Record "Upgrade: NayanPDF 1.0 installed first" ($p.ExitCode -eq 0 -and (Test-Path (Join-Path $legacyDir "NayanPDF.exe"))) $legacyDir
+  New-Item -ItemType Directory -Force -Path $legacyData | Out-Null
+  [IO.File]::WriteAllText((Join-Path $legacyData "settings.json"), '{"reviewerName":"Upgrade Check"}')
+  Install-App "Upgrade"
+  $entries = @(Get-ChildItem "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall" -ErrorAction SilentlyContinue |
+    ForEach-Object { Get-ItemProperty $_.PSPath } | Where-Object { $_.DisplayName -match '^(NayanPDF|X PDF)' })
+  Record "Upgrade: one installation registered" ($entries.Count -eq 1) (($entries | ForEach-Object { "$($_.DisplayName) $($_.DisplayVersion)" }) -join ", ")
+  Sync-InstallDir
+  Record "Upgrade: X-PDF.exe installed" (Test-Path (Join-Path $InstallDir "X-PDF.exe")) $InstallDir
+  Record "Upgrade: old NayanPDF.exe removed" (-not (Test-Path (Join-Path $legacyDir "NayanPDF.exe")))
+  Record "Upgrade: no NayanPDF Start Menu shortcut left" (-not (Test-Path (Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\NayanPDF.lnk")))
+  Run-App "upgrade" @()
+  $migrated = Join-Path $env:APPDATA "X PDF\settings.json"
+  Record "Upgrade: settings carried over from NayanPDF" ((Test-Path $migrated) -and ((Get-Content $migrated -Raw) -match "Upgrade Check")) $migrated
+  # Back to a clean machine for the fresh-install checks.
+  $u = Get-UninstallEntry
+  if ($u) {
+    $un = Join-Path $InstallDir "Uninstall X PDF.exe"
+    if (Test-Path $un) { Start-Process -FilePath $un -ArgumentList @("/S", "_?=$InstallDir") -Wait | Out-Null }
+    Start-Sleep -Seconds 3
+    Remove-Item -Recurse -Force $InstallDir -ErrorAction SilentlyContinue
+  }
+  Remove-Item -Recurse -Force $legacyDir, $legacyData, (Join-Path $env:APPDATA "X PDF") -ErrorAction SilentlyContinue
+  $script:InstallDir = Join-Path $env:LOCALAPPDATA "Programs\X PDF"
 }
 
 function Verify-Install([string]$label) {
-  $exe = Join-Path $InstallDir "NayanPDF.exe"
-  Record "${label}: NayanPDF.exe installed" (Test-Path $exe) $exe
+  Sync-InstallDir
+  $exe = Join-Path $InstallDir "X-PDF.exe"
+  Record "${label}: X-PDF.exe installed" (Test-Path $exe) $exe
   $res = Join-Path $InstallDir "resources"
   foreach ($rel in @("python\python.exe", "engine\run_engine.py", "tesseract\tesseract.exe", "tesseract\tessdata\eng.traineddata",
                      "libreoffice\program\soffice.exe", "ghostscript\bin\gswin64c.exe", "app.asar", "MANIFEST.json")) {
@@ -60,12 +104,12 @@ function Verify-Install([string]$label) {
   Record "${label}: uninstall registration" ($null -ne $u) ($(if ($u) { "$($u.DisplayName) $($u.DisplayVersion)" } else { "missing" }))
   if (Test-Path $exe) {
     $vi = (Get-Item $exe).VersionInfo
-    Record "${label}: executable version info" ($vi.ProductName -eq "NayanPDF") "ProductName=$($vi.ProductName) FileVersion=$($vi.FileVersion)" $false
+    Record "${label}: executable version info" ($vi.ProductName -eq "X PDF") "ProductName=$($vi.ProductName) FileVersion=$($vi.FileVersion)" $false
     Check-Fuses $label $exe
   }
 }
 
-# Electron fuses are switches compiled into NayanPDF.exe at packaging time.
+# Electron fuses are switches compiled into X-PDF.exe at packaging time.
 # Read them back from the installed file rather than trusting the build config.
 function Check-Fuses([string]$label, [string]$exe) {
   $tool = Join-Path $RepoRoot "node_modules\@electron\fuses\dist\bin.js"
@@ -81,19 +125,19 @@ function Check-Fuses([string]$label, [string]$exe) {
 function Block-Network {
   $exes = @()
   $exes += Get-ChildItem -Path $InstallDir -Recurse -Include *.exe -ErrorAction SilentlyContinue | Where-Object {
-    $_.Name -match '^(NayanPDF|python|pythonw|tesseract|soffice|soffice\.bin|gswin64c)\.exe$' -or $_.Name -eq 'soffice.bin'
+    $_.Name -match '^(X-PDF|python|pythonw|tesseract|soffice|soffice\.bin|gswin64c)\.exe$' -or $_.Name -eq 'soffice.bin'
   } | Select-Object -ExpandProperty FullName
   $bin = Join-Path $InstallDir "resources\libreoffice\program\soffice.bin"
   if (Test-Path $bin) { $exes += $bin }
   $i = 0
   foreach ($e in ($exes | Sort-Object -Unique)) {
     $i++
-    New-NetFirewallRule -DisplayName "NayanPDF offline test $i" -Group "NayanPDFOfflineTest" -Direction Outbound -Action Block -Program $e | Out-Null
+    New-NetFirewallRule -DisplayName "X PDF offline test $i" -Group "XPDFOfflineTest" -Direction Outbound -Action Block -Program $e | Out-Null
   }
-  Record "Outbound network blocked for NayanPDF executables" ($i -gt 0) "$i program rules"
+  Record "Outbound network blocked for X PDF executables" ($i -gt 0) "$i program rules"
 }
 
-function Unblock-Network { Get-NetFirewallRule -Group "NayanPDFOfflineTest" -ErrorAction SilentlyContinue | Remove-NetFirewallRule }
+function Unblock-Network { Get-NetFirewallRule -Group "XPDFOfflineTest" -ErrorAction SilentlyContinue | Remove-NetFirewallRule }
 
 function Engine-Env {
   $res = Join-Path $InstallDir "resources"
@@ -137,7 +181,7 @@ function Run-App([string]$label, [string[]]$argsList) {
   New-Item -ItemType Directory -Force -Path $out | Out-Null
   $env:NAYANPDF_SMOKE = "1"
   $env:NAYANPDF_SMOKE_OUT = $out
-  $exe = Join-Path $InstallDir "NayanPDF.exe"
+  $exe = Join-Path $InstallDir "X-PDF.exe"
   $p = Start-Process -FilePath $exe -ArgumentList $argsList -PassThru
   $conns = @()
   $listen = @()
@@ -174,15 +218,16 @@ function Run-App([string]$label, [string[]]$argsList) {
 
 # ------------------------------------------------------------------ run
 try {
+  if ($PreviousInstaller) { Test-Upgrade } else { Record "Upgrade from NayanPDF 1.0 tested" $false "previous installer not available" $false }
   Install-App "Install"
   Verify-Install "Install"
 
   # A user document and settings that must survive uninstallation.
-  $docs = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "NayanPDF-acceptance"
+  $docs = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "X-PDF-acceptance"
   New-Item -ItemType Directory -Force -Path $docs | Out-Null
   $userDoc = Join-Path $docs "user-document.pdf"
   $res = Engine-Env
-  & (Join-Path $res "python\python.exe") -I -c "import pymupdf,sys; d=pymupdf.open(); p=d.new_page(); p.insert_text((72,100),'NayanPDF acceptance document',fontsize=18); [d.new_page().insert_text((72,100),'Page %d'%(i+2)) for i in range(4)]; d.save(sys.argv[1])" $userDoc
+  & (Join-Path $res "python\python.exe") -I -c "import pymupdf,sys; d=pymupdf.open(); p=d.new_page(); p.insert_text((72,100),'X PDF acceptance document',fontsize=18); [d.new_page().insert_text((72,100),'Page %d'%(i+2)) for i in range(4)]; d.save(sys.argv[1])" $userDoc
   Record "Test document created" (Test-Path $userDoc) $userDoc
 
   Block-Network
@@ -191,17 +236,17 @@ try {
   Run-App "home" @()
   Run-App "document" @("`"$userDoc`"")
 
-  $settingsDir = Join-Path $env:APPDATA "NayanPDF"
+  $settingsDir = Join-Path $env:APPDATA "X PDF"
   Record "Settings folder created by the app" (Test-Path $settingsDir) $settingsDir $false
 
   # Uninstall
   $u = Get-UninstallEntry
-  $un = Join-Path $InstallDir "Uninstall NayanPDF.exe"
+  $un = Join-Path $InstallDir "Uninstall X PDF.exe"
   $p = Start-Process -FilePath $un -ArgumentList @("/S", "_?=$InstallDir") -Wait -PassThru
   Start-Sleep -Seconds 3
   Remove-Item -Recurse -Force $InstallDir -ErrorAction SilentlyContinue   # NSIS leaves the uninstaller itself when run with _?=
   Record "Uninstall: exit code" ($p.ExitCode -eq 0) "exit=$($p.ExitCode)"
-  Record "Uninstall: program files removed" (-not (Test-Path (Join-Path $InstallDir "NayanPDF.exe")))
+  Record "Uninstall: program files removed" (-not (Test-Path (Join-Path $InstallDir "X-PDF.exe")))
   Record "Uninstall: Start Menu shortcut removed" (-not (Test-Path $StartMenu))
   Record "Uninstall: registration removed" ($null -eq (Get-UninstallEntry))
   Record "Uninstall: user document preserved" (Test-Path $userDoc) $userDoc
@@ -217,7 +262,7 @@ try {
   Unblock-Network
   $json = $results | ConvertTo-Json -Depth 4
   $json | Out-File -Encoding utf8 (Join-Path $ReportDir "report.json")
-  $md = @("# NayanPDF Windows acceptance test", "", "Host: $([Environment]::OSVersion.VersionString) $(if ([Environment]::Is64BitOperatingSystem) {'x64'})", "Date: $(Get-Date -Format o)", "", "| Result | Check | Detail |", "|---|---|---|")
+  $md = @("# X PDF Windows acceptance test", "", "Host: $([Environment]::OSVersion.VersionString) $(if ([Environment]::Is64BitOperatingSystem) {'x64'})", "Date: $(Get-Date -Format o)", "", "| Result | Check | Detail |", "|---|---|---|")
   foreach ($r in $results) { $md += "| $(if ($r.ok) {'PASS'} elseif ($r.required) {'FAIL'} else {'WARN'}) | $($r.check) | $($r.detail -replace '\|','/') |" }
   $md -join "`n" | Out-File -Encoding utf8 (Join-Path $ReportDir "report.md")
 }
