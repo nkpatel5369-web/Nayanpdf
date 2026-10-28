@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronDown, ChevronLeft, ChevronRight, Eye, FilePen, FormInput, Highlighter, LayoutGrid, Maximize, MoveHorizontal, PanelLeft, PanelRight,
-  Printer, Redo2, RotateCw, Save, Search, Shredder, Signature, Stamp, Undo2, X, ZoomIn, ZoomOut, Info, FileDown, ArrowLeftRight, Lock,
+  Printer, Redo2, RotateCw, RotateCcw, Save, Search, Shredder, Signature, Stamp, Undo2, X, ZoomIn, ZoomOut, Info, FileDown, ArrowLeftRight, Lock,
+  BookOpen, Check as CheckIcon, Expand,
 } from "lucide-react";
 import { api, baseName, dirName, joinPath, stem, waitForJob } from "../api";
 import { errorText, useApp } from "../store";
-import { Viewer, ViewerHandle } from "./Viewer";
+import { DisplayMode, InitialView, PageLayout, Viewer, ViewerHandle } from "./Viewer";
 import { ThumbnailPanel } from "./Thumbnails";
 import { Mode, RedactMark, WsApi, WsContext } from "./context";
 import { PageOverlay, clearOverlayCache } from "./Overlay";
@@ -45,10 +46,17 @@ export function DocumentView({ sessionId, active }: { sessionId: string; active:
   const [busy, setBusy] = useState<string | null>(null);
   const [marks, setMarks] = useState<RedactMark[]>([]);
   const [selected, setSelected] = useState<any>(null);
+  const settings = useApp((s) => s.settings);
   const [leftTab, setLeftTab] = useState<"thumbs" | "bookmarks" | "attachments">("thumbs");
-  const [showLeft, setShowLeft] = useState(true);
-  const [showRight, setShowRight] = useState(true);
+  // As in Acrobat, a document opens with only its pages on screen. The navigation
+  // panel opens when the PDF asks for it (or when Settings say so); the tools panel
+  // opens with a tool that needs it.
+  const [showLeft, setShowLeft] = useState(false);
+  const [showRight, setShowRight] = useState(!!doc?.initialMode && doc.initialMode !== "view");
   const [rightView, setRightView] = useState<"mode" | "props">("mode");
+  const [display, setDisplay] = useState<DisplayMode>({ layout: "continuous", cover: false });
+  const [readMode, setReadMode] = useState(false);
+  const pageInputRef = useRef<HTMLInputElement>(null);
   const [findOpen, setFindOpen] = useState(false);
   const [findQ, setFindQ] = useState("");
   const [findCase, setFindCase] = useState(false);
@@ -69,8 +77,36 @@ export function DocumentView({ sessionId, active }: { sessionId: string; active:
     setTool(MODES.find((x) => x.id === m)!.defaultTool);
     setSelected(null);
     setRightView("mode");
-    setShowRight(m !== "view" || rightView === "props");
+    setShowRight(m !== "view");
   };
+
+  const onInitialView = (v: InitialView) => {
+    const pref = useApp.getState().settings.navPanelOnOpen;
+    if (pref === "never") return;
+    const tab = v.pageMode === "UseOutlines" ? "bookmarks" : v.pageMode === "UseAttachments" ? "attachments" : v.pageMode === "UseThumbs" ? "thumbs" : null;
+    if (tab && pref === "document") {
+      setLeftTab(tab);
+      setShowLeft(true);
+    } else if (pref === "always") {
+      setLeftTab(tab || "thumbs");
+      setShowLeft(true);
+    }
+  };
+  const toggleProps = () => {
+    if (rightView === "props" && showRight) {
+      setRightView("mode");
+      setShowRight(mode !== "view");
+    } else {
+      setRightView("props");
+      setShowRight(true);
+    }
+  };
+
+  // Read mode (Ctrl+H) hides the application's toolbars and panels.
+  useEffect(() => {
+    document.body.classList.toggle("read-mode", readMode && active);
+    return () => document.body.classList.remove("read-mode");
+  }, [readMode, active]);
 
   useEffect(() => {
     const h = (e: any) => {
@@ -117,6 +153,8 @@ export function DocumentView({ sessionId, active }: { sessionId: string; active:
       const t = e.target as HTMLElement;
       const typing = t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable);
       const key = e.key.toLowerCase();
+      const v = viewerRef.current;
+      const fs = !!document.fullscreenElement;
       if (e.ctrlKey && key === "s") {
         e.preventDefault();
         e.shiftKey ? saveAs() : save();
@@ -127,8 +165,63 @@ export function DocumentView({ sessionId, active }: { sessionId: string; active:
         e.preventDefault();
         setFindOpen(true);
         setTimeout(() => findInputRef.current?.select(), 0);
+      } else if (e.key === "F4" && !e.ctrlKey && !e.altKey) {
+        // Acrobat: F4 navigation panel, Shift+F4 tools panel.
+        e.preventDefault();
+        if (mode === "pages") return;
+        if (e.shiftKey) setShowRight((x) => !x);
+        else setShowLeft((x) => !x);
+      } else if (e.ctrlKey && !e.shiftKey && key === "d") {
+        e.preventDefault();
+        toggleProps();
+      } else if (e.ctrlKey && !e.shiftKey && key === "h") {
+        e.preventDefault();
+        setReadMode((x) => !x);
+      } else if (e.ctrlKey && !e.shiftKey && key === "l") {
+        e.preventDefault();
+        if (mode !== "pages") v?.fullScreen();
+      } else if (e.ctrlKey && e.shiftKey && key === "n") {
+        e.preventDefault();
+        if (mode === "pages") return;
+        pageInputRef.current?.focus();
+        pageInputRef.current?.select();
+      } else if (fs && key === "escape") {
+        document.exitFullscreen().catch(() => undefined);
       } else if (typing) {
         return;
+      } else if (fs && ["arrowright", "arrowdown", "pagedown", "enter", " "].includes(key)) {
+        // Full Screen: one page per step, as in Acrobat.
+        e.preventDefault();
+        v?.next();
+      } else if (fs && ["arrowleft", "arrowup", "pageup", "backspace"].includes(key)) {
+        e.preventDefault();
+        v?.prev();
+      } else if (e.ctrlKey && e.shiftKey && (e.code === "Equal" || e.code === "NumpadAdd")) {
+        e.preventDefault();
+        v?.rotate(90);
+      } else if (e.ctrlKey && e.shiftKey && (e.code === "Minus" || e.code === "NumpadSubtract")) {
+        e.preventDefault();
+        v?.rotate(-90);
+      } else if (e.ctrlKey && !e.shiftKey && key === "0") {
+        e.preventDefault();
+        v?.setScale("page-fit");
+      } else if (e.ctrlKey && !e.shiftKey && key === "1") {
+        e.preventDefault();
+        v?.setScale("page-actual");
+      } else if (e.ctrlKey && !e.shiftKey && key === "2") {
+        e.preventDefault();
+        v?.setScale("page-width");
+      } else if (!e.ctrlKey && !e.altKey && mode !== "pages" && (key === "home" || key === "end")) {
+        e.preventDefault();
+        v?.goTo(key === "home" ? 1 : v.pageCount());
+      } else if (!e.ctrlKey && !e.altKey && !e.shiftKey && (mode === "view" || mode === "comment") && !selected && (key === "arrowright" || key === "arrowleft")) {
+        e.preventDefault();
+        key === "arrowright" ? v?.next() : v?.prev();
+      } else if (!e.ctrlKey && !e.altKey && mode !== "pages" && (display.layout === "single" || display.layout === "two") && (key === "pagedown" || key === "pageup")) {
+        e.preventDefault();
+        key === "pagedown" ? v?.next() : v?.prev();
+      } else if (key === "escape" && readMode) {
+        setReadMode(false);
       } else if (e.ctrlKey && key === "a" && (mode === "view" || mode === "comment")) {
         // Select all text on the current page (pages are rendered on demand).
         e.preventDefault();
@@ -145,9 +238,6 @@ export function DocumentView({ sessionId, active }: { sessionId: string; active:
       } else if (e.ctrlKey && key === "-") {
         e.preventDefault();
         viewerRef.current?.zoomOut();
-      } else if (e.ctrlKey && key === "0") {
-        e.preventDefault();
-        viewerRef.current?.setScale("page-width");
       } else if (key === "escape") {
         setSelected(null);
         if (findOpen) closeFind();
@@ -157,7 +247,7 @@ export function DocumentView({ sessionId, active }: { sessionId: string; active:
     };
     window.addEventListener("keydown", k);
     return () => window.removeEventListener("keydown", k);
-  }, [active, page, mode, findOpen, state?.canUndo, state?.canRedo]);
+  }, [active, page, mode, findOpen, state?.canUndo, state?.canRedo, selected, display, readMode, rightView, showRight]);
 
   if (!doc || !state || !ws) return null;
 
@@ -226,31 +316,42 @@ export function DocumentView({ sessionId, active }: { sessionId: string; active:
           </div>
           <div className="sep" />
           <ToolsMenu onPick={(id) => setDialog(id as any)} sessionId={sessionId} />
+          {mode !== "pages" && (
+            <ViewMenu display={display} showLeft={showLeft} showRight={showRight}
+              onDisplay={(d) => viewerRef.current?.setDisplay(d)}
+              onZoom={(z) => viewerRef.current?.setScale(z)}
+              onRotate={(d) => viewerRef.current?.rotate(d)}
+              onToggleLeft={() => setShowLeft(!showLeft)}
+              onToggleRight={() => setShowRight(!showRight)}
+              onReadMode={() => setReadMode(true)}
+              onFullScreen={() => viewerRef.current?.fullScreen()}
+              onGoTo={() => { pageInputRef.current?.focus(); pageInputRef.current?.select(); }} />
+          )}
           <div className="grow" />
           {mode !== "pages" && (
             <>
               <button className="icon-btn" title="Previous page" onClick={() => viewerRef.current?.goTo(page - 1)}><ChevronLeft size={17} /></button>
-              <input className="input sm page-input" value={pageInput} onChange={(e) => setPageInput(e.target.value)}
+              <input ref={pageInputRef} className="input sm page-input" title="Go to page (Ctrl+Shift+N)" value={pageInput} onChange={(e) => setPageInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && viewerRef.current?.goTo(parseInt(pageInput) || 1)} onBlur={() => setPageInput(String(page))} />
               <span className="subtle">/ {count}</span>
               <button className="icon-btn" title="Next page" onClick={() => viewerRef.current?.goTo(page + 1)}><ChevronRight size={17} /></button>
               <div className="sep" />
               <button className="icon-btn" title="Zoom out (Ctrl+-)" onClick={() => viewerRef.current?.zoomOut()}><ZoomOut size={17} /></button>
               <span className="zoom-label">{scaleText}</span>
-              <button className="icon-btn" title="Zoom in (Ctrl++)" onClick={() => viewerRef.current?.zoomIn()}><ZoomIn size={17} /></button>
-              <button className="icon-btn" title="Fit width (Ctrl+0)" onClick={() => viewerRef.current?.setScale("page-width")}><MoveHorizontal size={17} /></button>
-              <button className="icon-btn hide-narrow" title="Fit page" onClick={() => viewerRef.current?.setScale("page-fit")}><Maximize size={16} /></button>
-              <button className="icon-btn" title="Rotate view (does not change the file)" onClick={() => viewerRef.current?.rotate(90)}><RotateCw size={16} /></button>
+              <button className="icon-btn" title="Zoom in (Ctrl+=)" onClick={() => viewerRef.current?.zoomIn()}><ZoomIn size={17} /></button>
+              <button className="icon-btn" title="Fit width (Ctrl+2)" onClick={() => viewerRef.current?.setScale("page-width")}><MoveHorizontal size={17} /></button>
+              <button className="icon-btn hide-narrow" title="Fit page (Ctrl+0)" onClick={() => viewerRef.current?.setScale("page-fit")}><Maximize size={16} /></button>
+              <button className="icon-btn" title="Rotate view clockwise (Ctrl+Shift+Plus; does not change the file)" onClick={() => viewerRef.current?.rotate(90)}><RotateCw size={16} /></button>
               <button className={"icon-btn" + (findOpen ? " active" : "")} title="Search (Ctrl+F)" onClick={() => { setFindOpen(!findOpen); setTimeout(() => findInputRef.current?.focus(), 0); }}><Search size={17} /></button>
               <div className="sep" />
-              <button className={"icon-btn" + (showLeft ? " active" : "")} title="Side panel" onClick={() => setShowLeft(!showLeft)}><PanelLeft size={17} /></button>
+              <button className={"icon-btn" + (showLeft ? " active" : "")} title="Navigation panel: pages, bookmarks, attachments (F4)" onClick={() => setShowLeft(!showLeft)}><PanelLeft size={17} /></button>
             </>
           )}
-          <button className={"icon-btn" + (rightView === "props" && showRight ? " active" : "")} title="Document properties" onClick={() => { setRightView(rightView === "props" ? "mode" : "props"); setShowRight(true); }}><Info size={17} /></button>
-          <button className={"icon-btn" + (showRight ? " active" : "")} title="Tool panel" onClick={() => setShowRight(!showRight)}><PanelRight size={17} /></button>
+          <button className={"icon-btn" + (rightView === "props" && showRight ? " active" : "")} title="Document properties (Ctrl+D)" onClick={toggleProps}><Info size={17} /></button>
+          <button className={"icon-btn" + (showRight ? " active" : "")} title="Tools panel (Shift+F4)" onClick={() => setShowRight(!showRight)}><PanelRight size={17} /></button>
         </div>
-        <div className="ws-body" style={{ gridTemplateColumns: mode === "pages" ? "1fr" : `${showLeft ? "auto" : ""} 1fr ${showRight ? "auto" : ""}`.trim() }}>
-          {mode !== "pages" && showLeft && (
+        <div className="ws-body" style={{ gridTemplateColumns: mode === "pages" || readMode ? "1fr" : `${showLeft ? "auto" : ""} 1fr ${showRight ? "auto" : ""}`.trim() }}>
+          {mode !== "pages" && showLeft && !readMode && (
             <div className="side">
               <div className="side-tabs">
                 <button className={leftTab === "thumbs" ? "on" : ""} onClick={() => setLeftTab("thumbs")}>Pages</button>
@@ -280,6 +381,10 @@ export function DocumentView({ sessionId, active }: { sessionId: string; active:
               onFindCount={(c, t) => setFindCount([c, t])}
               onError={(m) => toast({ kind: "error", title: "Cannot display document", body: m })}
               renderOverlay={(ctx) => <PageOverlay ctx={ctx} />}
+              initialZoom={settings.defaultZoom}
+              initialDisplay={settings.defaultLayout === "auto" ? null : { layout: settings.defaultLayout as PageLayout, cover: false }}
+              onInitialView={onInitialView}
+              onDisplayChange={setDisplay}
               overlayVersion={[mode, tool, revision, marks, selected, opts, page]}
               overlayInteractive={mode !== "view" && !(mode === "comment" && TEXT_TOOLS.has(tool))}
             />
@@ -297,6 +402,20 @@ export function DocumentView({ sessionId, active }: { sessionId: string; active:
                 <button className="icon-btn" onClick={closeFind}><X size={15} /></button>
               </div>
             )}
+            {readMode && (
+              <div className="read-bar" role="toolbar" aria-label="Read mode">
+                <button className="icon-btn" title="Previous page" onClick={() => viewerRef.current?.prev()}><ChevronLeft size={17} /></button>
+                <span>{page} / {count}</span>
+                <button className="icon-btn" title="Next page" onClick={() => viewerRef.current?.next()}><ChevronRight size={17} /></button>
+                <div className="sep" />
+                <button className="icon-btn" title="Zoom out (Ctrl+-)" onClick={() => viewerRef.current?.zoomOut()}><ZoomOut size={17} /></button>
+                <span className="zoom-label">{scaleText}</span>
+                <button className="icon-btn" title="Zoom in (Ctrl+=)" onClick={() => viewerRef.current?.zoomIn()}><ZoomIn size={17} /></button>
+                <button className="icon-btn" title="Fit page (Ctrl+0)" onClick={() => viewerRef.current?.setScale("page-fit")}><Maximize size={16} /></button>
+                <div className="sep" />
+                <button className="btn sm" title="Exit read mode (Ctrl+H or Esc)" onClick={() => setReadMode(false)}><X size={14} /> Exit read mode</button>
+              </div>
+            )}
             {doc.info?.likelyScanned && mode === "view" && (
               <div className="find-bar" style={{ left: 22, right: "auto" }}>
                 <span className="subtle">This document has no text layer.</span>
@@ -305,7 +424,7 @@ export function DocumentView({ sessionId, active }: { sessionId: string; active:
             )}
           </div>
           {mode === "pages" && <OrganizePages />}
-          {mode !== "pages" && showRight && <div className="side right">{rightPanel()}</div>}
+          {mode !== "pages" && showRight && !readMode && <div className="side right">{rightPanel()}</div>}
         </div>
         {busy && (
           <div className="busy-veil">
@@ -359,6 +478,61 @@ function ToolsMenu(props: { onPick: (id: string) => void; sessionId: string }) {
                 <it.icon size={15} /> {it.label}
               </button>
             ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/** Acrobat's View menu: page display, zoom, rotate view, panels, Read mode and Full Screen. */
+function ViewMenu(props: {
+  display: DisplayMode; showLeft: boolean; showRight: boolean;
+  onDisplay: (d: DisplayMode) => void; onZoom: (z: string) => void; onRotate: (d: number) => void;
+  onToggleLeft: () => void; onToggleRight: () => void; onReadMode: () => void; onFullScreen: () => void; onGoTo: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    const k = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    window.addEventListener("keydown", k);
+    return () => window.removeEventListener("keydown", k);
+  }, [open]);
+  const d = props.display;
+  const two = d.layout === "two" || d.layout === "twoContinuous";
+  const item = (label: string, run: () => void, opts: { on?: boolean; kbd?: string; icon?: any; disabled?: boolean } = {}) => (
+    <button key={label} role="menuitemcheckbox" aria-checked={opts.on ?? undefined} disabled={opts.disabled}
+      onClick={() => { setOpen(false); run(); }}>
+      <span className="mark">{opts.on ? <CheckIcon size={14} /> : opts.icon ? <opts.icon size={14} /> : null}</span>
+      {label}{opts.kbd && <span className="kbd">{opts.kbd}</span>}
+    </button>
+  );
+  const layouts: [PageLayout, string][] = [["single", "Single page view"], ["continuous", "Enable scrolling (single page continuous)"], ["two", "Two page view"], ["twoContinuous", "Two page scrolling"]];
+  return (
+    <div style={{ position: "relative" }}>
+      <button className="btn sm" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>View <ChevronDown size={14} /></button>
+      {open && (
+        <>
+          <div style={{ position: "fixed", inset: 0, zIndex: 50 }} onClick={() => setOpen(false)} />
+          <div className="sel-menu view-menu" role="menu" style={{ top: 34, left: 0, zIndex: 51 }}>
+            <div className="menu-label">Page display</div>
+            {layouts.map(([l, label]) => item(label, () => props.onDisplay({ layout: l, cover: d.cover }), { on: d.layout === l }))}
+            {item("Show cover page in two page view", () => props.onDisplay({ layout: d.layout, cover: !d.cover }), { on: two && d.cover, disabled: !two })}
+            <div className="sep" />
+            <div className="menu-label">Zoom</div>
+            {item("Actual size", () => props.onZoom("page-actual"), { kbd: "Ctrl+1" })}
+            {item("Fit page", () => props.onZoom("page-fit"), { kbd: "Ctrl+0" })}
+            {item("Fit width", () => props.onZoom("page-width"), { kbd: "Ctrl+2" })}
+            <div className="sep" />
+            {item("Rotate view clockwise", () => props.onRotate(90), { kbd: "Ctrl+Shift+Plus", icon: RotateCw })}
+            {item("Rotate view counterclockwise", () => props.onRotate(-90), { kbd: "Ctrl+Shift+Minus", icon: RotateCcw })}
+            {item("Go to page...", props.onGoTo, { kbd: "Ctrl+Shift+N" })}
+            <div className="sep" />
+            {item("Navigation panel", props.onToggleLeft, { on: props.showLeft, kbd: "F4" })}
+            {item("Tools panel", props.onToggleRight, { on: props.showRight, kbd: "Shift+F4" })}
+            <div className="sep" />
+            {item("Read mode", props.onReadMode, { kbd: "Ctrl+H", icon: BookOpen })}
+            {item("Full screen mode", props.onFullScreen, { kbd: "Ctrl+L", icon: Expand })}
           </div>
         </>
       )}

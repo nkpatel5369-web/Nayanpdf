@@ -377,3 +377,31 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 12.8px; }
 .print-item img { position: absolute; left: 50%; top: 50%; max-width: none; }
 .print-ph { position: absolute; inset: 0; display: grid; place-items: center; background: #f1f3f5; color: #868e96; font-size: 12px; }
 @media (max-width: 1000px) { .print-grid { grid-template-columns: 1fr; } }
+
+/* View menu (Acrobat's View > Page Display, Zoom, Read mode, Full Screen) */
+.view-menu { min-width: 370px; }
+.view-menu .menu-label { font-size: 11px; font-weight: 600; color: var(--text-3); padding: 6px 10px 2px; text-transform: uppercase; letter-spacing: .04em; }
+.view-menu > button .mark { width: 16px; display: inline-flex; justify-content: center; flex: none; }
+.view-menu > button:disabled { opacity: .45; cursor: default; background: none; color: var(--text); }
+
+/* Read mode (Ctrl+H): only the document and a small floating bar */
+body.read-mode .topbar, body.read-mode .rail, body.read-mode .ws-toolbar { display: none !important; }
+body.read-mode .app { grid-template-rows: 1fr; }
+body.read-mode .main { grid-template-columns: 1fr; }
+body.read-mode .ws { grid-template-rows: 1fr; }
+.read-bar { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 45; display: flex; align-items: center; gap: 4px; padding: 5px 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-lg); opacity: .55; transition: opacity .15s; }
+.read-bar:hover, .read-bar:focus-within { opacity: 1; }
+.read-bar .sep { width: 1px; height: 22px; background: var(--border); margin: 0 4px; }
+
+/* Full screen (Ctrl+L): pages on black, nothing else */
+.viewer-wrap:fullscreen { background: #000; }
+.viewer-wrap:fullscreen .viewer-container { background: #000; }
+.viewer-wrap:fullscreen .viewer-container .pdfViewer .page { box-shadow: none; margin: 0 auto; }
+.viewer-wrap:fullscreen .viewer-container:focus, .viewer-wrap:fullscreen .viewer-container:focus-visible { outline: none; }
+
+/* Space bar held: temporary Hand tool */
+.viewer-container.pan-ready, .viewer-container.pan-ready * { cursor: grab !important; }
+.viewer-container.panning, .viewer-container.panning * { cursor: grabbing !important; user-select: none !important; }
+/* The page area takes keyboard focus for shortcuts; Acrobat shows no ring around it. */
+.viewer-container:focus, .viewer-container:focus-visible,
+.pdfViewer .textLayer:focus, .pdfViewer .textLayer:focus-visible, .pdfViewer .page:focus, .pdfViewer .page:focus-visible { outline: none; }

@@ -74,6 +74,11 @@ export interface Settings {
   allowOverwriteOriginal: boolean;
   clearTempOnExit: boolean;
   printDpi: number;
+  /** Acrobat-style page display defaults. "auto" follows the document's own initial view. */
+  defaultZoom: "auto" | "page-fit" | "page-width" | "page-actual";
+  defaultLayout: "auto" | "single" | "continuous" | "two" | "twoContinuous";
+  /** Navigation panel when a document opens: as the PDF asks (Acrobat's behaviour), always (thumbnails), or never. */
+  navPanelOnOpen: "document" | "always" | "never";
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -94,6 +99,9 @@ export const DEFAULT_SETTINGS: Settings = {
   allowOverwriteOriginal: false,
   clearTempOnExit: true,
   printDpi: 300,
+  defaultZoom: "auto",
+  defaultLayout: "auto",
+  navPanelOnOpen: "document",
 };
 
 export interface RecentFile {

@@ -124,8 +124,10 @@ app.on("session-created", hardenSession);
 function lockDownDefaultSession() {
   const ses = session.defaultSession;
   hardenSession(ses);
-  ses.setPermissionRequestHandler((_wc, _perm, cb) => cb(false));
-  ses.setPermissionCheckHandler(() => false);
+  // Only full screen (Acrobat's Ctrl+L) is granted, and only to the app's own pages.
+  const own = (origin: string) => origin.startsWith("app://");
+  ses.setPermissionRequestHandler((wc, perm, cb, details) => cb(perm === "fullscreen" && own(details?.requestingUrl || wc.getURL())));
+  ses.setPermissionCheckHandler((_wc, perm, origin) => perm === "fullscreen" && own(origin || ""));
   const devUrl = process.env.NAYANPDF_DEV_URL;
   ses.webRequest.onBeforeRequest((details, cb) => {
     const u = details.url;

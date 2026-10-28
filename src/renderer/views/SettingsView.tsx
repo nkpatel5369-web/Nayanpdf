@@ -39,6 +39,25 @@ export function SettingsView() {
         </div>
 
         <div className="card card-pad" style={{ marginBottom: 14 }}>
+          <h3 style={{ marginBottom: 12 }}>Page display</h3>
+          <div className="grid2">
+            <Field label="Default zoom" hint="Automatic fits the page width up to 125% (landscape pages: the whole page).">
+              <select className="input" aria-label="Default zoom" value={settings.defaultZoom} onChange={(e) => save({ defaultZoom: e.target.value as Settings["defaultZoom"] })}>
+                <option value="auto">Automatic</option><option value="page-fit">Fit page</option><option value="page-width">Fit width</option><option value="page-actual">Actual size (100%)</option>
+              </select>
+            </Field>
+            <Field label="Default page layout" hint="Automatic uses the layout saved in the PDF, otherwise single page continuous.">
+              <select className="input" aria-label="Default page layout" value={settings.defaultLayout} onChange={(e) => save({ defaultLayout: e.target.value as Settings["defaultLayout"] })}>
+                <option value="auto">Automatic</option><option value="single">Single page</option><option value="continuous">Single page continuous</option><option value="two">Two page</option><option value="twoContinuous">Two page continuous</option>
+              </select>
+            </Field>
+          </div>
+          <Field label="Navigation panel when a document opens" hint="Many PDFs made by Word or LibreOffice ask to open with their bookmarks showing; Acrobat honours that. F4 shows or hides the panel at any time, Shift+F4 the tools panel.">
+            <Seg value={settings.navPanelOnOpen} onChange={(v) => save({ navPanelOnOpen: v })} options={[{ value: "document", label: "As the PDF requests" }, { value: "never", label: "Never" }, { value: "always", label: "Always" }]} />
+          </Field>
+        </div>
+
+        <div className="card card-pad" style={{ marginBottom: 14 }}>
           <h3 style={{ marginBottom: 12 }}>Files and folders</h3>
           <Field label="Default output folder" hint="Where results are saved unless you choose otherwise.">
             <div className="row">

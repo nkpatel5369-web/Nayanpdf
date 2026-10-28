@@ -361,9 +361,9 @@ export function SelectionTools(props: { wrapRef: React.RefObject<HTMLDivElement 
           {menu.page && (
             <button role="menuitem" onClick={() => { const p = menu.page!; setMenu(null); selectPage(p); }}><TextSelect size={15} /> Select all text on this page</button>
           )}
-          <button role="menuitem" onClick={() => { setMenu(null); ws.viewer?.zoomIn(); }}><ZoomIn size={15} /> Zoom in<span className="kbd">Ctrl++</span></button>
+          <button role="menuitem" onClick={() => { setMenu(null); ws.viewer?.zoomIn(); }}><ZoomIn size={15} /> Zoom in<span className="kbd">Ctrl+=</span></button>
           <button role="menuitem" onClick={() => { setMenu(null); ws.viewer?.zoomOut(); }}><ZoomOut size={15} /> Zoom out<span className="kbd">Ctrl+-</span></button>
-          <button role="menuitem" onClick={() => { setMenu(null); ws.viewer?.setScale("page-width"); }}><MoveHorizontal size={15} /> Fit width<span className="kbd">Ctrl+0</span></button>
+          <button role="menuitem" onClick={() => { setMenu(null); ws.viewer?.setScale("page-width"); }}><MoveHorizontal size={15} /> Fit width<span className="kbd">Ctrl+2</span></button>
           <button role="menuitem" onClick={() => { setMenu(null); ws.viewer?.rotate(90); }}><RotateCw size={15} /> Rotate view</button>
           <div className="sep" />
           <button role="menuitem" onClick={() => { setMenu(null); props.onPrint(); }}><Printer size={15} /> Print...<span className="kbd">Ctrl+P</span></button>

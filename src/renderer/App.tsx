@@ -55,9 +55,22 @@ export function App() {
         e.preventDefault();
         pickAndOpen();
       }
-      if (e.ctrlKey && e.key.toLowerCase() === "w" && view.kind === "doc") {
+      if (e.ctrlKey && (e.key.toLowerCase() === "w" || e.key === "F4") && view.kind === "doc") {
         e.preventDefault();
         closeTab(view.sessionId);
+      }
+      // Acrobat: Ctrl+Tab / Ctrl+Shift+Tab move between open documents, Ctrl+K opens Preferences.
+      if (e.ctrlKey && e.key === "Tab") {
+        e.preventDefault();
+        const order = useApp.getState().docOrder;
+        if (!order.length) return;
+        const i = view.kind === "doc" ? order.indexOf(view.sessionId) : -1;
+        const next = order[(i + (e.shiftKey ? -1 : 1) + order.length) % order.length];
+        setView({ kind: "doc", sessionId: next });
+      }
+      if (e.ctrlKey && !e.shiftKey && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setView({ kind: "settings" });
       }
     };
     window.addEventListener("keydown", k);

@@ -136,17 +136,53 @@ try {
     record("Document opens from the command line and renders", name === "financial.pdf" && pages >= 1, `tab=${name}, pages=${pages}`);
   });
 
+  await step("Panels follow the document on open; F4, Shift+F4 and Ctrl+D toggle them", async () => {
+    // financial.pdf (exported by LibreOffice) asks to open with its bookmarks, as
+    // Acrobat would show it; the tools panel stays closed in View mode.
+    const sides = () => page.evaluate(() => ({
+      left: document.querySelector(".doc-pane.active .ws-body > .side:not(.right) .side-tabs button.on")?.textContent || "",
+      right: document.querySelector(".doc-pane.active .ws-body > .side.right")?.textContent?.slice(0, 40) || "",
+    }));
+    await page.waitForTimeout(500);
+    const s0 = await sides();
+    await page.locator(".doc-pane.active .viewer-container").focus();
+    await page.keyboard.press("F4");
+    await page.waitForTimeout(300);
+    const s1 = await sides();
+    await page.keyboard.press("F4");
+    await page.waitForTimeout(300);
+    const s2 = await sides();
+    await page.keyboard.press("Control+d");
+    await page.waitForTimeout(300);
+    const s3 = await sides();
+    await page.keyboard.press("Control+d");
+    await page.waitForTimeout(300);
+    const s4 = await sides();
+    await page.keyboard.press("Shift+F4");
+    await page.waitForTimeout(300);
+    const s5 = await sides();
+    await page.keyboard.press("Shift+F4");
+    await page.waitForTimeout(300);
+    const s6 = await sides();
+    await shot("01b-panels");
+    const ok = s0.left === "Bookmarks" && !s0.right && !s1.left && !!s2.left && s3.right.startsWith("Document properties") && !s4.right && !!s5.right && !s6.right;
+    record("Panels follow the document on open; F4, Shift+F4 and Ctrl+D toggle them", ok,
+      `on open: navigation "${s0.left}" (the PDF asks for bookmarks), tools ${s0.right ? "open" : "closed"}; F4 ${s1.left ? "open" : "closed"}/${s2.left ? "open" : "closed"}; Ctrl+D properties ${s3.right.startsWith("Document properties")}/${s4.right ? "open" : "closed"}; Shift+F4 ${s5.right ? "open" : "closed"}/${s6.right ? "open" : "closed"}`);
+  });
+
   await step("Thumbnails, zoom and page navigation", async () => {
+    await page.click(".doc-pane.active .side-tabs button:has-text('Pages')");
     await page.waitForSelector(".thumb-item canvas");
     const before = await page.textContent(".zoom-label");
-    await page.click('[title="Zoom in (Ctrl++)"]');
+    await page.click('[title="Zoom in (Ctrl+=)"]');
     await page.waitForTimeout(500);
     const after = await page.textContent(".zoom-label");
     await page.click('[title="Next page"]');
     await page.waitForTimeout(600);
     const pageNo = await page.inputValue(".page-input");
     record("Thumbnails, zoom and page navigation", before !== after && pageNo === "2", `zoom ${before} -> ${after}, page ${pageNo}`);
-    await page.click('[title="Fit width (Ctrl+0)"]');
+    await page.click('[title="Fit width (Ctrl+2)"]');
+    await page.keyboard.press("F4");
   });
 
   await step("Search within the document", async () => {
@@ -597,6 +633,133 @@ try {
     record("Save As offers the document's own name; replacing the original asks once",
       sameName && asked1 === 1 && n1 === 19 && asked2 === 0 && n2 === 18,
       `suggested "${suggested.split(/[\\/]/).pop()}" in the same folder: ${sameName}; asked ${asked1} then ${asked2} time(s); pages 20 -> ${n1} -> ${n2}`);
+  });
+
+  await step("Acrobat view keys: zoom, page display, navigation, rotate, read mode, full screen, space-drag", async () => {
+    // The active document is "Tally Invoice 2026.pdf" (18 pages after the previous scenario,
+    // which left it in Pages mode).
+    await page.click('.doc-pane.active .mode-tabs button[title="View"]');
+    await waitIdle();
+    const view = page.locator(".doc-pane.active .viewer-container");
+    await view.focus();
+    const zoom = async (k) => { await page.keyboard.press(k); await page.waitForTimeout(400); return page.textContent(".doc-pane.active .ws-toolbar .zoom-label"); };
+    const geom = () => page.evaluate(() => {
+      const c = document.querySelector(".doc-pane.active .viewer-container");
+      const pages = [...c.querySelectorAll(".pdfViewer .page")].map((p) => p.getBoundingClientRect());
+      return { cw: c.clientWidth, ch: c.clientHeight, n: pages.length, p: pages.slice(0, 2).map((r) => ({ x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) })) };
+    });
+    const pageNo = () => page.inputValue(".doc-pane.active .page-input");
+    const checks = {};
+    checks.actual = (await zoom("Control+1")) === "100%";
+    await zoom("Control+2");
+    let g = await geom();
+    checks.fitWidth = g.p[0].w > g.cw * 0.85;
+    await zoom("Control+0");
+    g = await geom();
+    checks.fitPage = g.p[0].h <= g.ch + 1;
+    const pick = async (label) => {
+      await page.click('.doc-pane.active .ws-toolbar button[aria-haspopup="menu"]:has-text("View")');
+      await page.waitForSelector(".view-menu");
+      if (label === "Two page view") await shot("20-view-menu");
+      await page.click(`.view-menu button:has-text("${label}")`);
+      await page.waitForTimeout(600);
+    };
+    await pick("Two page view");
+    g = await geom();
+    checks.twoUp = g.n === 2 && Math.abs(g.p[0].y - g.p[1].y) <= 2 && g.p[1].x > g.p[0].x;
+    await view.focus();
+    await page.keyboard.press("ArrowRight");
+    await page.waitForTimeout(400);
+    checks.arrow = (await pageNo()) === "3";
+    const total = (await page.textContent(".doc-pane.active .ws-toolbar .subtle")).replace(/\D/g, "");
+    await page.keyboard.press("End");
+    await page.waitForTimeout(400);
+    // Two-page view shows the last spread; only the spread on screen is in the page list.
+    checks.end = await page.evaluate((t) => !!document.querySelector(`.doc-pane.active .pdfViewer .page[data-page-number="${t}"]`) && document.querySelectorAll(".doc-pane.active .pdfViewer .page").length <= 2, total);
+    await page.keyboard.press("Home");
+    await page.waitForTimeout(400);
+    checks.home = (await pageNo()) === "1";
+    await pick("Enable scrolling");
+    g = await geom();
+    checks.continuous = g.n === Number(total);
+    await view.focus();
+    await page.keyboard.press("Control+Shift+Equal");
+    await page.waitForTimeout(600);
+    g = await geom();
+    const rotated = g.p[0].w > g.p[0].h;
+    await page.keyboard.press("Control+Shift+Minus");
+    await page.waitForTimeout(600);
+    g = await geom();
+    checks.rotate = rotated && g.p[0].h > g.p[0].w;
+    await page.keyboard.press("Control+Shift+N");
+    checks.goToFocus = await page.evaluate(() => document.activeElement?.classList.contains("page-input"));
+    await page.keyboard.type("5");
+    await page.keyboard.press("Enter");
+    await page.waitForTimeout(500);
+    checks.goTo = (await pageNo()) === "5";
+    await view.focus();
+    await page.keyboard.press("Control+h");
+    await page.waitForTimeout(300);
+    checks.readMode = !(await page.locator(".doc-pane.active .ws-toolbar").isVisible()) && !(await page.locator(".rail").isVisible()) && (await page.locator(".read-bar").isVisible());
+    await shot("20a-read-mode");
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(300);
+    checks.readExit = await page.locator(".doc-pane.active .ws-toolbar").isVisible();
+    await view.focus();
+    await page.keyboard.press("Control+l");
+    await page.waitForFunction(() => document.fullscreenElement?.classList.contains("viewer-wrap"), null, { timeout: 10000 }).catch(() => undefined);
+    const fsOn = await page.evaluate(() => !!document.fullscreenElement?.classList.contains("viewer-wrap"));
+    const p0 = await pageNo();
+    await page.keyboard.press("ArrowRight");
+    await page.waitForTimeout(500);
+    const p1 = await pageNo();
+    await shot("20b-full-screen");
+    await page.keyboard.press("Escape");
+    await page.waitForFunction(() => !document.fullscreenElement, null, { timeout: 10000 }).catch(() => undefined);
+    checks.fullScreen = fsOn && Number(p1) === Number(p0) + 1 && (await page.evaluate(() => !document.fullscreenElement));
+    // Space held + drag moves the page and selects nothing.
+    await zoom("Control+2");
+    const box = await view.boundingBox();
+    const top0 = await view.evaluate((c) => c.scrollTop);
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height * 0.7);
+    await page.keyboard.down("Space");
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height * 0.3, { steps: 10 });
+    await page.mouse.up();
+    await page.keyboard.up("Space");
+    const top1 = await view.evaluate((c) => c.scrollTop);
+    const selText = await page.evaluate(() => window.getSelection().toString());
+    checks.spacePan = top1 - top0 > box.height * 0.3 && selText === "";
+    const failed = Object.entries(checks).filter(([, v]) => !v).map(([k]) => k);
+    record("Acrobat view keys: zoom, page display, navigation, rotate, read mode, full screen, space-drag", failed.length === 0,
+      failed.length ? `failed: ${failed.join(", ")}` : `${Object.keys(checks).length} checks: ${Object.keys(checks).join(", ")}`);
+  });
+
+  await step("Initial view: a plain PDF opens with pages only; one saved with bookmarks and two-page layout opens that way", async () => {
+    const plain = join(work, "plain.pdf");
+    const marked = join(work, "opens_with_bookmarks.pdf");
+    copyFileSync(join(work, "a.pdf"), plain);
+    execFileSync(PY, ["-c", "import pymupdf,sys; d=pymupdf.open(sys.argv[1]); d.set_pagemode('UseOutlines'); d.set_pagelayout('TwoColumnLeft'); d.save(sys.argv[2])", join(work, "financial.pdf"), marked]);
+    const openIt = async (f, name) => {
+      setDialogs({ openFiles: [f] });
+      await page.click('button[title="Open PDF (Ctrl+O)"]');
+      await page.waitForSelector(`.tab.active .name:has-text("${name}")`);
+      await page.waitForSelector(".doc-pane.active .pdfViewer .page canvas");
+      await page.waitForTimeout(800);
+      return page.evaluate(() => ({
+        left: document.querySelector(".doc-pane.active .ws-body > .side:not(.right) .side-tabs button.on")?.textContent || "",
+        right: !!document.querySelector(".doc-pane.active .ws-body > .side.right"),
+        y: [...document.querySelectorAll(".doc-pane.active .pdfViewer .page")].slice(0, 2).map((p) => Math.round(p.getBoundingClientRect().y)),
+      }));
+    };
+    const a = await openIt(plain, "plain.pdf");
+    await shot("20c-plain-open");
+    const b = await openIt(marked, "opens_with_bookmarks.pdf");
+    const twoUp = b.y.length === 2 && Math.abs(b.y[0] - b.y[1]) <= 2;
+    await shot("20d-initial-view");
+    record("Initial view: a plain PDF opens with pages only; one saved with bookmarks and two-page layout opens that way",
+      !a.left && !a.right && b.left === "Bookmarks" && !b.right && twoUp,
+      `plain.pdf: navigation ${a.left ? "open" : "closed"}, tools ${a.right ? "open" : "closed"}; opens_with_bookmarks.pdf: panel "${b.left}", pages 1-2 side by side ${twoUp}`);
   });
 
   await step("Settings and dark theme", async () => {

@@ -58,6 +58,9 @@ export function sanitizeSettings(s: any): Settings {
     allowOverwriteOriginal: pick("allowOverwriteOriginal", (v) => typeof v === "boolean"),
     clearTempOnExit: pick("clearTempOnExit", (v) => typeof v === "boolean"),
     printDpi: pick("printDpi", num(100, 600)),
+    defaultZoom: pick("defaultZoom", oneOf(["auto", "page-fit", "page-width", "page-actual"])),
+    defaultLayout: pick("defaultLayout", oneOf(["auto", "single", "continuous", "two", "twoContinuous"])),
+    navPanelOnOpen: pick("navPanelOnOpen", oneOf(["document", "always", "never"])),
   };
 }
 
