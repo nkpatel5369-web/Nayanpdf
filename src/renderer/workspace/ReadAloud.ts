@@ -87,7 +87,7 @@ export async function readAloud(pdf: any, start: number, toEnd: boolean, goTo: (
       }
       u.onerror = (e: any) => {
         if (id === session && e?.error !== "interrupted" && e?.error !== "canceled") {
-          toast({ kind: "error", title: "Read Out Loud stopped", body: String(e?.error || "speech error") });
+          toast({ kind: "error", ...speechError(String(e?.error || "")) });
           stopReading();
           onState(null);
         }
@@ -96,6 +96,20 @@ export async function readAloud(pdf: any, start: number, toEnd: boolean, goTo: (
     });
   };
   await next();
+}
+
+/** Plain-language message for a speech engine error code. */
+function speechError(code: string): { title: string; body: string } {
+  if (["synthesis-failed", "audio-hardware", "audio-busy", "synthesis-unavailable"].includes(code)) {
+    return {
+      title: "Windows could not play the speech",
+      body: "Check that speakers or headphones are connected and not muted, then try again. The voice can be tested in Windows Settings > Time & language > Speech.",
+    };
+  }
+  if (code === "voice-unavailable" || code === "language-unavailable") {
+    return { title: "The chosen voice is not available", body: "Choose another voice in Settings > Read Out Loud." };
+  }
+  return { title: "Read Out Loud stopped", body: code ? `The speech engine reported: ${code}` : "The speech engine stopped." };
 }
 
 export function pauseResume(): boolean | null {

@@ -554,7 +554,10 @@ def summary(ctx, path: str, output: str, password: str | None = None, overwrite:
                "h2{font-size:12pt;border-bottom:1px solid #999;margin-top:14pt} li{margin-bottom:6pt} .rep{margin-left:14pt;color:#333}")
         story = pymupdf.Story(html="<html><body>" + "".join(parts) + "</body></html>", user_css=css, archive=archive)
         out = OutputFile(ctx, output, overwrite, sources=[path])
-        writer = pymupdf.DocumentWriter(out.temp)
+        # Write to memory: on Windows MuPDF keeps a file it writes open until the
+        # writer is garbage collected, and the move into place then fails.
+        buf = io.BytesIO()
+        writer = pymupdf.DocumentWriter(buf)
         mediabox = pymupdf.paper_rect("a4")
         where = mediabox + (40, 40, -40, -40)
         more = True
@@ -568,6 +571,9 @@ def summary(ctx, path: str, output: str, password: str | None = None, overwrite:
             if pages > 2000:
                 break
         writer.close()
+        del writer, dev
+        with open(out.temp, "wb") as fh:
+            fh.write(buf.getvalue())
     finally:
         doc.close()
     final = out.commit(validate_pdf())

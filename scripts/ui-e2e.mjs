@@ -991,15 +991,29 @@ try {
     await page.click('.view-menu button:has-text("Read this page")');
     let ok;
     let detail;
+    // Sound devices on this machine, counted by the workflow (Win32_SoundDevice).
+    const audioDevices = process.env.NAYANPDF_TEST_AUDIO_DEVICES;
     if (voices > 0) {
-      await page.waitForSelector(".doc-pane.active .speak-bar", { timeout: 15000 });
-      const speaking = await page.evaluate(() => new Promise((res) => setTimeout(() => res(speechSynthesis.speaking || speechSynthesis.pending), 800)));
-      await shot("22c-read-aloud");
-      await page.click('.doc-pane.active .speak-bar button:has-text("Stop")');
-      await page.waitForTimeout(400);
-      const stopped = !(await page.locator(".doc-pane.active .speak-bar").count()) && !(await page.evaluate(() => speechSynthesis.speaking));
-      ok = speaking && stopped;
-      detail = `${voices} voice(s); speaking ${speaking}; stopped ${stopped}`;
+      const outcome = await (await page.waitForFunction(() => {
+        if ([...document.querySelectorAll(".toast")].some((t) => /Windows could not play the speech/.test(t.textContent || ""))) return "audioError";
+        return document.querySelector(".doc-pane.active .speak-bar") && (speechSynthesis.speaking || speechSynthesis.pending) ? "speaking" : false;
+      }, null, { timeout: 15000 })).jsonValue();
+      if (outcome === "speaking") {
+        const speaking = await page.evaluate(() => new Promise((res) => setTimeout(() => res(speechSynthesis.speaking || speechSynthesis.pending), 800)));
+        await shot("22c-read-aloud");
+        await page.click('.doc-pane.active .speak-bar button:has-text("Stop")');
+        await page.waitForTimeout(400);
+        const stopped = !(await page.locator(".doc-pane.active .speak-bar").count()) && !(await page.evaluate(() => speechSynthesis.speaking));
+        ok = speaking && stopped;
+        detail = `${voices} voice(s); speaking ${speaking}; stopped ${stopped}`;
+      } else {
+        // Voices are installed but nothing can play them. Accepted only where the
+        // machine is known to have no sound device; audio itself is then untested.
+        await page.waitForTimeout(400);
+        const clean = !(await page.locator(".doc-pane.active .speak-bar").count()) && !(await page.evaluate(() => speechSynthesis.speaking));
+        ok = audioDevices === "0" && clean;
+        detail = `${voices} voice(s), sound devices: ${audioDevices ?? "not counted"}; Windows reported a synthesis failure, the user was told to check speakers, nothing left running: ${clean}. Audio output NOT verified on this machine.`;
+      }
     } else {
       await toastText(/No speech voices are installed/, 15000);
       ok = !(await page.locator(".doc-pane.active .speak-bar").count());

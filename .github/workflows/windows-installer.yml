@@ -89,6 +89,9 @@ jobs:
           $env:NAYANPDF_SOFFICE   = "$rt\libreoffice\program\soffice.exe"
           $env:NAYANPDF_GS        = "$rt\ghostscript\bin\gswin64c.exe"
           $env:NAYANPDF_GS_ICC    = "$rt\ghostscript\iccprofiles\srgb.icc"
+          # Read Out Loud can only be heard where a sound device exists; record how many.
+          $env:NAYANPDF_TEST_AUDIO_DEVICES = "$(@(Get-CimInstance Win32_SoundDevice -ErrorAction SilentlyContinue).Count)"
+          Write-Host "Sound devices: $env:NAYANPDF_TEST_AUDIO_DEVICES; Windows Audio service: $((Get-Service Audiosrv -ErrorAction SilentlyContinue).Status)"
           node scripts/ui-e2e.mjs 2>&1 | Tee-Object acceptance\ui-e2e.txt
           $code = $LASTEXITCODE
           Remove-Item -Recurse -Force test-results\ui\work -ErrorAction SilentlyContinue
