@@ -79,7 +79,11 @@ app.process().stdout.on("data", (d) => {
 });
 const page = await app.firstWindow();
 page.setDefaultTimeout(30000);
-page.on("pageerror", (e) => console.log("  [renderer error]", e.message));
+let pageErrors = 0;
+page.on("pageerror", (e) => {
+  pageErrors++;
+  console.log("  [renderer error]", e.message, process.env.UI_STACK ? e.stack : "");
+});
 page.on("console", (m) => { if (m.type() === "error" || m.text().startsWith("[e2e-debug]")) console.log("  [renderer console]", m.text()); });
 await page.setViewportSize({ width: 1440, height: 900 }).catch(() => undefined);
 const shot = async (name) => page.screenshot({ path: join(out, `${name}.png`) });
@@ -783,7 +787,7 @@ try {
     const n1 = await page.locator(".doc-pane.active .tools-pane .tool-item").count();
     await page.click('.doc-pane.active .tools-pane .tool-item:has-text("View more")');
     const n2 = await page.locator(".doc-pane.active .tools-pane .tool-item").count();
-    checks.allTools = n1 === 16 && n2 === 22;
+    checks.allTools = n1 === 17 && n2 === 23;
     await shot("21b-all-tools");
     await openTool("Add comments");
     await page.waitForTimeout(300);
@@ -997,7 +1001,8 @@ try {
       const outcome = await (await page.waitForFunction(() => {
         if ([...document.querySelectorAll(".toast")].some((t) => /Windows could not play the speech/.test(t.textContent || ""))) return "audioError";
         return document.querySelector(".doc-pane.active .speak-bar") && (speechSynthesis.speaking || speechSynthesis.pending) ? "speaking" : false;
-      }, null, { timeout: 15000 })).jsonValue();
+        // Without a sound device Windows takes about 15 seconds to report the failure.
+      }, null, { timeout: 60000 })).jsonValue();
       if (outcome === "speaking") {
         const speaking = await page.evaluate(() => new Promise((res) => setTimeout(() => res(speechSynthesis.speaking || speechSynthesis.pending), 800)));
         await shot("22c-read-aloud");
@@ -1020,6 +1025,116 @@ try {
       detail = "no voices on this machine: the user is told so and nothing is spoken";
     }
     record("Read Out Loud (installed voices, offline)", ok, detail);
+  });
+
+  await step("Prepare a form: detect blanks, add, move, delete, radio group, then fill", async () => {
+    const checks = {};
+    const errorsBefore = pageErrors;
+    // A flat registration form with no fields, as received from a client.
+    const blank = join(work, "registration_blank.pdf");
+    execFileSync(PY, ["-c", [
+      "import pymupdf,sys",
+      "d=pymupdf.open(); p=d.new_page()",
+      "p.insert_text((72,100),'Client registration form',fontsize=16)",
+      "p.insert_text((72,150),'Name: ______________________',fontsize=11)",
+      "p.insert_text((72,180),'PAN',fontsize=11); p.draw_line((140,182),(360,182))",
+      "p.insert_text((72,210),'Email address',fontsize=11); p.draw_rect(pymupdf.Rect(170,196,420,214))",
+      "p.draw_rect(pymupdf.Rect(72,232,84,244)); p.insert_text((90,242),'GST registered',fontsize=11)",
+      "p.draw_rect(pymupdf.Rect(200,232,212,244)); p.insert_text((218,242),'MSME',fontsize=11)",
+      "d.save(sys.argv[1])",
+    ].join("\n"), blank]);
+    await openCopy("registration_blank.pdf", "registration.pdf");
+    await openTool("Prepare a form");
+    // Entering the tool on a form without fields looks for blanks; nothing is added yet.
+    await page.waitForSelector(".doc-pane.active .suggest-box", { timeout: 60000 });
+    checks.detected = (await page.textContent(".doc-pane.active .suggest-box strong")).startsWith("5 suggested");
+    checks.notAddedYet = (await page.locator(".doc-pane.active .design-item").count()) === 0;
+    await shot("23a-prepare-detected");
+    await page.click('.doc-pane.active button[aria-label="Add field PAN"]');
+    await waitIdle();
+    await page.waitForSelector('.doc-pane.active .ov-dfield[data-field="PAN"]', { timeout: 30000 });
+    await page.click('.doc-pane.active button[aria-label="Discard field MSME"]');
+    checks.acceptOne = (await page.textContent(".doc-pane.active .suggest-box strong")).startsWith("3 suggested");
+    await page.click('.doc-pane.active .suggest-box button:has-text("Add all 3")');
+    await waitIdle();
+    await page.waitForFunction(() => document.querySelectorAll(".doc-pane.active .design-item").length === 4, null, { timeout: 30000 });
+    checks.addAll = !(await page.locator(".doc-pane.active .suggest-box").count());
+    const pg = page.locator('.doc-pane.active .pdfViewer .page[data-page-number="1"]');
+    const click = async (fx, fy) => {
+      const b = await stableBox(pg);
+      await page.mouse.click(b.x + b.width * fx, b.y + b.height * fy);
+    };
+    // A radio group with two choices.
+    await page.click('.doc-pane.active .field-tools button[title="Radio button"]');
+    await click(0.15, 0.45);
+    await page.fill('input[aria-label="Radio group name"]', "Scheme");
+    await page.fill('input[aria-label="Radio button choice"]', "Regular");
+    await page.click('.edit-pop button:has-text("Add button")');
+    await waitIdle();
+    await click(0.35, 0.45);
+    checks.groupRemembered = (await page.inputValue('input[aria-label="Radio group name"]')) === "Scheme";
+    await page.fill('input[aria-label="Radio button choice"]', "Composition");
+    await page.click('.edit-pop button:has-text("Add button")');
+    await waitIdle();
+    await page.waitForFunction(() => document.querySelectorAll('.doc-pane.active .ov-dfield[data-field="Scheme"]').length === 2, null, { timeout: 30000 });
+    // A drop-down, named and given its choices in the properties.
+    await page.click('.doc-pane.active .field-tools button[title="Drop-down"]');
+    await click(0.15, 0.55);
+    await waitIdle();
+    await page.waitForSelector('.doc-pane.active .field-props:has-text("Drop-down properties")', { timeout: 30000 });
+    await page.fill('input[aria-label="Field name"]', "Quarter");
+    await page.fill('textarea[aria-label="Field choices"]', "Q1\nQ2\nQ3\nQ4");
+    await page.click('.doc-pane.active .field-props button:has-text("Apply")');
+    await waitIdle();
+    await page.waitForSelector('.doc-pane.active .design-item:has-text("Quarter")', { timeout: 30000 });
+    // Move PAN 40 px to the right; delete Email address with the Delete key.
+    const pan = page.locator('.doc-pane.active .ov-dfield[data-field="PAN"]');
+    const b0 = await stableBox(pan);
+    await page.mouse.move(b0.x + b0.width / 2, b0.y + b0.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(b0.x + b0.width / 2 + 40, b0.y + b0.height / 2, { steps: 5 });
+    await page.mouse.up();
+    await waitIdle();
+    await page.waitForTimeout(500);
+    const b1 = await stableBox(page.locator('.doc-pane.active .ov-dfield[data-field="PAN"]'));
+    checks.moved = b1.x - b0.x > 30 && Math.abs(b1.y - b0.y) < 3;
+    const em = page.locator('.doc-pane.active .ov-dfield[data-field="Email address"]');
+    const eb = await stableBox(em);
+    await page.mouse.click(eb.x + eb.width / 2, eb.y + eb.height / 2);
+    await page.keyboard.press("Delete");
+    await waitIdle();
+    await page.waitForFunction(() => !document.querySelector('.doc-pane.active .ov-dfield[data-field="Email address"]'), null, { timeout: 30000 });
+    await shot("23b-prepare-fields");
+    const prepared = join(work, "registration_form.pdf");
+    setDialogs({ saveAs: prepared });
+    await page.click('.doc-pane.active button:has-text("Save As")');
+    await page.waitForTimeout(1500);
+    const listOf = (f) => JSON.parse(execFileSync(PY, ["-c", "import sys,json; sys.path.insert(0,'engine'); from nayanpdf_engine.server import call; r=call('forms.list', path=sys.argv[1]); print(json.dumps({f['name']: [f['type'], f['options'], f['value']] for f in r['fields']}))", f], { cwd: root }).toString().trim().split("\n").pop());
+    const L = existsSync(prepared) ? listOf(prepared) : {};
+    checks.saved = JSON.stringify(Object.keys(L).sort()) === JSON.stringify(["GST registered", "Name", "PAN", "Quarter", "Scheme"])
+      && L.Scheme?.[0] === "radio" && JSON.stringify(L.Scheme?.[1]) === JSON.stringify(["Regular", "Composition"])
+      && JSON.stringify(L.Quarter?.[1]) === JSON.stringify(["Q1", "Q2", "Q3", "Q4"]) && L["GST registered"]?.[0] === "checkbox";
+    // Fill the new form: one radio choice, a name, a quarter.
+    await openTool("Fill in a form");
+    await page.waitForSelector('.doc-pane.active .tools-pane .field:has(> label:text-is("Name")) input', { timeout: 30000 });
+    await page.fill('.doc-pane.active .tools-pane .field:has(> label:text-is("Name")) input', "ACME Traders");
+    await page.click('.doc-pane.active .tools-pane label.check:has-text("Composition") input');
+    await page.selectOption('.doc-pane.active .tools-pane .field:has(> label:text-is("Quarter")) select', "Q3");
+    await page.click('.doc-pane.active .tools-pane button:has-text("Apply")');
+    await waitIdle();
+    const filled = join(work, "registration_filled.pdf");
+    setDialogs({ saveAs: filled });
+    await page.click('.doc-pane.active button:has-text("Save As")');
+    await page.waitForTimeout(1500);
+    const F = existsSync(filled) ? listOf(filled) : {};
+    const on = existsSync(filled) ? execFileSync(PY, ["-c", "import pymupdf,sys; d=pymupdf.open(sys.argv[1]); print(sorted(d.xref_get_key(w.xref,'AS')[1] for p in d for w in p.widgets() if w.field_name=='Scheme'))", filled]).toString().trim() : "";
+    checks.filled = F.Name?.[2] === "ACME Traders" && F.Scheme?.[2] === "Composition" && F.Quarter?.[2] === "Q3" && on === "['/Composition', '/Off']";
+    // The viewer drew every revision of the new form without an error.
+    checks.renderedClean = pageErrors === errorsBefore;
+    await exitTool();
+    const failed = Object.entries(checks).filter(([, v]) => !v).map(([k]) => k);
+    record("Prepare a form: detect blanks, add, move, delete, radio group, then fill", failed.length === 0,
+      failed.length ? `failed: ${failed.join(", ")}; saved ${JSON.stringify(L)}; filled ${JSON.stringify(F)} ${on}` : `${Object.keys(checks).length} checks: ${Object.keys(checks).join(", ")}; fields ${Object.keys(L).join(", ")}; radio states ${on}`);
   });
 
   await step("Settings and dark theme", async () => {

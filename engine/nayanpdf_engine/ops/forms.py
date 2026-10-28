@@ -8,7 +8,7 @@ from ..errors import EngineError, VALIDATION_FAILED, invalid
 from ..registry import method
 from ..util.geometry import fitz_to_pdf_rect
 from ..util.io import OutputFile, validate_pdf
-from ..util.pdf import doc_is_signed, open_pdf, save_doc
+from ..util.pdf import doc_is_signed, drop_keys, open_pdf, save_doc
 
 TYPES = {
     pymupdf.PDF_WIDGET_TYPE_TEXT: "text",
@@ -84,6 +84,43 @@ def _has_xfa(doc) -> bool:
     return False
 
 
+def _pdf_name(s: str) -> str:
+    return "/" + "".join(chr(b) if 33 <= b <= 126 and chr(b) not in "()<>[]{}/%#" else f"#{b:02X}" for b in s.encode("utf-8"))
+
+
+def _set_radio(ctx, doc, name: str, items, value: str) -> int:
+    """Switch one button of a radio group on (or all off) and set the group's value."""
+    widgets = []
+    for page, xref in items:
+        w = next((x for x in page.widgets() if x.xref == xref), None)
+        if w is not None:
+            widgets.append(w)
+    target = [w for w in widgets if _on_state(w) == value]
+    if value != "Off" and not target:
+        ctx.warn(f"'{value}' is not one of the choices of '{name}'; no button was selected.")
+    # PyMuPDF writes /Ff on each button it updates; on a button that inherits its
+    # flags from the group that would override them (a required group would stop
+    # being required), so the key is removed again where it was not there before.
+    own_flags = {w.xref: doc.xref_get_key(w.xref, "Ff")[0] != "null" for w in widgets}
+    for w in widgets:
+        if w not in target:
+            w.field_value = False
+            w.update()
+    for w in target:
+        w.field_value = True
+        w.update()
+    for w in widgets:
+        if not own_flags[w.xref] and doc.xref_get_key(w.xref, "Ff")[0] != "null":
+            drop_keys(doc, w.xref, ("Ff",))
+    # The group's value is a name (/Composition), not a string.
+    v = _pdf_name(value if target else "Off")
+    for w in widgets:
+        t, p = doc.xref_get_key(w.xref, "Parent")
+        holder = int(p.split()[0]) if t == "xref" else w.xref
+        doc.xref_set_key(holder, "V", v)
+    return 1 if widgets else 0
+
+
 @method("forms.fill")
 def fill(ctx, path: str, output: str, values: dict, flatten: bool = False, password: str | None = None,
          overwrite: bool = False):
@@ -97,6 +134,7 @@ def fill(ctx, path: str, output: str, values: dict, flatten: bool = False, passw
     changed = 0
     unknown = set(values)
     expected = {}
+    radios: dict[str, list] = {}
     for page in doc:
         for w in page.widgets():
             name = w.field_name
@@ -112,9 +150,11 @@ def fill(ctx, path: str, output: str, values: dict, flatten: bool = False, passw
                 w.field_value = _on_state(w) if v in (True, "true", "on", "Yes", 1, "1") else "Off"
                 expected[name] = bool(v in (True, "true", "on", "Yes", 1, "1"))
             elif t == pymupdf.PDF_WIDGET_TYPE_RADIOBUTTON:
-                on = _on_state(w)
-                w.field_value = on if str(v) == str(on) else "Off"
-                expected[name] = str(v)
+                # Handled per group below: PyMuPDF switches a button on for any
+                # non-empty value, including "Off".
+                radios.setdefault(name, []).append((page, w.xref))
+                expected[name] = "Off" if v in (None, False, "", "Off") else str(v)
+                continue
             elif t in (pymupdf.PDF_WIDGET_TYPE_COMBOBOX, pymupdf.PDF_WIDGET_TYPE_LISTBOX):
                 w.field_value = "" if v is None else str(v)
                 expected[name] = "" if v is None else str(v)
@@ -125,6 +165,8 @@ def fill(ctx, path: str, output: str, values: dict, flatten: bool = False, passw
                 continue
             w.update()
             changed += 1
+    for name, items in radios.items():
+        changed += _set_radio(ctx, doc, name, items, expected[name])
     if unknown:
         ctx.warn("Unknown field(s) ignored: " + ", ".join(sorted(unknown)[:10]))
     n = doc.page_count
@@ -148,7 +190,9 @@ def fill(ctx, path: str, output: str, values: dict, flatten: bool = False, passw
                         if got != e:
                             mismatches.append(w.field_name)
                     elif w.field_type == pymupdf.PDF_WIDGET_TYPE_RADIOBUTTON:
-                        pass
+                        state = chk.xref_get_key(w.xref, "AS")[1].lstrip("/") or "Off"
+                        if (state == _on_state(w)) != (_on_state(w) == e) and w.field_name not in mismatches:
+                            mismatches.append(w.field_name)
                     elif (w.field_value or "") != e:
                         mismatches.append(w.field_name)
         chk.close()

@@ -220,6 +220,15 @@ def save_doc(doc: pymupdf.Document, path: str, *, keep_encryption: bool = True,
     doc.save(path, **kwargs)
 
 
+def drop_keys(doc: pymupdf.Document, xref: int, keys) -> None:
+    """Remove keys with simple values from an object. (Setting a key to null with
+    xref_set_key leaves "/Key null" in the file, which some readers reject.)"""
+    obj = doc.xref_object(xref, compressed=True)
+    for k in keys:
+        obj = re.sub(rf"/{k}(?=[\s/(<\[])\s*(?:/[^\s/<>\[\]()]*|\((?:\\.|[^\\)])*\)|<[0-9A-Fa-f]*>|[-+.\d]+|true|false|null)", "", obj, count=1)
+    doc.update_object(xref, obj)
+
+
 def doc_is_signed(doc: pymupdf.Document) -> bool:
     try:
         if doc.get_sigflags() > 0:

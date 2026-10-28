@@ -2,7 +2,7 @@ import { createContext, useContext } from "react";
 import type { OpenDoc } from "../store";
 import type { ViewerHandle } from "./Viewer";
 
-export type Mode = "view" | "edit" | "comment" | "pages" | "forms" | "redact" | "sign";
+export type Mode = "view" | "edit" | "comment" | "pages" | "forms" | "prepare" | "redact" | "sign";
 
 export interface RedactMark {
   id: string;

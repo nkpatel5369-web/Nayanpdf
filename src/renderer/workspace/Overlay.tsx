@@ -5,10 +5,16 @@ import { useApp } from "../store";
 import { useWs } from "./context";
 import { cssPointToPdf, cssRectToPdf, PageCtx, pdfRectToCss } from "./Viewer";
 import { TEXT_TOOLS } from "./Selection";
+import { FIELD_TOOLS, FIELD_TYPE_OF } from "./panels/PreparePanel";
 
 // Tools that are drawn as a rectangle.
 const RECT_TOOLS = new Set(["highlight", "underline", "strikeout", "squiggly", "freetext", "callout", "rect", "circle", "stamp",
-  "initials", "addText", "addImage", "redactArea", "placeSignature", "digitalBox", "textstamp", "link"]);
+  "initials", "addText", "addImage", "redactArea", "placeSignature", "digitalBox", "textstamp", "link",
+  "textField", "checkField", "radioField", "comboField", "listField", "sigField"]);
+// Size of a field placed with a click instead of a drag, in points.
+const FIELD_SIZE: Record<string, [number, number]> = {
+  textField: [150, 18], checkField: [12, 12], radioField: [12, 12], comboField: [120, 18], listField: [120, 60], sigField: [160, 40],
+};
 const LINE_TOOLS = new Set(["line", "arrow"]);
 
 interface Drag {
@@ -52,6 +58,10 @@ export function PageOverlay({ ctx }: { ctx: PageCtx }) {
     if (e.button !== 0 || !ref.current || pending) return;
     if ((e.target as HTMLElement).closest("[data-noprop]")) return;
     const p = rel(e, ref.current);
+    if (tool === "fieldSelect") {
+      ws.setSelected(null);
+      return;
+    }
     if (tool === "ink") {
       setInk([[p.x, p.y]]);
     } else if (RECT_TOOLS.has(tool) || LINE_TOOLS.has(tool) || tool === "note") {
@@ -105,7 +115,11 @@ export function PageOverlay({ ctx }: { ctx: PageCtx }) {
       return;
     }
     let css = d;
-    if (small) {
+    if (small && FIELD_SIZE[tool]) {
+      // A click places the field with its top-left corner at the pointer.
+      const [w, h] = FIELD_SIZE[tool];
+      css = { x0: d.x0, y0: d.y0, x1: d.x0 + w * sc, y1: d.y0 + h * sc };
+    } else if (small) {
       // A click places a default-sized box.
       const w = (tool === "placeSignature" ? 160 : tool === "stamp" || tool === "textstamp" ? 150 : tool === "digitalBox" ? 200 : 180) * sc;
       const h = (tool === "placeSignature" ? 60 : tool === "stamp" || tool === "textstamp" ? 50 : tool === "digitalBox" ? 60 : 40) * sc;
@@ -164,6 +178,24 @@ export function PageOverlay({ ctx }: { ctx: PageCtx }) {
       case "digitalBox":
         window.dispatchEvent(new CustomEvent("nayan:digital-box", { detail: { sessionId: ws.sessionId, page, rect } }));
         break;
+      case "radioField":
+        setPending({ kind: "radio", rect, css });
+        break;
+      case "textField":
+      case "checkField":
+      case "comboField":
+      case "listField":
+      case "sigField": {
+        const label = FIELD_TOOLS.find((t) => t.id === tool)!.label;
+        ws.apply("forms.design", { ops: [{ op: "add", type: FIELD_TYPE_OF[tool], page, rect }] }, `Add ${label.toLowerCase()}`).then((r) => {
+          const c = r?.created?.[0];
+          if (!c) return;
+          // As in Acrobat, the new field is selected so its properties can be set.
+          ws.setTool("fieldSelect");
+          ws.setSelected({ kind: "dfield", name: c.name, xref: c.xref, page });
+        });
+        break;
+      }
     }
   };
 
@@ -183,7 +215,7 @@ export function PageOverlay({ ctx }: { ctx: PageCtx }) {
     setPending(null);
   };
 
-  const cursor = interactive ? (tool === "text" || tool === "image" || tool === "select" || tool === "fields" ? "default" : "crosshair") : "default";
+  const cursor = interactive ? (tool === "text" || tool === "image" || tool === "select" || tool === "fields" || tool === "fieldSelect" ? "default" : "crosshair") : "default";
 
   return (
     <div ref={ref} className={"overlay" + (interactive ? "" : " passive")} style={{ cursor }} onMouseDown={interactive ? onDown : undefined}>
@@ -192,6 +224,8 @@ export function PageOverlay({ ctx }: { ctx: PageCtx }) {
       {ws.mode === "edit" && tool === "link" && <LinkBoxes ctx={ctx} />}
       {ws.mode === "comment" && tool === "select" && <AnnotBoxes ctx={ctx} />}
       {ws.mode === "forms" && <FieldBoxes ctx={ctx} />}
+      {ws.mode === "prepare" && <DesignBoxes ctx={ctx} />}
+      {ws.mode === "prepare" && <SuggestionBoxes ctx={ctx} />}
       {(ws.mode === "redact" || ws.marks.length > 0) && <Marks ctx={ctx} />}
       {drag && !LINE_TOOLS.has(tool) && (
         <div className="ov-drag" style={{ left: Math.min(drag.x0, drag.x1), top: Math.min(drag.y0, drag.y1), width: Math.abs(drag.x1 - drag.x0), height: Math.abs(drag.y1 - drag.y0) }} />
@@ -213,7 +247,23 @@ export function PageOverlay({ ctx }: { ctx: PageCtx }) {
             setPending(null);
           }} />
       )}
-      {pending && pending.kind !== "link" && <TextEntry css={pending.css} multiline={pending.kind !== "note"} placeholder={pending.kind === "note" ? "Comment" : "Type text"} onSubmit={submitPending} onCancel={() => setPending(null)} />}
+      {pending && pending.kind === "radio" && (
+        <RadioEntry css={pending.css} group={ws.opts.radioGroup || ""} groups={(ws.opts.designFields || []).filter((f: any) => f.type === "radio").map((f: any) => f.name)}
+          onCancel={() => setPending(null)}
+          onSubmit={(group, value) => {
+            const rect = pending.rect;
+            setPending(null);
+            ws.apply("forms.design", { ops: [{ op: "add", type: "radio", page: ctx.pageNumber, name: group || undefined, buttons: [{ rect, export: value || undefined }] }] }, "Add radio button").then((r) => {
+              const c = r?.created?.[0];
+              // Stay on the radio tool, adding to the same group, until the user picks another tool.
+              if (c) {
+                ws.setOpts({ radioGroup: c.name });
+                ws.setSelected({ kind: "dfield", name: c.name, xref: c.xref, page: ctx.pageNumber });
+              }
+            });
+          }} />
+      )}
+      {pending && pending.kind !== "link" && pending.kind !== "radio" && <TextEntry css={pending.css} multiline={pending.kind !== "note"} placeholder={pending.kind === "note" ? "Comment" : "Type text"} onSubmit={submitPending} onCancel={() => setPending(null)} />}
     </div>
   );
 }
@@ -574,6 +624,131 @@ function FieldBoxes({ ctx }: { ctx: PageCtx }) {
             onMouseDown={(e) => { e.stopPropagation(); ws.setSelected({ kind: "field", name: f.name }); }} />;
         }),
       )}
+    </>
+  );
+}
+
+// ------------------------------------------------------------ prepare a form
+/** Name the group a new radio button belongs to, and the value it stands for. */
+function RadioEntry(props: { css: Drag; group: string; groups: string[]; onSubmit: (group: string, value: string) => void; onCancel: () => void }) {
+  const [group, setGroup] = useState(props.group);
+  const [value, setValue] = useState("");
+  const left = Math.min(props.css.x0, props.css.x1);
+  const top = Math.max(props.css.y0, props.css.y1) + 6;
+  const submit = () => props.onSubmit(group.trim(), value.trim());
+  return (
+    <div className="edit-pop link-pop" data-noprop style={{ left, top, width: 280 }} onMouseDown={(e) => e.stopPropagation()}
+      onKeyDown={(e) => { if (e.key === "Escape") props.onCancel(); if (e.key === "Enter") submit(); }}>
+      <strong>Radio button</strong>
+      <label className="subtle">Group name (buttons in one group switch each other off)</label>
+      <input className="input sm" aria-label="Radio group name" list="radio-groups" placeholder="For example: GST scheme" value={group} onChange={(e) => setGroup(e.target.value)} autoFocus={!props.group} />
+      <datalist id="radio-groups">{props.groups.map((g) => <option key={g} value={g} />)}</datalist>
+      <label className="subtle">This button's choice</label>
+      <input className="input sm" aria-label="Radio button choice" placeholder="For example: Composition" value={value} onChange={(e) => setValue(e.target.value)} autoFocus={!!props.group} />
+      <div className="row" style={{ width: "100%", justifyContent: "flex-end" }}>
+        <button className="btn sm" onClick={props.onCancel}><X size={13} /> Cancel</button>
+        <button className="btn sm primary" onClick={submit}><Check size={13} /> Add button</button>
+      </div>
+    </div>
+  );
+}
+
+/** Fields being prepared: click to select, drag to move, corner to resize, Delete to remove. */
+function DesignBoxes({ ctx }: { ctx: PageCtx }) {
+  const ws = useWs();
+  const fields: any[] = ws.opts.designFields || [];
+  const [delta, setDelta] = useState<{ xref: number; dx: number; dy: number; dw: number; dh: number } | null>(null);
+  const sel = ws.selected?.kind === "dfield" ? ws.selected : null;
+  useEffect(() => {
+    if (!sel || sel.page !== ctx.pageNumber || !sel.xref) return;
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT")) return;
+      if (e.key === "Delete") {
+        e.preventDefault();
+        ws.apply("forms.design", { ops: [{ op: "deleteWidget", page: ctx.pageNumber, xref: sel.xref }] }, "Delete field").then((r) => r && ws.setSelected(null));
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [sel?.xref, sel?.page, ctx.pageNumber]);
+
+  const begin = (e: React.MouseEvent, f: any, w: any, resize: boolean) => {
+    if (ws.tool !== "fieldSelect") return;
+    e.stopPropagation();
+    ws.setSelected({ kind: "dfield", name: f.name, xref: w.xref, page: w.page });
+    const sx = e.clientX;
+    const sy = e.clientY;
+    let moved = false;
+    const mm = (ev: MouseEvent) => {
+      const dx = ev.clientX - sx;
+      const dy = ev.clientY - sy;
+      if (Math.abs(dx) + Math.abs(dy) > 2) moved = true;
+      setDelta(resize ? { xref: w.xref, dx: 0, dy: 0, dw: dx, dh: dy } : { xref: w.xref, dx, dy, dw: 0, dh: 0 });
+    };
+    const mu = (ev: MouseEvent) => {
+      window.removeEventListener("mousemove", mm);
+      window.removeEventListener("mouseup", mu);
+      setDelta(null);
+      if (!moved) return;
+      const dx = ev.clientX - sx;
+      const dy = ev.clientY - sy;
+      const css = pdfRectToCss(ctx.viewport, w.rect);
+      const n = resize
+        ? { x0: css.left, y0: css.top, x1: css.left + Math.max(6, css.width + dx), y1: css.top + Math.max(6, css.height + dy) }
+        : { x0: css.left + dx, y0: css.top + dy, x1: css.left + dx + css.width, y1: css.top + dy + css.height };
+      ws.apply("forms.design", { ops: [{ op: "move", page: ctx.pageNumber, xref: w.xref, rect: cssRectToPdf(ctx.viewport, n.x0, n.y0, n.x1, n.y1) }] }, resize ? "Resize field" : "Move field");
+    };
+    window.addEventListener("mousemove", mm);
+    window.addEventListener("mouseup", mu);
+  };
+
+  return (
+    <>
+      {fields.flatMap((f) =>
+        f.widgets.filter((w: any) => w.page === ctx.pageNumber).map((w: any) => {
+          const css = pdfRectToCss(ctx.viewport, w.rect);
+          const d = delta?.xref === w.xref ? delta : null;
+          const on = sel?.name === f.name;
+          return (
+            <div key={w.xref} className={"ov-dfield" + (on ? " on" : "") + (sel?.xref === w.xref ? " sel" : "")} data-noprop data-field={f.name}
+              title={`${f.name}${f.label ? " (" + f.label + ")" : ""}${f.type === "radio" ? " = " + w.onState : ""}`}
+              style={{ left: css.left + (d?.dx || 0), top: css.top + (d?.dy || 0), width: Math.max(6, css.width + (d?.dw || 0)), height: Math.max(6, css.height + (d?.dh || 0)), cursor: ws.tool === "fieldSelect" ? "move" : undefined }}
+              onMouseDown={(e) => begin(e, f, w, false)}>
+              <span className="ov-dname">{f.type === "radio" ? `${f.name}: ${w.onState}` : f.name}</span>
+              {sel?.xref === w.xref && <div className="ov-handle" onMouseDown={(e) => begin(e, f, w, true)} />}
+            </div>
+          );
+        }),
+      )}
+    </>
+  );
+}
+
+/** Fields suggested by Detect form fields, each to accept or discard. */
+function SuggestionBoxes({ ctx }: { ctx: PageCtx }) {
+  const ws = useWs();
+  const all: any[] = ws.opts.suggestions || [];
+  const drop = (s: any) => ws.setOpts({ suggestions: all.filter((x) => x !== s) });
+  const accept = async (s: any) => {
+    const r = await ws.apply("forms.design", { ops: [{ op: "add", type: s.type, page: s.page, rect: s.rect, name: s.name, tooltip: s.label || undefined }] }, "Add field");
+    if (r) ws.setOpts({ suggestions: (ws.opts.suggestions || all).filter((x: any) => x !== s) });
+  };
+  return (
+    <>
+      {all.filter((s) => s.page === ctx.pageNumber).map((s, i) => {
+        const css = pdfRectToCss(ctx.viewport, s.rect);
+        // Small boxes (check boxes) have their label on the right: keep the buttons off it.
+        return (
+        <div key={i} className={"ov-suggest" + (css.width < 40 ? " narrow" : "")} data-noprop style={css} title={`Suggested ${s.type === "checkbox" ? "check box" : "text field"}: ${s.name}`}>
+          <span className="ov-dname">{s.name}</span>
+          <span className="ov-suggest-acts">
+            <button title="Add this field" aria-label={`Add field ${s.name}`} onMouseDown={(e) => e.stopPropagation()} onClick={() => accept(s)}><Check size={11} /></button>
+            <button title="Not a field" aria-label={`Discard field ${s.name}`} onMouseDown={(e) => e.stopPropagation()} onClick={() => drop(s)}><X size={11} /></button>
+          </span>
+        </div>
+        );
+      })}
     </>
   );
 }

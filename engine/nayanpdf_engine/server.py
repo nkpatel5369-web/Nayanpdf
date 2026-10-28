@@ -32,6 +32,7 @@ def _load_ops() -> None:
         convert,
         create,
         edit,
+        formdesign,
         forms,
         info,
         links,

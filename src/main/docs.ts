@@ -43,7 +43,7 @@ const EDIT_METHODS = new Set([
   "pages.assemble", "pages.rotate", "pages.delete", "pages.insertBlank", "pages.insertFromFile", "pages.replace",
   "pages.duplicate", "pages.reverse",
   "stamp.watermark", "stamp.headerFooter", "stamp.pageNumbers", "stamp.bates", "stamp.background",
-  "forms.fill", "meta.set", "meta.remove", "redact.apply", "bookmarks.set", "labels.set",
+  "forms.fill", "forms.design", "meta.set", "meta.remove", "redact.apply", "bookmarks.set", "labels.set",
   "attachments.add", "attachments.delete", "sign.placeImage", "ocr.run", "compress.run",
   "pagesize.standardize", "pagesize.crop", "util.repair",
   "annot.importXfdf", "links.apply", "meta.initialView",
@@ -55,7 +55,7 @@ const QUERY_METHODS = new Set([
   "annot.list", "forms.list", "meta.get", "bookmarks.get", "labels.get", "attachments.list", "security.inspect",
   "security.integrity", "sign.verify", "redact.search", "edit.listImages", "compress.analyze", "blank.detect",
   "util.pdfaCheck", "pages.thumbnail", "compare.run",
-  "links.list", "meta.getInitialView",
+  "links.list", "meta.getInitialView", "forms.detect",
 ]);
 
 function newToken(): string {

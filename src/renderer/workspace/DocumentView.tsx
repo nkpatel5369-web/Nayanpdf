@@ -3,7 +3,7 @@ import {
   ChevronDown, ChevronLeft, ChevronRight, Eye, FilePen, FormInput, Highlighter, LayoutGrid, Maximize, MoveHorizontal, PanelLeft, PanelRight,
   Printer, Redo2, RotateCw, RotateCcw, Save, Search, Shredder, Signature, Stamp, Undo2, X, ZoomIn, ZoomOut, Info, FileDown, ArrowLeftRight, Lock,
   BookOpen, Check as CheckIcon, Expand, Volume2, GalleryThumbnails, Bookmark, Paperclip, MessageSquare, MousePointer2, StickyNote, PenLine, Type,
-  ArrowLeft, Combine, FileSearch, ScanText, Scissors, Images, Tags, Wrench, FilePlus2, Layers,
+  ArrowLeft, Combine, FileSearch, ScanText, Scissors, Images, Tags, Wrench, FilePlus2, Layers, ClipboardList,
 } from "lucide-react";
 import { api, baseName, dirName, joinPath, stem, waitForJob } from "../api";
 import { errorText, useApp } from "../store";
@@ -17,6 +17,7 @@ import { pauseResume, readAloud, ReadState, stopReading } from "./ReadAloud";
 import { EditPanel } from "./panels/EditPanel";
 import { CommentPanel, CommentsList } from "./panels/CommentPanel";
 import { FormsPanel } from "./panels/FormsPanel";
+import { PreparePanel } from "./panels/PreparePanel";
 import { RedactPanel } from "./panels/RedactPanel";
 import { SignPanel } from "./panels/SignPanel";
 import { AttachmentsPanel, BookmarksPanel, PropertiesPanel } from "./panels/InfoPanels";
@@ -31,6 +32,7 @@ const MODES: { id: Mode; label: string; icon: any; defaultTool: string }[] = [
   { id: "comment", label: "Add comments", icon: Highlighter, defaultTool: "highlight" },
   { id: "pages", label: "Organize pages", icon: LayoutGrid, defaultTool: "none" },
   { id: "forms", label: "Fill in a form", icon: FormInput, defaultTool: "fields" },
+  { id: "prepare", label: "Prepare a form", icon: ClipboardList, defaultTool: "fieldSelect" },
   { id: "redact", label: "Redact", icon: Shredder, defaultTool: "redactArea" },
   { id: "sign", label: "Sign", icon: Signature, defaultTool: "placeSignature" },
 ];
@@ -372,6 +374,7 @@ export function DocumentView({ sessionId, active }: { sessionId: string; active:
       case "edit": return <EditPanel />;
       case "comment": return <CommentPanel />;
       case "forms": return <FormsPanel />;
+      case "prepare": return <PreparePanel />;
       case "redact": return <RedactPanel />;
       case "sign": return <SignPanel />;
       case "pages": return <div className="panel-pad subtle">Select pages in the grid, then use the toolbar above it: rotate, delete, duplicate, insert, extract. Drag pages to reorder. Apply changes when you are done.</div>;
@@ -392,7 +395,7 @@ export function DocumentView({ sessionId, active }: { sessionId: string; active:
   const runAction = (id: string) => {
     const setView = useApp.getState().setView;
     switch (id) {
-      case "edit": case "comment": case "pages": case "forms": case "redact": case "sign": return setMode(id as Mode);
+      case "edit": case "comment": case "pages": case "forms": case "prepare": case "redact": case "sign": return setMode(id as Mode);
       case "protect": case "stamp": case "print": return setDialog(id as any);
       case "batch": return setView({ kind: "batch" });
       default: return setView({ kind: "tool", tool: id as any, args: { sessionId } });
@@ -580,6 +583,7 @@ const ALL_TOOLS: { id: string; label: string; icon: any; more?: boolean }[] = [
   { id: "comment", label: "Add comments", icon: Highlighter },
   { id: "pages", label: "Organize pages", icon: LayoutGrid },
   { id: "forms", label: "Fill in a form", icon: FormInput },
+  { id: "prepare", label: "Prepare a form", icon: ClipboardList },
   { id: "sign", label: "Sign", icon: Signature },
   { id: "redact", label: "Redact", icon: Shredder },
   { id: "protect", label: "Protect with a password", icon: Lock },
