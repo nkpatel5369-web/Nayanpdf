@@ -30,7 +30,7 @@ New-Item -ItemType Directory -Force -Path $ReportDir | Out-Null
 $ReportDir = (Resolve-Path $ReportDir).Path
 $Installer = (Resolve-Path $Installer).Path
 $results = New-Object System.Collections.ArrayList
-$InstallDir = Join-Path $env:LOCALAPPDATA "Programs\X PDF"
+$InstallDir = Join-Path $env:LOCALAPPDATA "Programs\X-PDF"
 $StartMenu = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\X PDF.lnk"
 
 function Record([string]$name, [bool]$ok, [string]$detail = "", [bool]$required = $true) {
@@ -59,6 +59,24 @@ function Sync-InstallDir {
   if ($u -and $u.UninstallString -match '^"?([^"]+\\)[^"\\]+\.exe') { $script:InstallDir = $Matches[1].TrimEnd('\') }
 }
 
+# The uninstaller exactly as Windows Settings runs it: the file named in the
+# registration (electron-builder names it after the executable: "Uninstall X-PDF.exe").
+function Get-Uninstaller {
+  $u = Get-UninstallEntry
+  if ($u -and $u.UninstallString -match '^"([^"]+)"') { return $Matches[1] }
+  return $null
+}
+
+function Invoke-Uninstall {
+  $exe = Get-Uninstaller
+  if (-not $exe -or -not (Test-Path $exe)) { return $null }
+  $dir = Split-Path $exe
+  $p = Start-Process -FilePath $exe -ArgumentList @("/S", "_?=$dir") -Wait -PassThru
+  Start-Sleep -Seconds 3
+  Remove-Item -Recurse -Force $dir -ErrorAction SilentlyContinue   # NSIS leaves the uninstaller itself when run with _?=
+  return $p
+}
+
 function Test-Upgrade {
   $legacyDir = Join-Path $env:LOCALAPPDATA "Programs\NayanPDF"
   $legacyData = Join-Path $env:APPDATA "NayanPDF"
@@ -75,19 +93,16 @@ function Test-Upgrade {
   Record "Upgrade: X-PDF.exe installed" (Test-Path (Join-Path $InstallDir "X-PDF.exe")) $InstallDir
   Record "Upgrade: old NayanPDF.exe removed" (-not (Test-Path (Join-Path $legacyDir "NayanPDF.exe")))
   Record "Upgrade: no NayanPDF Start Menu shortcut left" (-not (Test-Path (Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\NayanPDF.lnk")))
+  $un = Get-Uninstaller
+  Record "Upgrade: registered uninstaller present" ($un -and (Test-Path $un)) "$un"
   Run-App "upgrade" @()
   $migrated = Join-Path $env:APPDATA "X PDF\settings.json"
   Record "Upgrade: settings carried over from NayanPDF" ((Test-Path $migrated) -and ((Get-Content $migrated -Raw) -match "Upgrade Check")) $migrated
   # Back to a clean machine for the fresh-install checks.
-  $u = Get-UninstallEntry
-  if ($u) {
-    $un = Join-Path $InstallDir "Uninstall X PDF.exe"
-    if (Test-Path $un) { Start-Process -FilePath $un -ArgumentList @("/S", "_?=$InstallDir") -Wait | Out-Null }
-    Start-Sleep -Seconds 3
-    Remove-Item -Recurse -Force $InstallDir -ErrorAction SilentlyContinue
-  }
+  $p = Invoke-Uninstall
+  Record "Upgrade: uninstall after the upgrade" ($p -and $p.ExitCode -eq 0 -and $null -eq (Get-UninstallEntry)) "$(if ($p) { "exit=$($p.ExitCode)" } else { 'uninstaller not found' })"
   Remove-Item -Recurse -Force $legacyDir, $legacyData, (Join-Path $env:APPDATA "X PDF") -ErrorAction SilentlyContinue
-  $script:InstallDir = Join-Path $env:LOCALAPPDATA "Programs\X PDF"
+  $script:InstallDir = Join-Path $env:LOCALAPPDATA "Programs\X-PDF"
 }
 
 function Verify-Install([string]$label) {
@@ -100,6 +115,8 @@ function Verify-Install([string]$label) {
     Record "${label}: bundled $rel" (Test-Path (Join-Path $res $rel))
   }
   Record "${label}: Start Menu shortcut" (Test-Path $StartMenu) $StartMenu
+  $un = Get-Uninstaller
+  Record "${label}: registered uninstaller present" ($un -and (Test-Path $un)) "$un"
   $u = Get-UninstallEntry
   Record "${label}: uninstall registration" ($null -ne $u) ($(if ($u) { "$($u.DisplayName) $($u.DisplayVersion)" } else { "missing" }))
   if (Test-Path $exe) {
@@ -240,12 +257,8 @@ try {
   Record "Settings folder created by the app" (Test-Path $settingsDir) $settingsDir $false
 
   # Uninstall
-  $u = Get-UninstallEntry
-  $un = Join-Path $InstallDir "Uninstall X PDF.exe"
-  $p = Start-Process -FilePath $un -ArgumentList @("/S", "_?=$InstallDir") -Wait -PassThru
-  Start-Sleep -Seconds 3
-  Remove-Item -Recurse -Force $InstallDir -ErrorAction SilentlyContinue   # NSIS leaves the uninstaller itself when run with _?=
-  Record "Uninstall: exit code" ($p.ExitCode -eq 0) "exit=$($p.ExitCode)"
+  $p = Invoke-Uninstall
+  Record "Uninstall: exit code" ($p -and $p.ExitCode -eq 0) "$(if ($p) { "exit=$($p.ExitCode)" } else { 'uninstaller not found' })"
   Record "Uninstall: program files removed" (-not (Test-Path (Join-Path $InstallDir "X-PDF.exe")))
   Record "Uninstall: Start Menu shortcut removed" (-not (Test-Path $StartMenu))
   Record "Uninstall: registration removed" ($null -eq (Get-UninstallEntry))

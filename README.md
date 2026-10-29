@@ -19,7 +19,7 @@ X PDF (called NayanPDF until version 1.1) is a fully offline PDF editor and docu
 
 1. Download `X-PDF_Setup.exe` (and `X-PDF_Setup.exe.sha256`) from the repository's Releases page.
 2. Optional: check the file hash in PowerShell: `Get-FileHash .\X-PDF_Setup.exe` and compare with the `.sha256` file.
-3. Double-click `X-PDF_Setup.exe`. Accept the licence, choose the folder (default: `%LOCALAPPDATA%\Programs\X PDF`) and, on the last page, tick "Create a desktop shortcut" if you want one.
+3. Double-click `X-PDF_Setup.exe`. Accept the licence, choose the folder (default: `%LOCALAPPDATA%\Programs\X-PDF`; an upgrade from NayanPDF keeps its folder, `Programs\NayanPDF`) and, on the last page, tick "Create a desktop shortcut" if you want one.
 4. Start X PDF from the Start Menu.
 
 No administrator rights are needed and nothing is downloaded during or after installation. The installer is not code-signed, so Windows SmartScreen may show "Windows protected your PC": choose **More info → Run anyway** (signing requires a paid certificate; see Known limitations).
