@@ -11,9 +11,9 @@ X PDF (called NayanPDF until version 1.1) is a fully offline PDF editor and docu
 
 ## Current delivery status
 
-- **Windows installer:** built, installed and tested on a clean Windows machine by `.github/workflows/windows-installer.yml`. Every successful build is published as a GitHub pre-release (`v1.0.0-build.N`) with `X-PDF_Setup.exe`, its SHA-256 and the acceptance report. Use the newest pre-release.
-- **Evidence on Windows (build 12):** the 105 engine tests pass against the bundled runtime and again against the installed copy with outbound traffic blocked; the 67-point acceptance test covering install, the security switches compiled into `X-PDF.exe`, offline self-test, app launch with zero network connections and zero listening ports, uninstall and reinstall passes; and the 32-scenario UI test, including text selection, markup, printing, saving and the Acrobat view modes (full screen included), passes.
-- **Not yet verified:** installation under a standard (non-administrator) Windows account, and Windows 10 or Windows 11 desktop editions specifically. The CI machine is Windows Server 2025 (Windows 11 kernel 10.0.26100).
+- **Windows installer:** built, installed and tested on a clean Windows machine by `.github/workflows/windows-installer.yml`. Every successful build is published as a GitHub pre-release (`v1.1.0-build.N`; `v1.0.0-build.N` up to build 13, under the old name) with `X-PDF_Setup.exe`, its SHA-256 and the acceptance report. Use the newest pre-release. Current: **v1.1.0-build.19**, `X-PDF_Setup.exe` 419.5 MB, SHA-256 `A52EB892C18FF2C3A2D9CF3DEA825C75F8423696014EE5A102B735A14D0DF815`.
+- **Evidence on Windows (build 19):** the 123 engine tests pass against the bundled runtime and again against the installed copy with outbound traffic blocked; the 40-scenario UI test passes; the 82-point acceptance test passes with no failures or warnings. It covers the upgrade from NayanPDF 1.0 (one installation afterwards, old program and shortcut removed, settings carried over, the registered uninstaller present and working), a fresh install, the security switches compiled into `X-PDF.exe`, the offline self-test, app launch with zero network connections and zero listening ports, uninstall and reinstall.
+- **Not yet verified:** installation under a standard (non-administrator) Windows account, Windows 10 or Windows 11 desktop editions specifically (the CI machine is Windows Server 2025, Windows 11 kernel 10.0.26100), scanning with a physical scanner, and spoken audio from Read Out Loud.
 
 ## 1. Installing
 
@@ -119,7 +119,7 @@ The assignments follow Acrobat on Windows. Shortcuts are ignored while you are t
 | Log file (no document content, passwords or file contents) | `%APPDATA%\X PDF\logs` |
 | Undo revisions, job working files and scanned pages | `%TEMP%\X-PDF` (removed when documents close and at the next start; Settings shows the size and can clean it up) |
 
-Upgrading from X PDF (the name before version 1.1): the first start copies `%APPDATA%\X PDF` to `%APPDATA%\X PDF`, so settings, recent files, saved signatures and saved actions carry over. The old folder is left in place; delete it when you no longer need it.
+Upgrading from NayanPDF (the name before version 1.1): install X PDF over it; the installer replaces the old program in its folder (`Programs\NayanPDF`), and the first start copies `%APPDATA%\NayanPDF` to `%APPDATA%\X PDF`, so settings, recent files, saved signatures and saved actions carry over. The old folder is left in place; delete it when you no longer need it.
 
 ## 3. Uninstalling
 

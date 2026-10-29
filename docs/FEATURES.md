@@ -7,7 +7,7 @@ Status of every feature in the NayanPDF brief (the product's name before version
 - **E:** engine test in `engine/tests/` (pytest, synthetic documents, output files reopened and inspected).
 - **U:** scenario in the UI end-to-end test `scripts/ui-e2e.mjs`, which drives the real Electron application, its main process and engine (see `docs/TEST_REPORT.md`).
 
-**Platforms.** The evidence codes refer to tests run on the Linux development build. The same engine tests and UI scenarios have also been run on Windows (GitHub Actions, Windows Server 2025), against the bundled Windows runtime, and the installed application passed the 67-point Windows acceptance test (builds 10 to 12). Windows 10/11 desktop editions and standard (non-administrator) accounts have not been tested.
+**Platforms.** The evidence codes refer to tests run on the Linux development build. The same 123 engine tests and 40 UI scenarios have also been run on Windows (GitHub Actions, Windows Server 2025), against the bundled Windows runtime, and the installed application passed the 82-point Windows acceptance test, including the upgrade from NayanPDF 1.0 (build 19). Windows 10/11 desktop editions and standard (non-administrator) accounts have not been tested.
 
 ## Status summary
 
@@ -394,5 +394,5 @@ X PDF edits the page content stream itself. It does not lay white boxes over the
 | Optional desktop shortcut | Implemented with limitations | Check box on the installer's last page; not exercised by the silent test |
 | Uninstall removes program, shortcut and registration; keeps user documents and settings | Fully implemented and tested | Windows acceptance test, followed by a successful reinstall |
 | Installed executable named `X-PDF.exe` (`NayanPDF.exe` before 1.1) | Fully implemented and tested | Windows acceptance test |
-| Upgrade in place from X PDF 1.0: one installation afterwards, old program and shortcuts removed, settings, recent files, saved signatures and actions carried over | Implemented with limitations | Windows acceptance test (upgrade phase from build 13) — result pending the first X PDF build |
+| Upgrade in place from NayanPDF 1.0: one installation afterwards, old program and shortcuts removed, settings, recent files, saved signatures and actions carried over | Implemented with limitations | Windows acceptance test, build 19: NayanPDF build 13 installed, then X PDF over it: one registration, old executable and Start Menu shortcut gone, registered uninstaller present and working, planted settings file carried over. Saved signatures written by a real NayanPDF session were not part of the test |
 | Code signing of the installer and executable | Requires paid licence | Needs a purchased code-signing certificate; until then Windows SmartScreen warns on first run |

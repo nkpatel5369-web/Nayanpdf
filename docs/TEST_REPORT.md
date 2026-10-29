@@ -8,17 +8,17 @@ What was tested, how, the results, the defects the tests found, and what has not
 
 | Test set | Where executed | Result |
 |---|---|---|
-| Engine test suite (pytest, synthetic documents) | Linux development build | **105 / 105 passed** |
-| Engine test suite with networking disabled | Linux, empty network namespace | **105 / 105 passed** (15 October 2026) |
-| UI end-to-end test (real Electron app, 32 scenarios) | Linux development build (xvfb) | **32 / 32 passed**; see §4 for run history |
-| UI end-to-end test with networking disabled | Linux, network namespace with loopback only | **32 / 32 passed** (28 October 2026); the earlier 25-scenario version passed 3 consecutive runs |
+| Engine test suite (pytest, synthetic documents) | Linux development build | **123 / 123 passed** |
+| Engine test suite with networking disabled | Linux, empty network namespace | **123 / 123 passed** (29 October 2026) |
+| UI end-to-end test (real Electron app, 40 scenarios) | Linux development build (xvfb) | **40 / 40 passed**; see §4 for run history |
+| UI end-to-end test with networking disabled | Linux, network namespace with loopback only | **40 / 40 passed** (29 October 2026) |
 | Any outbound attempt by any app process (recording proxy) | Linux | **0** (the check detects the spell-check download that existed before the fix) |
 | Office linked-content leak test, sensitivity check | Linux | Leak detected with protection removed; none with protection |
 | Windows runtime assembly (Python, Tesseract, Ghostscript, LibreOffice; hashes and publisher signatures verified) | Windows CI | Pass |
-| Engine test suite against the bundled Windows runtime | Windows CI | **105 / 105 passed** (builds 10, 11 and 12) |
-| UI end-to-end test on Windows (32 scenarios) | Windows CI | **32 / 32 passed** in build 12 and in the separate Windows UI run on the same commit; see §4 for the two earlier Windows runs that did not pass |
-| Installer build (`NayanPDF_Setup.exe`, 419.3 MB, includes LibreOffice; build 12 SHA-256 `271425EC3DD6CC51FE8CD18C7F8C7D5F019A843C5A9C2DAA4FD315C3DB494B43`) | Windows CI | Pass |
-| Acceptance: install, Electron fuses read back from the installed exe, offline self-test, full engine suite on the installed copy with outbound traffic blocked, app launch and document display with network and listening-port monitoring, uninstall, reinstall | Windows CI | **67 / 67 checks passed** (builds 10, 11 and 12); build 7 passed 63 / 63 and build 3 62 / 62 before the later checks were added |
+| Engine test suite against the bundled Windows runtime | Windows CI | **123 / 123 passed** (build 19); 105 / 105 in builds 10 to 12 |
+| UI end-to-end test on Windows (40 scenarios) | Windows CI | **40 / 40 passed** in build 19 and in the separate Windows UI run 14; see §4 for the runs that did not pass |
+| Installer build (`X-PDF_Setup.exe`, 419.5 MB, includes LibreOffice; build 19 SHA-256 `A52EB892C18FF2C3A2D9CF3DEA825C75F8423696014EE5A102B735A14D0DF815`) | Windows CI | Pass |
+| Acceptance: upgrade from NayanPDF 1.0 (build 13), install, registered uninstaller present, Electron fuses read back from the installed exe, offline self-test, full engine suite on the installed copy with outbound traffic blocked, app launch and document display with network and listening-port monitoring, uninstall, reinstall | Windows CI | **82 / 82 checks passed** (build 19); 67 / 67 in builds 10 to 12 before the upgrade checks were added |
 
 Windows CI is GitHub Actions `windows-latest`: Windows Server 2025, kernel 10.0.26100, x64. Results are published with each pre-release (`report.md`).
 
@@ -105,7 +105,7 @@ All 105 were also run inside a Linux network namespace with no usable network in
 
 On Windows, after the scenarios now numbered 8, 9 and 27 were added: run 5 passed 27 / 28 (Convert read the previous result, defect 27); run 6 passed 26 / 28 (the selection scenario measured the title while the page was being re-rendered and got no position, and the Save As check that looks for that strike-through failed with it; fixed in the test by waiting for the text to settle). Build 10 and the following UI run: 28 / 28. On Linux the 28-scenario suite passed both with and without network access, and so did the 29-scenario suite after the Save As scenario was added. Windows, 29 scenarios: 29 / 29 in build 11 and in the separate UI run on the same commit. After the view scenarios (2, 29, 30) were added, 32 / 32 on Linux with and without network access, and on Windows in build 12 and its separate UI run.
 
-Rounds 1 to 4 (October 2026). Linux: 33 / 33 after the layout scenario (31), 37 / 37 after comment review, search, link and Read Out Loud (32-35), 38 / 38 after Prepare a form (36), 40 / 40 after saved actions and scan (37, 38). Windows: build 13 and its UI run passed with 33 scenarios. With 37 scenarios the Windows UI run passed 35 / 37 (comment summary file lock, defect 32; Read Out Loud, defects 33 and 34); after the summary fix 36 / 37 and, with 38 scenarios, 37 / 38 (Read Out Loud only: the test, not the app, was wrong, defect 34). Builds 14 and 16 did not reach the UI test: build 14 stopped at the engine tests (defect 32) and build 16 at a download failure of the LibreOffice version index (defect 40). The results of the first X PDF build are in §1.
+Rounds 1 to 4 (October 2026). Linux: 33 / 33 after the layout scenario (31), 37 / 37 after comment review, search, link and Read Out Loud (32-35), 38 / 38 after Prepare a form (36), 40 / 40 after saved actions and scan (37, 38). Windows: build 13 and its UI run passed with 33 scenarios. With 37 scenarios the Windows UI run passed 35 / 37 (comment summary file lock, defect 32; Read Out Loud, defects 33 and 34); after the summary fix 36 / 37 and, with 38 scenarios, 37 / 38 (Read Out Loud only: the test, not the app, was wrong, defect 34). Builds 14 and 16 did not reach the UI test: build 14 stopped at the engine tests (defect 32) and build 16 at a download failure of the LibreOffice version index (defect 40). Build 17 stopped at the engine tests (defect 45, a test that left files open); build 18 passed every upgrade check and stopped at the uninstall step (defect 44, the test looked for the wrong uninstaller name). Build 19: engine 123 / 123, UI 40 / 40, acceptance 82 / 82.
 
 Screenshots of every scenario are written to `test-results/ui/` (not committed).
 
@@ -156,6 +156,8 @@ Screenshots of every scenario are written to `test-results/ui/` (not committed).
 | 41 | Prepare a form: the accept/drop buttons of a suggested check box covered its label | Screenshot of UI scenario 36 | Buttons placed to the left of small boxes |
 | 42 | Prepare a form: check boxes and radio buttons placed on an empty area had no border, so they were invisible on screen and on paper until ticked | Screenshot review | Thin black border by default, as in Acrobat; detected check boxes sit exactly on the printed square |
 | 43 | Saved actions: a "protect" step with print/copy permissions would not have restricted anything, because one password served as both open and permissions password | Code review before release | Permission options removed; the step sets an open password only, as Batch does |
+| 44 | Test defect: the acceptance test looked for "Uninstall X PDF.exe"; electron-builder names the uninstaller after the executable ("Uninstall X-PDF.exe") and the default folder `Programs\X-PDF`. The cleanup after the upgrade silently skipped the uninstall, the next install reused the old folder, and build 18 stopped at the uninstall step | Windows CI, build 18 | The test runs the uninstaller named in the registration, as Windows Settings does, and checks that it exists after the upgrade and after each install (build 19: present and working in all three cases) |
+| 45 | Test defect: form-design tests left PDFs open and reused output names; Windows could not replace the file (WinError 32, build 17: 122 / 123) | Windows CI, build 17 | Documents closed; each test writes its own files |
 
 ## 6. Tests not run, and why
 
@@ -174,5 +176,5 @@ Screenshots of every scenario are written to `test-results/ui/` (not committed).
 | Scanning with a physical scanner (flatbed and document feeder) | Not run | No scanner in CI. Covered: the no-scanner message on Windows, and the full flow with a simulated scanner in a development build |
 | Read Out Loud producing audible speech | Not run | CI machines have no sound device; the app's handling of that case is tested |
 | Prepare a form detection on real client forms | Not run, by design | Synthetic forms only; detection is rule-based and its suggestions are reviewed by the user |
-| Upgrade from NayanPDF with data the app wrote itself | Partly | The acceptance test plants a settings file and checks it carries over; saved signatures encrypted by a real NayanPDF session were not part of the test |
+| Upgrade from NayanPDF with data the app wrote itself | Partly | Build 19 upgraded a real NayanPDF 1.0 installation and carried over a planted settings file; saved signatures encrypted by a real NayanPDF session were not part of the test |
 | Real-world documents | Not run, by design | The brief requires synthetic test documents |
