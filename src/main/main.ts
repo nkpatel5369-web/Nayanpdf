@@ -15,9 +15,17 @@ import { parseShellArgs, queueShell, setShellWindow } from "./shell";
 import { testAnswer } from "./testhooks";
 
 // Automated UI tests use a throw-away profile so they never touch a real user's
-// settings or saved signatures. Ignored by the installed (packaged) application.
+// settings or saved signatures; NAYANPDF_TEST_APPDATA instead points the app at a
+// throw-away application-data folder so the start-up copy below can be tested.
+// Both are ignored by the installed (packaged) application.
 if (!app.isPackaged && process.env.NAYANPDF_TEST_USERDATA) app.setPath("userData", process.env.NAYANPDF_TEST_USERDATA);
-else migrateUserData();
+else {
+  if (!app.isPackaged && process.env.NAYANPDF_TEST_APPDATA) {
+    app.setPath("appData", process.env.NAYANPDF_TEST_APPDATA);
+    app.setPath("userData", join(process.env.NAYANPDF_TEST_APPDATA, app.getName()));
+  }
+  migrateUserData();
+}
 
 /**
  * This app was called NayanPDF up to 1.0 and X PDF in 1.1, and Electron keeps
@@ -25,20 +33,20 @@ else migrateUserData();
  * after the app. On the first start after the rename the newest old folder is
  * copied whole, including "Local State", which holds the key that protects the
  * saved signatures. It runs before Chromium opens anything in the new folder.
- * The old folders are kept.
+ * The old folders are kept. It is called while this module loads, so it uses
+ * nothing declared further down, and no failure here may stop the app starting.
  */
-const LEGACY_NAMES = ["X PDF", "NayanPDF"];
-
 function migrateUserData() {
-  const current = app.getPath("userData");
-  if (existsSync(join(current, "settings.json"))) return;
-  const legacy = LEGACY_NAMES.map((n) => join(app.getPath("appData"), n)).find((d) => d !== current && existsSync(join(d, "settings.json")));
-  if (!legacy) return;
+  const legacyNames = ["X PDF", "NayanPDF"];
+  let legacy: string | undefined;
   try {
-    cpSync(legacy, current, { recursive: true, force: true });
+    const current = app.getPath("userData");
+    if (existsSync(join(current, "settings.json"))) return;
+    legacy = legacyNames.map((n) => join(app.getPath("appData"), n)).find((d) => d !== current && existsSync(join(d, "settings.json")));
+    if (legacy) cpSync(legacy, current, { recursive: true, force: true });
   } catch {
     // Could not copy (disk full, permissions): keep using the old folder as it is.
-    app.setPath("userData", legacy);
+    if (legacy) app.setPath("userData", legacy);
   }
 }
 

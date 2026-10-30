@@ -63,13 +63,15 @@ const electronPath = createRequire(import.meta.url)("electron");
 const baseArgs = [...(IS_WIN ? [] : ["--no-sandbox"]), root];
 const launchEnv = { ...process.env, ...proxyEnv, NAYANPDF_PYTHON: PY, NAYANPDF_TEST_DIALOGS: dialogFile, NAYANPDF_TEST_USERDATA: join(out, "profile"), NAYANPDF_TEST_SCANNER: join(out, "scanner"), ELECTRON_DISABLE_SECURITY_WARNINGS: "1" };
 const app = await electron.launch({ executablePath: electronPath, args: [...baseArgs, src], env: launchEnv, timeout: 60000 });
-// A second start of the app, as Explorer makes for a right-click command; it hands
-// its arguments to the running app and exits. Resolves with its exit code.
-const secondInstance = (args) => new Promise((resolve) => {
-  const c = spawn(electronPath, [...baseArgs, ...args], { env: launchEnv, stdio: "ignore" });
-  const t = setTimeout(() => { c.kill(); resolve("timeout"); }, 60000);
+// Another start of the app outside Playwright. Resolves with its exit code.
+const runInstance = (args, env, ms) => new Promise((resolve) => {
+  const c = spawn(electronPath, [...baseArgs, ...args], { env, stdio: "ignore" });
+  const t = setTimeout(() => { c.kill(); resolve("timeout"); }, ms);
   c.on("exit", (code) => { clearTimeout(t); resolve(code); });
 });
+// A second start, as Explorer makes for a right-click command: it hands its
+// arguments to the running app and exits.
+const secondInstance = (args) => runInstance(args, launchEnv, 60000);
 // Test-hook lines from the main process, kept so scenarios can check what a
 // dialog would have offered (for example the file name Save As suggests).
 const hookLog = [];
@@ -1313,6 +1315,36 @@ try {
       ? `page requests: ${urls.length} (browser-process traffic is checked by the Windows acceptance test)`
       : `page requests: ${urls.length}; any-process attempts through the recording proxy: ${outside.length}${outside.length ? " (" + outside.slice(0, 3).join(", ") + ")" : ""}`;
     record("No network requests attempted by the app", urls.length === 0 && outside.length === 0, detail);
+  });
+
+  // The installed app copies the settings folder of its earlier name on its first
+  // start. The test profile used above skips that, so this start uses its own
+  // application-data folder holding an X PDF folder, and the app's self-check
+  // mode, which loads the window, runs the engine and exits.
+  await step("First start after the rename: the X PDF settings folder is carried over", async () => {
+    const checks = {};
+    const appData = join(work, "appdata");
+    rmSync(appData, { recursive: true, force: true });
+    const old = join(appData, "X PDF");
+    mkdirSync(old, { recursive: true });
+    writeFileSync(join(old, "settings.json"), JSON.stringify({ reviewerName: "Migration Check" }));
+    writeFileSync(join(old, "actions.json"), JSON.stringify([{ id: "carried", name: "Carried action", steps: [] }]));
+    const smokeOut = join(work, "migration-smoke");
+    rmSync(smokeOut, { recursive: true, force: true });
+    const env = { ...launchEnv, NAYANPDF_TEST_APPDATA: appData, NAYANPDF_SMOKE: "1", NAYANPDF_SMOKE_OUT: smokeOut };
+    delete env.NAYANPDF_TEST_USERDATA;
+    const code = await runInstance([], env, 150000);
+    const smokeFile = join(smokeOut, "smoke.json");
+    const smoke = existsSync(smokeFile) ? JSON.parse(readFileSync(smokeFile, "utf8")) : {};
+    checks.started = code === 0 && smoke.ok === true && smoke.title === "N PDF";
+    checks.engine = smoke.engine?.ok === true;
+    const moved = join(appData, "N PDF");
+    checks.settings = existsSync(join(moved, "settings.json")) && /Migration Check/.test(readFileSync(join(moved, "settings.json"), "utf8"));
+    checks.actions = existsSync(join(moved, "actions.json")) && /Carried action/.test(readFileSync(join(moved, "actions.json"), "utf8"));
+    checks.oldKept = existsSync(join(old, "settings.json"));
+    const failed = Object.entries(checks).filter(([, v]) => !v).map(([k]) => k);
+    record("First start after the rename: the X PDF settings folder is carried over", failed.length === 0,
+      `${failed.length ? "failed: " + failed.join(", ") + "; " : Object.keys(checks).length + " checks; "}exit ${code}, window title ${JSON.stringify(smoke.title)}`);
   });
 } finally {
   setDialogs({ closeConfirm: 0 });
