@@ -80,7 +80,7 @@ function sheetsHtml(job: PrintJob, files: Map<number, string>): string {
 
 /**
  * Print a laid-out job: pages are rendered by the PDF engine, placed on sheets as
- * planned in X PDF's print dialog and sent to the chosen printer. With
+ * planned in N PDF's print dialog and sent to the chosen printer. With
  * systemDialog the Windows print dialog is shown for driver-specific options.
  */
 export async function printPlan(parent: BrowserWindow, path: string, password: string | undefined, job: PrintJob,
@@ -134,7 +134,7 @@ export async function printPlan(parent: BrowserWindow, path: string, password: s
 
 export async function htmlToPdf(input: string, output: string, opts: { pageSize?: string; landscape?: boolean; margin?: number; overwrite?: boolean }) {
   if (!access.canRead(input)) throw new EngineError("ACCESS_DENIED", "Access to this file was not granted.");
-  if (!access.canWrite(output)) throw new EngineError("ACCESS_DENIED", "X PDF may not write to that folder.");
+  if (!access.canWrite(output)) throw new EngineError("ACCESS_DENIED", "N PDF may not write to that folder.");
   const ext = extname(input).toLowerCase();
   if (![".html", ".htm", ".xhtml"].includes(ext)) throw new EngineError("UNSUPPORTED_FORMAT", "Choose an .html or .htm file.");
   lockDownSession("nayan-html", [dirname(input)]);

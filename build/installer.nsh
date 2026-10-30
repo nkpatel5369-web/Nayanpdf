@@ -1,126 +1,127 @@
-; X PDF installer customisation (included by electron-builder).
+; N PDF installer customisation (included by electron-builder).
 
 ;; Explorer right-click commands for the current user, per file type (they work
-;; whichever program opens that type): "Convert to PDF with X PDF" and "Combine
-;; files in X PDF". Shown directly on Windows 10; on Windows 11 under "Show more
-;; options". Explorer starts X-PDF.exe once per selected file; the running app
+;; whichever program opens that type): "Convert to PDF with N PDF" and "Combine
+;; files in N PDF". Shown directly on Windows 10; on Windows 11 under "Show more
+;; options". Explorer starts N-PDF.exe once per selected file; the running app
 ;; collects them into one request. src/main/shell.ts accepts the same types.
-!define XPDF_SFA "Software\Classes\SystemFileAssociations"
+!define NPDF_SFA "Software\Classes\SystemFileAssociations"
 
-!macro XPdfVerb EXT KEY LABEL FLAG
-  WriteRegStr HKCU "${XPDF_SFA}\${EXT}\shell\${KEY}" "" "${LABEL}"
-  WriteRegStr HKCU "${XPDF_SFA}\${EXT}\shell\${KEY}" "Icon" "$INSTDIR\X-PDF.exe,0"
-  WriteRegStr HKCU "${XPDF_SFA}\${EXT}\shell\${KEY}" "MultiSelectModel" "Player"
-  WriteRegStr HKCU "${XPDF_SFA}\${EXT}\shell\${KEY}\command" "" '"$INSTDIR\X-PDF.exe" ${FLAG} "%1"'
+!macro NPdfVerb EXT KEY LABEL FLAG
+  WriteRegStr HKCU "${NPDF_SFA}\${EXT}\shell\${KEY}" "" "${LABEL}"
+  WriteRegStr HKCU "${NPDF_SFA}\${EXT}\shell\${KEY}" "Icon" "$INSTDIR\N-PDF.exe,0"
+  WriteRegStr HKCU "${NPDF_SFA}\${EXT}\shell\${KEY}" "MultiSelectModel" "Player"
+  WriteRegStr HKCU "${NPDF_SFA}\${EXT}\shell\${KEY}\command" "" '"$INSTDIR\N-PDF.exe" ${FLAG} "%1"'
 !macroend
 
-!macro XPdfRegisterVerbs
-  !insertmacro XPdfVerb ".doc" "XPDF.ConvertToPdf" "Convert to PDF with X PDF" "--convert-to-pdf"
-  !insertmacro XPdfVerb ".docx" "XPDF.ConvertToPdf" "Convert to PDF with X PDF" "--convert-to-pdf"
-  !insertmacro XPdfVerb ".odt" "XPDF.ConvertToPdf" "Convert to PDF with X PDF" "--convert-to-pdf"
-  !insertmacro XPdfVerb ".rtf" "XPDF.ConvertToPdf" "Convert to PDF with X PDF" "--convert-to-pdf"
-  !insertmacro XPdfVerb ".xls" "XPDF.ConvertToPdf" "Convert to PDF with X PDF" "--convert-to-pdf"
-  !insertmacro XPdfVerb ".xlsx" "XPDF.ConvertToPdf" "Convert to PDF with X PDF" "--convert-to-pdf"
-  !insertmacro XPdfVerb ".ods" "XPDF.ConvertToPdf" "Convert to PDF with X PDF" "--convert-to-pdf"
-  !insertmacro XPdfVerb ".csv" "XPDF.ConvertToPdf" "Convert to PDF with X PDF" "--convert-to-pdf"
-  !insertmacro XPdfVerb ".ppt" "XPDF.ConvertToPdf" "Convert to PDF with X PDF" "--convert-to-pdf"
-  !insertmacro XPdfVerb ".pptx" "XPDF.ConvertToPdf" "Convert to PDF with X PDF" "--convert-to-pdf"
-  !insertmacro XPdfVerb ".odp" "XPDF.ConvertToPdf" "Convert to PDF with X PDF" "--convert-to-pdf"
-  !insertmacro XPdfVerb ".png" "XPDF.ConvertToPdf" "Convert to PDF with X PDF" "--convert-to-pdf"
-  !insertmacro XPdfVerb ".jpg" "XPDF.ConvertToPdf" "Convert to PDF with X PDF" "--convert-to-pdf"
-  !insertmacro XPdfVerb ".jpeg" "XPDF.ConvertToPdf" "Convert to PDF with X PDF" "--convert-to-pdf"
-  !insertmacro XPdfVerb ".tif" "XPDF.ConvertToPdf" "Convert to PDF with X PDF" "--convert-to-pdf"
-  !insertmacro XPdfVerb ".tiff" "XPDF.ConvertToPdf" "Convert to PDF with X PDF" "--convert-to-pdf"
-  !insertmacro XPdfVerb ".bmp" "XPDF.ConvertToPdf" "Convert to PDF with X PDF" "--convert-to-pdf"
-  !insertmacro XPdfVerb ".gif" "XPDF.ConvertToPdf" "Convert to PDF with X PDF" "--convert-to-pdf"
-  !insertmacro XPdfVerb ".webp" "XPDF.ConvertToPdf" "Convert to PDF with X PDF" "--convert-to-pdf"
-  !insertmacro XPdfVerb ".txt" "XPDF.ConvertToPdf" "Convert to PDF with X PDF" "--convert-to-pdf"
-  !insertmacro XPdfVerb ".htm" "XPDF.ConvertToPdf" "Convert to PDF with X PDF" "--convert-to-pdf"
-  !insertmacro XPdfVerb ".html" "XPDF.ConvertToPdf" "Convert to PDF with X PDF" "--convert-to-pdf"
-  !insertmacro XPdfVerb ".doc" "XPDF.Combine" "Combine files in X PDF" "--combine"
-  !insertmacro XPdfVerb ".docx" "XPDF.Combine" "Combine files in X PDF" "--combine"
-  !insertmacro XPdfVerb ".odt" "XPDF.Combine" "Combine files in X PDF" "--combine"
-  !insertmacro XPdfVerb ".rtf" "XPDF.Combine" "Combine files in X PDF" "--combine"
-  !insertmacro XPdfVerb ".xls" "XPDF.Combine" "Combine files in X PDF" "--combine"
-  !insertmacro XPdfVerb ".xlsx" "XPDF.Combine" "Combine files in X PDF" "--combine"
-  !insertmacro XPdfVerb ".ods" "XPDF.Combine" "Combine files in X PDF" "--combine"
-  !insertmacro XPdfVerb ".csv" "XPDF.Combine" "Combine files in X PDF" "--combine"
-  !insertmacro XPdfVerb ".ppt" "XPDF.Combine" "Combine files in X PDF" "--combine"
-  !insertmacro XPdfVerb ".pptx" "XPDF.Combine" "Combine files in X PDF" "--combine"
-  !insertmacro XPdfVerb ".odp" "XPDF.Combine" "Combine files in X PDF" "--combine"
-  !insertmacro XPdfVerb ".png" "XPDF.Combine" "Combine files in X PDF" "--combine"
-  !insertmacro XPdfVerb ".jpg" "XPDF.Combine" "Combine files in X PDF" "--combine"
-  !insertmacro XPdfVerb ".jpeg" "XPDF.Combine" "Combine files in X PDF" "--combine"
-  !insertmacro XPdfVerb ".tif" "XPDF.Combine" "Combine files in X PDF" "--combine"
-  !insertmacro XPdfVerb ".tiff" "XPDF.Combine" "Combine files in X PDF" "--combine"
-  !insertmacro XPdfVerb ".bmp" "XPDF.Combine" "Combine files in X PDF" "--combine"
-  !insertmacro XPdfVerb ".gif" "XPDF.Combine" "Combine files in X PDF" "--combine"
-  !insertmacro XPdfVerb ".webp" "XPDF.Combine" "Combine files in X PDF" "--combine"
-  !insertmacro XPdfVerb ".txt" "XPDF.Combine" "Combine files in X PDF" "--combine"
-  !insertmacro XPdfVerb ".pdf" "XPDF.Combine" "Combine files in X PDF" "--combine"
+!macro NPdfRegisterVerbs
+  !insertmacro NPdfVerb ".doc" "NPDF.ConvertToPdf" "Convert to PDF with N PDF" "--convert-to-pdf"
+  !insertmacro NPdfVerb ".docx" "NPDF.ConvertToPdf" "Convert to PDF with N PDF" "--convert-to-pdf"
+  !insertmacro NPdfVerb ".odt" "NPDF.ConvertToPdf" "Convert to PDF with N PDF" "--convert-to-pdf"
+  !insertmacro NPdfVerb ".rtf" "NPDF.ConvertToPdf" "Convert to PDF with N PDF" "--convert-to-pdf"
+  !insertmacro NPdfVerb ".xls" "NPDF.ConvertToPdf" "Convert to PDF with N PDF" "--convert-to-pdf"
+  !insertmacro NPdfVerb ".xlsx" "NPDF.ConvertToPdf" "Convert to PDF with N PDF" "--convert-to-pdf"
+  !insertmacro NPdfVerb ".ods" "NPDF.ConvertToPdf" "Convert to PDF with N PDF" "--convert-to-pdf"
+  !insertmacro NPdfVerb ".csv" "NPDF.ConvertToPdf" "Convert to PDF with N PDF" "--convert-to-pdf"
+  !insertmacro NPdfVerb ".ppt" "NPDF.ConvertToPdf" "Convert to PDF with N PDF" "--convert-to-pdf"
+  !insertmacro NPdfVerb ".pptx" "NPDF.ConvertToPdf" "Convert to PDF with N PDF" "--convert-to-pdf"
+  !insertmacro NPdfVerb ".odp" "NPDF.ConvertToPdf" "Convert to PDF with N PDF" "--convert-to-pdf"
+  !insertmacro NPdfVerb ".png" "NPDF.ConvertToPdf" "Convert to PDF with N PDF" "--convert-to-pdf"
+  !insertmacro NPdfVerb ".jpg" "NPDF.ConvertToPdf" "Convert to PDF with N PDF" "--convert-to-pdf"
+  !insertmacro NPdfVerb ".jpeg" "NPDF.ConvertToPdf" "Convert to PDF with N PDF" "--convert-to-pdf"
+  !insertmacro NPdfVerb ".tif" "NPDF.ConvertToPdf" "Convert to PDF with N PDF" "--convert-to-pdf"
+  !insertmacro NPdfVerb ".tiff" "NPDF.ConvertToPdf" "Convert to PDF with N PDF" "--convert-to-pdf"
+  !insertmacro NPdfVerb ".bmp" "NPDF.ConvertToPdf" "Convert to PDF with N PDF" "--convert-to-pdf"
+  !insertmacro NPdfVerb ".gif" "NPDF.ConvertToPdf" "Convert to PDF with N PDF" "--convert-to-pdf"
+  !insertmacro NPdfVerb ".webp" "NPDF.ConvertToPdf" "Convert to PDF with N PDF" "--convert-to-pdf"
+  !insertmacro NPdfVerb ".txt" "NPDF.ConvertToPdf" "Convert to PDF with N PDF" "--convert-to-pdf"
+  !insertmacro NPdfVerb ".htm" "NPDF.ConvertToPdf" "Convert to PDF with N PDF" "--convert-to-pdf"
+  !insertmacro NPdfVerb ".html" "NPDF.ConvertToPdf" "Convert to PDF with N PDF" "--convert-to-pdf"
+  !insertmacro NPdfVerb ".doc" "NPDF.Combine" "Combine files in N PDF" "--combine"
+  !insertmacro NPdfVerb ".docx" "NPDF.Combine" "Combine files in N PDF" "--combine"
+  !insertmacro NPdfVerb ".odt" "NPDF.Combine" "Combine files in N PDF" "--combine"
+  !insertmacro NPdfVerb ".rtf" "NPDF.Combine" "Combine files in N PDF" "--combine"
+  !insertmacro NPdfVerb ".xls" "NPDF.Combine" "Combine files in N PDF" "--combine"
+  !insertmacro NPdfVerb ".xlsx" "NPDF.Combine" "Combine files in N PDF" "--combine"
+  !insertmacro NPdfVerb ".ods" "NPDF.Combine" "Combine files in N PDF" "--combine"
+  !insertmacro NPdfVerb ".csv" "NPDF.Combine" "Combine files in N PDF" "--combine"
+  !insertmacro NPdfVerb ".ppt" "NPDF.Combine" "Combine files in N PDF" "--combine"
+  !insertmacro NPdfVerb ".pptx" "NPDF.Combine" "Combine files in N PDF" "--combine"
+  !insertmacro NPdfVerb ".odp" "NPDF.Combine" "Combine files in N PDF" "--combine"
+  !insertmacro NPdfVerb ".png" "NPDF.Combine" "Combine files in N PDF" "--combine"
+  !insertmacro NPdfVerb ".jpg" "NPDF.Combine" "Combine files in N PDF" "--combine"
+  !insertmacro NPdfVerb ".jpeg" "NPDF.Combine" "Combine files in N PDF" "--combine"
+  !insertmacro NPdfVerb ".tif" "NPDF.Combine" "Combine files in N PDF" "--combine"
+  !insertmacro NPdfVerb ".tiff" "NPDF.Combine" "Combine files in N PDF" "--combine"
+  !insertmacro NPdfVerb ".bmp" "NPDF.Combine" "Combine files in N PDF" "--combine"
+  !insertmacro NPdfVerb ".gif" "NPDF.Combine" "Combine files in N PDF" "--combine"
+  !insertmacro NPdfVerb ".webp" "NPDF.Combine" "Combine files in N PDF" "--combine"
+  !insertmacro NPdfVerb ".txt" "NPDF.Combine" "Combine files in N PDF" "--combine"
+  !insertmacro NPdfVerb ".pdf" "NPDF.Combine" "Combine files in N PDF" "--combine"
   ; Tell Explorer that file-type commands changed.
   System::Call 'shell32::SHChangeNotify(i 0x08000000, i 0, p 0, p 0)'
 !macroend
 
-!macro XPdfRemoveVerbs
-  DeleteRegKey HKCU "${XPDF_SFA}\.bmp\shell\XPDF.ConvertToPdf"
-  DeleteRegKey HKCU "${XPDF_SFA}\.bmp\shell\XPDF.Combine"
-  DeleteRegKey HKCU "${XPDF_SFA}\.csv\shell\XPDF.ConvertToPdf"
-  DeleteRegKey HKCU "${XPDF_SFA}\.csv\shell\XPDF.Combine"
-  DeleteRegKey HKCU "${XPDF_SFA}\.doc\shell\XPDF.ConvertToPdf"
-  DeleteRegKey HKCU "${XPDF_SFA}\.doc\shell\XPDF.Combine"
-  DeleteRegKey HKCU "${XPDF_SFA}\.docx\shell\XPDF.ConvertToPdf"
-  DeleteRegKey HKCU "${XPDF_SFA}\.docx\shell\XPDF.Combine"
-  DeleteRegKey HKCU "${XPDF_SFA}\.gif\shell\XPDF.ConvertToPdf"
-  DeleteRegKey HKCU "${XPDF_SFA}\.gif\shell\XPDF.Combine"
-  DeleteRegKey HKCU "${XPDF_SFA}\.htm\shell\XPDF.ConvertToPdf"
-  DeleteRegKey HKCU "${XPDF_SFA}\.htm\shell\XPDF.Combine"
-  DeleteRegKey HKCU "${XPDF_SFA}\.html\shell\XPDF.ConvertToPdf"
-  DeleteRegKey HKCU "${XPDF_SFA}\.html\shell\XPDF.Combine"
-  DeleteRegKey HKCU "${XPDF_SFA}\.jpeg\shell\XPDF.ConvertToPdf"
-  DeleteRegKey HKCU "${XPDF_SFA}\.jpeg\shell\XPDF.Combine"
-  DeleteRegKey HKCU "${XPDF_SFA}\.jpg\shell\XPDF.ConvertToPdf"
-  DeleteRegKey HKCU "${XPDF_SFA}\.jpg\shell\XPDF.Combine"
-  DeleteRegKey HKCU "${XPDF_SFA}\.odp\shell\XPDF.ConvertToPdf"
-  DeleteRegKey HKCU "${XPDF_SFA}\.odp\shell\XPDF.Combine"
-  DeleteRegKey HKCU "${XPDF_SFA}\.ods\shell\XPDF.ConvertToPdf"
-  DeleteRegKey HKCU "${XPDF_SFA}\.ods\shell\XPDF.Combine"
-  DeleteRegKey HKCU "${XPDF_SFA}\.odt\shell\XPDF.ConvertToPdf"
-  DeleteRegKey HKCU "${XPDF_SFA}\.odt\shell\XPDF.Combine"
-  DeleteRegKey HKCU "${XPDF_SFA}\.pdf\shell\XPDF.ConvertToPdf"
-  DeleteRegKey HKCU "${XPDF_SFA}\.pdf\shell\XPDF.Combine"
-  DeleteRegKey HKCU "${XPDF_SFA}\.png\shell\XPDF.ConvertToPdf"
-  DeleteRegKey HKCU "${XPDF_SFA}\.png\shell\XPDF.Combine"
-  DeleteRegKey HKCU "${XPDF_SFA}\.ppt\shell\XPDF.ConvertToPdf"
-  DeleteRegKey HKCU "${XPDF_SFA}\.ppt\shell\XPDF.Combine"
-  DeleteRegKey HKCU "${XPDF_SFA}\.pptx\shell\XPDF.ConvertToPdf"
-  DeleteRegKey HKCU "${XPDF_SFA}\.pptx\shell\XPDF.Combine"
-  DeleteRegKey HKCU "${XPDF_SFA}\.rtf\shell\XPDF.ConvertToPdf"
-  DeleteRegKey HKCU "${XPDF_SFA}\.rtf\shell\XPDF.Combine"
-  DeleteRegKey HKCU "${XPDF_SFA}\.tif\shell\XPDF.ConvertToPdf"
-  DeleteRegKey HKCU "${XPDF_SFA}\.tif\shell\XPDF.Combine"
-  DeleteRegKey HKCU "${XPDF_SFA}\.tiff\shell\XPDF.ConvertToPdf"
-  DeleteRegKey HKCU "${XPDF_SFA}\.tiff\shell\XPDF.Combine"
-  DeleteRegKey HKCU "${XPDF_SFA}\.txt\shell\XPDF.ConvertToPdf"
-  DeleteRegKey HKCU "${XPDF_SFA}\.txt\shell\XPDF.Combine"
-  DeleteRegKey HKCU "${XPDF_SFA}\.webp\shell\XPDF.ConvertToPdf"
-  DeleteRegKey HKCU "${XPDF_SFA}\.webp\shell\XPDF.Combine"
-  DeleteRegKey HKCU "${XPDF_SFA}\.xls\shell\XPDF.ConvertToPdf"
-  DeleteRegKey HKCU "${XPDF_SFA}\.xls\shell\XPDF.Combine"
-  DeleteRegKey HKCU "${XPDF_SFA}\.xlsx\shell\XPDF.ConvertToPdf"
-  DeleteRegKey HKCU "${XPDF_SFA}\.xlsx\shell\XPDF.Combine"
+;; PREFIX: NPDF for this version's commands, XPDF for those of X PDF 1.1.
+!macro NPdfRemoveVerbs PREFIX
+  DeleteRegKey HKCU "${NPDF_SFA}\.bmp\shell\${PREFIX}.ConvertToPdf"
+  DeleteRegKey HKCU "${NPDF_SFA}\.bmp\shell\${PREFIX}.Combine"
+  DeleteRegKey HKCU "${NPDF_SFA}\.csv\shell\${PREFIX}.ConvertToPdf"
+  DeleteRegKey HKCU "${NPDF_SFA}\.csv\shell\${PREFIX}.Combine"
+  DeleteRegKey HKCU "${NPDF_SFA}\.doc\shell\${PREFIX}.ConvertToPdf"
+  DeleteRegKey HKCU "${NPDF_SFA}\.doc\shell\${PREFIX}.Combine"
+  DeleteRegKey HKCU "${NPDF_SFA}\.docx\shell\${PREFIX}.ConvertToPdf"
+  DeleteRegKey HKCU "${NPDF_SFA}\.docx\shell\${PREFIX}.Combine"
+  DeleteRegKey HKCU "${NPDF_SFA}\.gif\shell\${PREFIX}.ConvertToPdf"
+  DeleteRegKey HKCU "${NPDF_SFA}\.gif\shell\${PREFIX}.Combine"
+  DeleteRegKey HKCU "${NPDF_SFA}\.htm\shell\${PREFIX}.ConvertToPdf"
+  DeleteRegKey HKCU "${NPDF_SFA}\.htm\shell\${PREFIX}.Combine"
+  DeleteRegKey HKCU "${NPDF_SFA}\.html\shell\${PREFIX}.ConvertToPdf"
+  DeleteRegKey HKCU "${NPDF_SFA}\.html\shell\${PREFIX}.Combine"
+  DeleteRegKey HKCU "${NPDF_SFA}\.jpeg\shell\${PREFIX}.ConvertToPdf"
+  DeleteRegKey HKCU "${NPDF_SFA}\.jpeg\shell\${PREFIX}.Combine"
+  DeleteRegKey HKCU "${NPDF_SFA}\.jpg\shell\${PREFIX}.ConvertToPdf"
+  DeleteRegKey HKCU "${NPDF_SFA}\.jpg\shell\${PREFIX}.Combine"
+  DeleteRegKey HKCU "${NPDF_SFA}\.odp\shell\${PREFIX}.ConvertToPdf"
+  DeleteRegKey HKCU "${NPDF_SFA}\.odp\shell\${PREFIX}.Combine"
+  DeleteRegKey HKCU "${NPDF_SFA}\.ods\shell\${PREFIX}.ConvertToPdf"
+  DeleteRegKey HKCU "${NPDF_SFA}\.ods\shell\${PREFIX}.Combine"
+  DeleteRegKey HKCU "${NPDF_SFA}\.odt\shell\${PREFIX}.ConvertToPdf"
+  DeleteRegKey HKCU "${NPDF_SFA}\.odt\shell\${PREFIX}.Combine"
+  DeleteRegKey HKCU "${NPDF_SFA}\.pdf\shell\${PREFIX}.ConvertToPdf"
+  DeleteRegKey HKCU "${NPDF_SFA}\.pdf\shell\${PREFIX}.Combine"
+  DeleteRegKey HKCU "${NPDF_SFA}\.png\shell\${PREFIX}.ConvertToPdf"
+  DeleteRegKey HKCU "${NPDF_SFA}\.png\shell\${PREFIX}.Combine"
+  DeleteRegKey HKCU "${NPDF_SFA}\.ppt\shell\${PREFIX}.ConvertToPdf"
+  DeleteRegKey HKCU "${NPDF_SFA}\.ppt\shell\${PREFIX}.Combine"
+  DeleteRegKey HKCU "${NPDF_SFA}\.pptx\shell\${PREFIX}.ConvertToPdf"
+  DeleteRegKey HKCU "${NPDF_SFA}\.pptx\shell\${PREFIX}.Combine"
+  DeleteRegKey HKCU "${NPDF_SFA}\.rtf\shell\${PREFIX}.ConvertToPdf"
+  DeleteRegKey HKCU "${NPDF_SFA}\.rtf\shell\${PREFIX}.Combine"
+  DeleteRegKey HKCU "${NPDF_SFA}\.tif\shell\${PREFIX}.ConvertToPdf"
+  DeleteRegKey HKCU "${NPDF_SFA}\.tif\shell\${PREFIX}.Combine"
+  DeleteRegKey HKCU "${NPDF_SFA}\.tiff\shell\${PREFIX}.ConvertToPdf"
+  DeleteRegKey HKCU "${NPDF_SFA}\.tiff\shell\${PREFIX}.Combine"
+  DeleteRegKey HKCU "${NPDF_SFA}\.txt\shell\${PREFIX}.ConvertToPdf"
+  DeleteRegKey HKCU "${NPDF_SFA}\.txt\shell\${PREFIX}.Combine"
+  DeleteRegKey HKCU "${NPDF_SFA}\.webp\shell\${PREFIX}.ConvertToPdf"
+  DeleteRegKey HKCU "${NPDF_SFA}\.webp\shell\${PREFIX}.Combine"
+  DeleteRegKey HKCU "${NPDF_SFA}\.xls\shell\${PREFIX}.ConvertToPdf"
+  DeleteRegKey HKCU "${NPDF_SFA}\.xls\shell\${PREFIX}.Combine"
+  DeleteRegKey HKCU "${NPDF_SFA}\.xlsx\shell\${PREFIX}.ConvertToPdf"
+  DeleteRegKey HKCU "${NPDF_SFA}\.xlsx\shell\${PREFIX}.Combine"
   System::Call 'shell32::SHChangeNotify(i 0x08000000, i 0, p 0, p 0)'
 !macroend
 
 
-; Finish page: "Run X PDF" plus an optional "Create a desktop shortcut" box.
+; Finish page: "Run N PDF" plus an optional "Create a desktop shortcut" box.
 !macro customFinishPage
   Function StartApp
     ${StdUtils.ExecShellAsUser} $0 "$launchLink" "open" ""
   FunctionEnd
 
   Function NayanCreateDesktopShortcut
-    CreateShortCut "$DESKTOP\X PDF.lnk" "$INSTDIR\X-PDF.exe" "" "$INSTDIR\X-PDF.exe" 0
+    CreateShortCut "$DESKTOP\N PDF.lnk" "$INSTDIR\N-PDF.exe" "" "$INSTDIR\N-PDF.exe" 0
   FunctionEnd
 
   !define MUI_FINISHPAGE_RUN
@@ -132,20 +133,39 @@
   !insertmacro MUI_PAGE_FINISH
 !macroend
 
+!macro customInit
+  ; An upgrade first runs the previous version's uninstaller, which deletes the
+  ; desktop shortcut. Note now whether there is one (this app was NayanPDF up to
+  ; 1.0 and X PDF in 1.1) so that customInstall can put it back.
+  Var /GLOBAL NPdfHadDesktopLink
+  StrCpy $NPdfHadDesktopLink "0"
+  ${If} ${FileExists} "$DESKTOP\N PDF.lnk"
+  ${OrIf} ${FileExists} "$DESKTOP\X PDF.lnk"
+  ${OrIf} ${FileExists} "$DESKTOP\NayanPDF.lnk"
+    StrCpy $NPdfHadDesktopLink "1"
+  ${EndIf}
+!macroend
+
 !macro customInstall
   ; Nothing is downloaded during installation: every component is inside this installer.
-  ; Shortcuts left by NayanPDF (this app's name before 1.1) would point to a
-  ; program the upgrade has removed.
+  ; Shortcuts and right-click commands left by earlier names of this app would
+  ; point to a program the upgrade has removed.
   Delete "$DESKTOP\NayanPDF.lnk"
   Delete "$SMPROGRAMS\NayanPDF.lnk"
-  !insertmacro XPdfRegisterVerbs
+  Delete "$DESKTOP\X PDF.lnk"
+  Delete "$SMPROGRAMS\X PDF.lnk"
+  !insertmacro NPdfRemoveVerbs "XPDF"
+  ${If} $NPdfHadDesktopLink == "1"
+    CreateShortCut "$DESKTOP\N PDF.lnk" "$INSTDIR\N-PDF.exe" "" "$INSTDIR\N-PDF.exe" 0
+  ${EndIf}
+  !insertmacro NPdfRegisterVerbs
 !macroend
 
 !macro customUnInstall
-  ; Remove the optional desktop shortcut and X PDF's own temporary files.
+  ; Remove the optional desktop shortcut and N PDF's own temporary files.
   ; Settings, saved signatures and every user document are left untouched.
-  Delete "$DESKTOP\X PDF.lnk"
-  RMDir /r "$TEMP\X-PDF"
+  Delete "$DESKTOP\N PDF.lnk"
+  RMDir /r "$TEMP\N-PDF"
   ; Right-click commands (an upgrade writes them again after this).
-  !insertmacro XPdfRemoveVerbs
+  !insertmacro NPdfRemoveVerbs "NPDF"
 !macroend

@@ -1,6 +1,6 @@
 // Explorer right-click commands, registered for the current user by the installer:
-// "Convert to PDF with X PDF" and "Combine files in X PDF". Explorer starts
-// X-PDF.exe once per selected file; the running instance collects the files that
+// "Convert to PDF with N PDF" and "Combine files in N PDF". Explorer starts
+// N-PDF.exe once per selected file; the running instance collects the files that
 // arrive close together and handles them as one request, as Acrobat does.
 import { BrowserWindow } from "electron";
 import { existsSync, statSync } from "node:fs";

@@ -1,4 +1,4 @@
-/* X PDF design system: restrained, professional, light and dark themes. */
+/* N PDF design system: restrained, professional, light and dark themes. */
 :root {
   --font: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
   --font-display: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
@@ -20,7 +20,7 @@
   --accent-hover: #3443c0;
   --accent-soft: #eef0ff;
   --accent-text: #ffffff;
-  --brand: #4f46e5;
+  --brand: #c8102e;
   --success: #1f8a4c;
   --success-soft: #e7f6ed;
   --warning: #b26b00;
@@ -45,7 +45,7 @@
   --accent-hover: #93a0ff;
   --accent-soft: #23284a;
   --accent-text: #0e1116;
-  --brand: #8b93ff;
+  --brand: #f26d7d;
   --success: #46c47b;
   --success-soft: #16301f;
   --warning: #f0a93b;

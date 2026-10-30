@@ -64,7 +64,7 @@ export function EditPanel() {
       </button>
       <div className="divider" />
       <Notice kind="info">
-        X PDF edits the actual page content. Results depend on how the PDF was made: scanned pages need OCR first, and text drawn as outlines cannot be edited.
+        N PDF edits the actual page content. Results depend on how the PDF was made: scanned pages need OCR first, and text drawn as outlines cannot be edited.
         For heavy rewording, convert to Word and back.
       </Notice>
       {fr && <FindReplaceDialog onClose={() => setFr(false)} />}

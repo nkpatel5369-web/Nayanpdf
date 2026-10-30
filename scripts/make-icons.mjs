@@ -1,7 +1,9 @@
 // Renders build/icon.svg to build/icon.png (512 px) and the Windows icon
 // build/icon.ico (16-256 px, each size drawn from the vector, not scaled down
-// from one bitmap). Uses the Chromium that Playwright drives for the UI tests
-// and Python's Pillow to pack the .ico. Run: node scripts/make-icons.mjs
+// from one bitmap). Sizes of 32 px and below use build/icon-small.svg, which
+// leaves out the lettering that cannot be read that small. Uses the Chromium
+// that Playwright drives for the UI tests and Python's Pillow to pack the .ico.
+// Run: node scripts/make-icons.mjs
 import { createRequire } from "node:module";
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
@@ -10,6 +12,7 @@ import { join, resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
 const svg = readFileSync(join(root, "build", "icon.svg"), "utf8");
+const svgSmall = readFileSync(join(root, "build", "icon-small.svg"), "utf8");
 const work = mkdtempSync(join(tmpdir(), "icons-"));
 const sizes = [16, 20, 24, 32, 40, 48, 64, 96, 128, 256, 512];
 // Playwright with its own Chromium if installed; otherwise playwright-core (a
@@ -25,7 +28,8 @@ const browser = await pw.chromium.launch(process.env.CHROMIUM_PATH ? { executabl
 const page = await browser.newPage();
 for (const s of sizes) {
   await page.setViewportSize({ width: s, height: s });
-  await page.setContent(`<html><body style="margin:0;background:transparent">${svg.replace('width="1024" height="1024"', `width="${s}" height="${s}"`)}</body></html>`);
+  const src = s <= 32 ? svgSmall : svg;
+  await page.setContent(`<html><body style="margin:0;background:transparent">${src.replace('width="1024" height="1024"', `width="${s}" height="${s}"`)}</body></html>`);
   await page.screenshot({ path: join(work, `${s}.png`), omitBackground: true, clip: { x: 0, y: 0, width: s, height: s } });
 }
 await browser.close();

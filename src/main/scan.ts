@@ -4,7 +4,7 @@
 // passed as arguments, never pasted into the script. Scanned pages are written to
 // the app's temp folder; the PDF itself is made by the engine (create.fromImages,
 // with OCR if asked). Network scanners are reached by the Windows WIA service, not
-// by X PDF, which makes no network connection of its own.
+// by N PDF, which makes no network connection of its own.
 import { app, BrowserWindow, nativeImage } from "electron";
 import { spawn, ChildProcess } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";

@@ -1,12 +1,12 @@
-X PDF - offline PDF editor and document toolkit
+N PDF - offline PDF editor and document toolkit
 
-X PDF is free software: you can redistribute it and/or modify it under the
+N PDF is free software: you can redistribute it and/or modify it under the
 terms of the GNU Affero General Public License version 3 (AGPL-3.0) as
 published by the Free Software Foundation. It is distributed WITHOUT ANY
 WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
 A PARTICULAR PURPOSE.
 
-X PDF bundles these components, each under its own licence (full texts are
+N PDF bundles these components, each under its own licence (full texts are
 installed in resources\assets\licenses):
   - MuPDF / PyMuPDF (AGPL-3.0)          - Ghostscript (AGPL-3.0)
   - LibreOffice (MPL-2.0)               - Tesseract OCR and language data (Apache-2.0)
@@ -14,7 +14,7 @@ installed in resources\assets\licenses):
   - PDF.js (Apache-2.0)                 - Electron and Chromium (MIT / BSD and others)
   - CPython (PSF), NumPy, OpenCV, Pillow, lxml, cryptography (permissive licences)
 
-Privacy: X PDF processes every document on this computer. It has no
+Privacy: N PDF processes every document on this computer. It has no
 account, no activation, no telemetry and no automatic update checks, and it
 does not connect to the internet.
 

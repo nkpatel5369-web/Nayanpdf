@@ -276,7 +276,7 @@ function authorName() {
   return useApp.getState().settings.reviewerName || undefined;
 }
 
-/** Where a new link goes: a page of this document, or a web address (kept for readers; X PDF never opens it). */
+/** Where a new link goes: a page of this document, or a web address (kept for readers; N PDF never opens it). */
 function LinkEntry(props: { css: Drag; pageCount: number; onSubmit: (t: { toPage?: number; uri?: string }) => void; onCancel: () => void }) {
   const [kind, setKind] = useState<"page" | "uri">("page");
   const [pageNo, setPageNo] = useState("1");
@@ -294,7 +294,7 @@ function LinkEntry(props: { css: Drag; pageCount: number; onSubmit: (t: { toPage
       {kind === "page" && <input className="input sm" aria-label="Link target page" type="number" min={1} max={props.pageCount} value={pageNo} onChange={(e) => setPageNo(e.target.value)} autoFocus />}
       <label className="check"><input type="radio" name="lk" checked={kind === "uri"} onChange={() => setKind("uri")} /> A web address</label>
       {kind === "uri" && <input className="input sm" aria-label="Link web address" placeholder="https://..." value={uri} onChange={(e) => setUri(e.target.value)} autoFocus />}
-      {kind === "uri" && <span className="subtle">Saved in the PDF for readers. X PDF itself never opens web addresses.</span>}
+      {kind === "uri" && <span className="subtle">Saved in the PDF for readers. N PDF itself never opens web addresses.</span>}
       <div className="row" style={{ width: "100%", justifyContent: "flex-end" }}>
         <button className="btn sm" onClick={props.onCancel}><X size={13} /> Cancel</button>
         <button className="btn sm primary" disabled={!ok} onClick={submit}><Check size={13} /> Add link</button>

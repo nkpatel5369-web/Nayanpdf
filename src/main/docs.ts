@@ -223,7 +223,7 @@ async function confirmOverwriteOriginal(win: BrowserWindow, s: Session): Promise
     cancelId: 1,
     title: "Replace the original document?",
     message: `"${basename(s.originalPath)}" is the file you opened. Replace it with your edited version?`,
-    detail: "X PDF will not ask again for this document until you close it. To keep the original, choose Cancel and save under a different name.",
+    detail: "N PDF will not ask again for this document until you close it. To keep the original, choose Cancel and save under a different name.",
   })).response;
   if (response !== 0) return false;
   s.overwriteConfirmed = true;

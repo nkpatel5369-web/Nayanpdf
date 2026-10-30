@@ -49,7 +49,7 @@ def _numbered_pdf(path: str, n: int, label: str, size=(595, 842)):
         p.insert_text((72, 100), f"{label} page {i + 1}", fontsize=20)
         p.insert_text((72, 140), f"Marker {label}-{i + 1:03d}", fontsize=12)
         p.draw_rect(pymupdf.Rect(72, 160, 300, 200), color=(0.2, 0.4, 0.8), width=1.5)
-    d.set_metadata({"title": f"{label} test document", "author": "X PDF Test Suite"})
+    d.set_metadata({"title": f"{label} test document", "author": "N PDF Test Suite"})
     d.save(path)
     d.close()
 
@@ -216,7 +216,7 @@ def fx():
     Image.new("RGB", (1200, 900), (30, 120, 200)).save(f["jpg"], quality=90)
     f["txt"] = os.path.join(FIX, "notes.txt")
     with open(f["txt"], "w", encoding="utf-8") as fh:
-        fh.write("X PDF text to PDF test\n" + "\n".join(f"Line {i}: amount ₹ {i * 1000:,}" for i in range(1, 120)))
+        fh.write("N PDF text to PDF test\n" + "\n".join(f"Line {i}: amount ₹ {i * 1000:,}" for i in range(1, 120)))
     hashes = {k: sha256(v) for k, v in f.items() if os.path.isfile(v)}
     f["_hashes"] = hashes
     yield f

@@ -177,7 +177,7 @@ export function AttachmentsPanel() {
           <button className="icon-btn" title="Remove" onClick={() => ws.apply("attachments.delete", { names: [a.name] }, "Remove attachment")}><Trash2 size={14} /></button>
         </div>
       ))}
-      {list.length > 0 && <div className="panel-pad subtle">Attached files can be harmful. X PDF never opens them automatically.</div>}
+      {list.length > 0 && <div className="panel-pad subtle">Attached files can be harmful. N PDF never opens them automatically.</div>}
     </div>
   );
 }
@@ -196,7 +196,7 @@ function InitialView() {
   return (
     <div className="initial-view">
       <div className="row" style={{ margin: "14px 0 6px" }}><h3 className="grow">Initial view</h3></div>
-      <p className="subtle" style={{ marginTop: 0 }}>Saved in the PDF: how it opens in X PDF, Acrobat and most other viewers.</p>
+      <p className="subtle" style={{ marginTop: 0 }}>Saved in the PDF: how it opens in N PDF, Acrobat and most other viewers.</p>
       <Field label="Navigation panel">
         <select className="input sm" aria-label="Initial navigation panel" value={form.pageMode} onChange={(e) => setForm({ ...form, pageMode: e.target.value })}>
           <option value="UseNone">Page only</option><option value="UseOutlines">Bookmarks panel and page</option>

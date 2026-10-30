@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- N PDF at 32 px and below: the N alone (PDF cannot be read that small), firmer outline. -->
+  <path d="M206 72 H690 L878 260 V888 Q878 952 814 952 H206 Q142 952 142 888 V136 Q142 72 206 72 Z" fill="#ffffff" stroke="#c9c9cf" stroke-width="44" stroke-linejoin="round"/><path d="M690 72 V196 Q690 260 754 260 H878" fill="#f1f1f4" stroke="#c9c9cf" stroke-width="44" stroke-linejoin="round"/>
+  <path d="M358.8,760 L358.8,340 L661.2,760 L661.2,340" fill="none" stroke="#C8102E" stroke-width="88" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -305,7 +305,7 @@ function ToPdf() {
 export function CreateTool(props: { args?: any }) {
   const [files, setFiles] = useState<FileEntry[]>(() => (props.args?.files || []).map((p: string) => ({ path: p })));
   const [name, setName] = useState("combined");
-  // "Combine files in X PDF" from Explorer while this tool is already open: take the new selection.
+  // "Combine files in N PDF" from Explorer while this tool is already open: take the new selection.
   useEffect(() => {
     if (props.args?.from !== "explorer") return;
     const paths: string[] = props.args.files || [];

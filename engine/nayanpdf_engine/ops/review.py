@@ -11,7 +11,7 @@ survive a round trip through Acrobat and other viewers:
   check mark uses /StateModel /Marked. The latest one per reviewer wins.
 
 XFDF is the XML exchange format Acrobat imports and exports (Comments >
-Export / Import Data File). Only the annotation types X PDF itself
+Export / Import Data File). Only the annotation types N PDF itself
 creates are written and read; anything else in an imported file is
 reported, never silently dropped.
 """
@@ -39,7 +39,7 @@ NOVIEW = 32
 HIDDEN = 2
 XFDF_NS = "http://ns.adobe.com/xfdf/"
 
-# Annotation subtype -> XFDF element name, for the types X PDF creates.
+# Annotation subtype -> XFDF element name, for the types N PDF creates.
 XFDF_TAGS = {
     "Text": "text", "FreeText": "freetext", "Line": "line", "Square": "square", "Circle": "circle",
     "Highlight": "highlight", "Underline": "underline", "Squiggly": "squiggly", "StrikeOut": "strikeout",

@@ -100,40 +100,41 @@ jobs:
           Copy-Item -Recurse -Force test-results\ui acceptance\ui-e2e
           if ($code -ne 0) { throw "UI end-to-end test failed" }
 
-      - name: Build X-PDF_Setup.exe
+      - name: Build N-PDF_Setup.exe
         run: npx electron-builder --win nsis --x64 --publish never
 
       - name: Installer facts
         shell: pwsh
         run: |
-          $f = Get-Item release\X-PDF_Setup.exe
+          $f = Get-Item release\N-PDF_Setup.exe
           $h = (Get-FileHash $f -Algorithm SHA256).Hash
-          "X-PDF_Setup.exe  $([math]::Round($f.Length/1MB,1)) MB  SHA-256 $h" | Tee-Object acceptance\installer.txt
-          $h | Out-File -Encoding ascii release\X-PDF_Setup.exe.sha256
+          "N-PDF_Setup.exe  $([math]::Round($f.Length/1MB,1)) MB  SHA-256 $h" | Tee-Object acceptance\installer.txt
+          $h | Out-File -Encoding ascii release\N-PDF_Setup.exe.sha256
 
-      - name: Previous release for the upgrade test (NayanPDF, the name before 1.1)
+      - name: Previous releases for the upgrade tests (X PDF 1.1 and NayanPDF 1.0, earlier names of this app)
         shell: pwsh
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           New-Item -ItemType Directory -Force -Path previous | Out-Null
+          gh release download v1.1.0-build.20 --pattern X-PDF_Setup.exe --dir previous --repo ${{ github.repository }}
           gh release download v1.0.0-build.13 --pattern NayanPDF_Setup.exe --dir previous --repo ${{ github.repository }}
 
-      - name: Acceptance test (upgrade, install, offline operation, UI, uninstall, reinstall)
+      - name: Acceptance test (upgrades, install, offline operation, UI, uninstall, reinstall)
         shell: pwsh
         run: |
-          $prev = if (Test-Path previous\NayanPDF_Setup.exe) { (Resolve-Path previous\NayanPDF_Setup.exe).Path } else { "" }
-          ./scripts/win-acceptance.ps1 -Installer release\X-PDF_Setup.exe -PreviousInstaller $prev -ReportDir acceptance -TestDeps "$env:RUNNER_TEMP\testdeps"
+          $prev = @("previous\X-PDF_Setup.exe", "previous\NayanPDF_Setup.exe") | Where-Object { Test-Path $_ } | ForEach-Object { (Resolve-Path $_).Path }
+          ./scripts/win-acceptance.ps1 -Installer release\N-PDF_Setup.exe -PreviousInstaller $prev -ReportDir acceptance -TestDeps "$env:RUNNER_TEMP\testdeps"
 
       - name: Upload installer
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: X-PDF_Setup
+          name: N-PDF_Setup
           path: |
-            release/X-PDF_Setup.exe
-            release/X-PDF_Setup.exe.sha256
+            release/N-PDF_Setup.exe
+            release/N-PDF_Setup.exe.sha256
           if-no-files-found: warn
           retention-days: 30
 
@@ -156,4 +157,4 @@ jobs:
           $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
           $tag = "v$version-build.${{ github.run_number }}"
           $notes = "Automated build of ${{ github.sha }}.`n`nAll acceptance checks passed on windows-latest (see the acceptance-report artifact of run ${{ github.run_id }}).`n`n" + (Get-Content acceptance\installer.txt -Raw)
-          gh release create $tag release\X-PDF_Setup.exe release\X-PDF_Setup.exe.sha256 acceptance\report.md --target ${{ github.sha }} --prerelease --title "X PDF $tag" --notes $notes
+          gh release create $tag release\N-PDF_Setup.exe release\N-PDF_Setup.exe.sha256 acceptance\report.md --target ${{ github.sha }} --prerelease --title "N PDF $tag" --notes $notes

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Assemble the offline Windows runtime that is bundled into X-PDF_Setup.exe.
+"""Assemble the offline Windows runtime that is bundled into N-PDF_Setup.exe.
 
 Produces runtime/win/:
     python/        CPython 3.13 (official NuGet distribution) + engine wheels
@@ -97,7 +97,7 @@ def download(url: str, dest: Path, expected: str | None = None) -> Path:
         try:
             log("download", url)
             tmp = dest.with_suffix(dest.suffix + ".part")
-            req = urllib.request.Request(url, headers={"User-Agent": "X-PDF-build/1.0"})
+            req = urllib.request.Request(url, headers={"User-Agent": "N-PDF-build/1.0"})
             with urllib.request.urlopen(req, timeout=300) as r, open(tmp, "wb") as fh:
                 shutil.copyfileobj(r, fh, 1 << 20)
             tmp.replace(dest)
@@ -179,7 +179,7 @@ def build_python():
     for pkg in ("numpy", "cv2", "pikepdf", "lxml", "PIL", "cryptography", "fontTools"):
         for t in (site / pkg).glob("**/tests"):
             shutil.rmtree(t, ignore_errors=True)
-    # OpenCV's FFmpeg plug-in is only used for video I/O (never by X PDF): drop it.
+    # OpenCV's FFmpeg plug-in is only used for video I/O (never by N PDF): drop it.
     for f in (site / "cv2").glob("opencv_videoio_ffmpeg*.dll"):
         f.unlink()
     # Isolated mode (-I) ignores PYTHONPATH; the default ._pth-less layout already includes site-packages.
@@ -432,7 +432,7 @@ def build_assets():
             log("optional font not available:", name)
     lic = OUT / "assets" / "licenses"
     lic.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(ROOT / "LICENSE", lic / "X-PDF-LICENSE.txt")
+    shutil.copy2(ROOT / "LICENSE", lic / "N-PDF-LICENSE.txt")
     shutil.copy2(ROOT / "docs" / "DEPENDENCIES.md", lic / "DEPENDENCIES.md")
     site = OUT / "python" / "Lib" / "site-packages"
     py_lic = lic / "python-packages"

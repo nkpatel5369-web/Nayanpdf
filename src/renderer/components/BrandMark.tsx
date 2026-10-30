@@ -1,26 +1,43 @@
-import React, { useId } from "react";
+import React from "react";
 
-/** The X PDF mark: a folded page with a two-tone X (the same drawing as build/icon.svg). */
+const RED = "#C8102E";
+const PAGE = "M206 72 H690 L878 260 V888 Q878 952 814 952 H206 Q142 952 142 888 V136 Q142 72 206 72 Z";
+const FOLD = "M690 72 V196 Q690 260 754 260 H878";
+
+/**
+ * The N PDF mark: a white page with a folded corner and a red N (the same drawing
+ * as build/icon.svg; at 32 px and below, as in build/icon-small.svg, the N alone).
+ */
 export function BrandMark({ size = 24 }: { size?: number }) {
-  const id = useId().replace(/[^a-zA-Z0-9]/g, "");
+  const small = size <= 32;
+  const outline = small ? 44 : 16;
   return (
     <svg className="brand-mark" width={size} height={size} viewBox="0 0 1024 1024" aria-hidden="true" focusable="false">
-      <defs>
-        <linearGradient id={`${id}p`} x1="0" y1="0" x2="0.35" y2="1">
-          <stop offset="0" stopColor="#4f46e5" />
-          <stop offset="1" stopColor="#2a2596" />
-        </linearGradient>
-        <linearGradient id={`${id}f`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#c7d2fe" />
-          <stop offset="1" stopColor="#8b9cf7" />
-        </linearGradient>
-      </defs>
-      <path d="M168 64 H704 L960 320 V856 Q960 960 856 960 H168 Q64 960 64 856 V168 Q64 64 168 64 Z" fill={`url(#${id}p)`} />
-      <path d="M704 64 V216 Q704 320 808 320 H960 Z" fill={`url(#${id}f)`} />
-      <g strokeLinecap="round" strokeWidth="156" fill="none">
-        <line x1="290" y1="372" x2="694" y2="800" stroke="#38bdf8" />
-        <line x1="694" y1="372" x2="290" y2="800" stroke="#ffffff" />
+      <path d={PAGE} fill="#ffffff" stroke="#c9c9cf" strokeWidth={outline} strokeLinejoin="round" />
+      <path d={FOLD} fill="#f1f1f4" stroke="#c9c9cf" strokeWidth={outline} strokeLinejoin="round" />
+      <g fill="none" stroke={RED} strokeLinecap="round" strokeLinejoin="round">
+        {small ? (
+          <path d="M358.8,760 L358.8,340 L661.2,760 L661.2,340" strokeWidth={88} />
+        ) : (
+          <>
+            <path d="M391.2,630 L391.2,300 L628.8,630 L628.8,300" strokeWidth={40} />
+            <path d={PDF_PATH} strokeWidth={24} />
+          </>
+        )}
       </g>
     </svg>
   );
 }
+
+const PDF_PATH = (() => {
+  const h = 130, gap = 34, r1 = 0.27 * h, r2 = 0.5 * h;
+  const wP = 0.33 * h + r1, wD = 0.2 * h + r2, wF = 0.52 * h;
+  let x = 510 - (wP + gap + wD + gap + wF) / 2;
+  const y = 720;
+  const p = `M${x},${y + h} L${x},${y} L${x + 0.33 * h},${y} A${r1},${r1} 0 0 1 ${x + 0.33 * h},${y + 2 * r1} L${x},${y + 2 * r1}`;
+  x += wP + gap;
+  const d = `M${x},${y} L${x},${y + h} L${x + 0.2 * h},${y + h} A${r2},${r2} 0 0 0 ${x + 0.2 * h},${y} Z`;
+  x += wD + gap;
+  const f = `M${x + 0.52 * h},${y} L${x},${y} L${x},${y + h} M${x},${y + 0.47 * h} L${x + 0.42 * h},${y + 0.47 * h}`;
+  return `${p} ${d} ${f}`;
+})();

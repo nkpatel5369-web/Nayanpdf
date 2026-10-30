@@ -1,6 +1,6 @@
 """Password protection, authorised removal, permission and integrity inspection.
 
-X PDF only removes protection when the caller supplies a password that
+N PDF only removes protection when the caller supplies a password that
 grants the necessary rights. It never attempts to guess, crack or bypass
 passwords.
 """

@@ -62,7 +62,7 @@ def place_image(ctx, path: str, output: str, page: int, rect, imagePath: str | N
             pg.insert_image(box, stream=data, keep_proportion=True, overlay=True)
         else:
             a = pg.add_stamp_annot(box, stamp=data)
-            a.set_info(content="Signature image", title="X PDF")
+            a.set_info(content="Signature image", title="N PDF")
             a.update()
         if dateText:
             dr = pymupdf.Rect(box.x0, box.y1 + 1, box.x1 + 80, box.y1 + float(dateFontSize) * 1.6 + 2)

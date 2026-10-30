@@ -59,7 +59,7 @@ export function Home() {
             <h3>Your documents stay on this computer</h3>
             <div className="row" style={{ alignItems: "flex-start" }}>
               <WifiOff size={18} color="var(--success)" />
-              <div className="muted">All processing (conversion, OCR, compression, editing) runs locally. X PDF makes no network connections, has no account and no telemetry.</div>
+              <div className="muted">All processing (conversion, OCR, compression, editing) runs locally. N PDF makes no network connections, has no account and no telemetry.</div>
             </div>
             <div className="row" style={{ alignItems: "flex-start" }}>
               <ShieldCheck size={18} color="var(--success)" />

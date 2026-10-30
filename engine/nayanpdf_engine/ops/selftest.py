@@ -35,7 +35,7 @@ def run(ctx, quick: bool = False):
         d = pymupdf.open()
         for i in range(3):
             p = d.new_page()
-            p.insert_text((72, 100), f"X PDF self test page {i + 1}", fontsize=16)
+            p.insert_text((72, 100), f"N PDF self test page {i + 1}", fontsize=16)
             p.insert_text((72, 140), "Invoice INV-2026/0042 total 1,23,456.78", fontsize=12)
         d.save(sample)
         d.close()
@@ -137,7 +137,7 @@ def run(ctx, quick: bool = False):
         import docx
 
         d = docx.Document()
-        d.add_paragraph("X PDF LibreOffice self test")
+        d.add_paragraph("N PDF LibreOffice self test")
         src = os.path.join(work, "t.docx")
         d.save(src)
         from .convert import office_to_pdf

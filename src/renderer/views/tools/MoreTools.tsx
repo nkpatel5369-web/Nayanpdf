@@ -192,7 +192,7 @@ export function UtilitiesTool(props: { args?: any }) {
           <>
             {needsGs && <Notice kind="err">The Ghostscript component is not installed, so PDF/A conversion is unavailable.</Notice>}
             <Field label="Conformance level"><Seg value={level} onChange={setLevel} options={[{ value: "1b", label: "PDF/A-1b" }, { value: "2b", label: "PDF/A-2b" }, { value: "3b", label: "PDF/A-3b" }]} /></Field>
-            <Notice kind="warn">The document is rebuilt: form fields, digital signatures, encryption and JavaScript are removed. X PDF checks key PDF/A properties but does not perform a formal (veraPDF) validation.</Notice>
+            <Notice kind="warn">The document is rebuilt: form fields, digital signatures, encryption and JavaScript are removed. N PDF checks key PDF/A properties but does not perform a formal (veraPDF) validation.</Notice>
           </>
         )}
         {util === "validate" && validation && (

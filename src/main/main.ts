@@ -1,4 +1,4 @@
-// X PDF main process.
+// N PDF main process.
 import { app, BrowserWindow, dialog, Menu, protocol, screen, session, shell } from "electron";
 import { cpSync, existsSync, readdirSync, rmSync, statSync } from "node:fs";
 import { readFile } from "node:fs/promises";
@@ -20,21 +20,25 @@ if (!app.isPackaged && process.env.NAYANPDF_TEST_USERDATA) app.setPath("userData
 else migrateUserData();
 
 /**
- * This app was called NayanPDF before 1.1, and Electron keeps settings, recent
- * files, saved signatures and saved actions in a folder named after the app.
- * On the first start after the rename the old folder is copied whole, including
- * "Local State", which holds the key that protects the saved signatures. It runs
- * before Chromium opens anything in the new folder. The old folder is kept.
+ * This app was called NayanPDF up to 1.0 and X PDF in 1.1, and Electron keeps
+ * settings, recent files, saved signatures and saved actions in a folder named
+ * after the app. On the first start after the rename the newest old folder is
+ * copied whole, including "Local State", which holds the key that protects the
+ * saved signatures. It runs before Chromium opens anything in the new folder.
+ * The old folders are kept.
  */
+const LEGACY_NAMES = ["X PDF", "NayanPDF"];
+
 function migrateUserData() {
+  const current = app.getPath("userData");
+  if (existsSync(join(current, "settings.json"))) return;
+  const legacy = LEGACY_NAMES.map((n) => join(app.getPath("appData"), n)).find((d) => d !== current && existsSync(join(d, "settings.json")));
+  if (!legacy) return;
   try {
-    const current = app.getPath("userData");
-    const legacy = join(app.getPath("appData"), "NayanPDF");
-    if (legacy === current || !existsSync(join(legacy, "settings.json")) || existsSync(join(current, "settings.json"))) return;
     cpSync(legacy, current, { recursive: true, force: true });
   } catch {
     // Could not copy (disk full, permissions): keep using the old folder as it is.
-    app.setPath("userData", join(app.getPath("appData"), "NayanPDF"));
+    app.setPath("userData", legacy);
   }
 }
 
@@ -184,7 +188,7 @@ function createWindow() {
     height: Math.min(920, wa.height),
     minWidth: 1000,
     minHeight: 640,
-    title: "X PDF",
+    title: "N PDF",
     show: false,
     backgroundColor: "#0f172a",
     autoHideMenuBar: true,

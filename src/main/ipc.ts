@@ -41,7 +41,7 @@ const ENGINE_QUERIES = new Set([
   "security.integrity", "util.pdfaCheck", "blank.detect", "redact.search", "action.validate",
 ]);
 
-// Files X PDF will hand to the operating system to open. Executables and
+// Files N PDF will hand to the operating system to open. Executables and
 // scripts (e.g. extracted attachments) are never launched.
 const OPENABLE = new Set([".pdf", ".docx", ".doc", ".xlsx", ".xls", ".csv", ".pptx", ".ppt", ".txt", ".html", ".htm", ".md",
   ".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".webp", ".gif", ".odt", ".ods", ".odp", ".rtf"]);
@@ -85,7 +85,7 @@ const handlers: Record<string, Handler> = {
   "app:info": async () => {
     const caps = await enginePool.queryCall("engine.capabilities", {}).catch((e) => ({ error: e.message }));
     return {
-      name: "X PDF",
+      name: "N PDF",
       version: app.getVersion(),
       electron: process.versions.electron,
       chrome: process.versions.chrome,
@@ -204,7 +204,7 @@ const handlers: Record<string, Handler> = {
   "files:openWithSystem": async (_e, payload) => {
     const p = str(payload, "path");
     if (!access.canRead(p)) throw new AccessDenied("Not permitted.");
-    if (!OPENABLE.has(extname(p).toLowerCase())) throw new EngineError("NOT_SUPPORTED", "For safety, X PDF only opens document and image files. Use 'Show in folder' instead.");
+    if (!OPENABLE.has(extname(p).toLowerCase())) throw new EngineError("NOT_SUPPORTED", "For safety, N PDF only opens document and image files. Use 'Show in folder' instead.");
     const err = await shell.openPath(p);
     if (err) throw new EngineError("OPERATION_FAILED", err);
     return true;
@@ -381,7 +381,7 @@ const handlers: Record<string, Handler> = {
     if (t.hit) return t.value;
     const r = await dialog.showMessageBox(win(e), {
       type: p.type === "warning" ? "warning" : "question",
-      title: String(p.title || "X PDF"),
+      title: String(p.title || "N PDF"),
       message: String(p.message || ""),
       detail: p.detail ? String(p.detail) : undefined,
       buttons,

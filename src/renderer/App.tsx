@@ -121,7 +121,7 @@ export function App() {
         <AppMenu closeTab={closeTab} />
         <div className="brand" onClick={() => setView({ kind: "home" })} title="Home">
           <BrandMark />
-          X PDF
+          N PDF
         </div>
         <div className="tabs">
           <div className={"tab home-tab" + (view.kind === "home" ? " active" : "")} onClick={() => setView({ kind: "home" })} title="Home">

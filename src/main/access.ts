@@ -2,7 +2,7 @@
 //
 // The renderer never gets general file-system access. It can only refer to
 // files the user explicitly provided (open dialog, drag and drop, recent list,
-// folder scans of a chosen folder) or that X PDF itself produced, and it can
+// folder scans of a chosen folder) or that N PDF itself produced, and it can
 // only write into folders the user chose or into the folder of a document
 // they opened. Every path inside an engine request is checked against this
 // registry before the request is forwarded.
@@ -115,9 +115,9 @@ export function checkParams(params: any): void {
           if (typeof f === "string" && !isAbsolute(f)) throw new AccessDenied("Invalid file reference.");
         }
       } else if (OUTPUT_KEYS.has(k) && typeof v === "string" && v) {
-        if (!access.canWrite(v)) throw new AccessDenied(`X PDF may not write to ${dirname(v)}. Choose an output folder first.`);
+        if (!access.canWrite(v)) throw new AccessDenied(`N PDF may not write to ${dirname(v)}. Choose an output folder first.`);
       } else if (OUTPUT_DIR_KEYS.has(k) && typeof v === "string" && v) {
-        if (!access.canWrite(v, true)) throw new AccessDenied(`X PDF may not write to ${v}. Choose an output folder first.`);
+        if (!access.canWrite(v, true)) throw new AccessDenied(`N PDF may not write to ${v}. Choose an output folder first.`);
       } else if (typeof v === "object") {
         walk(v, depth + 1);
       }

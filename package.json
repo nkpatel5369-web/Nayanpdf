@@ -1,10 +1,10 @@
 {
   "name": "nayanpdf",
-  "productName": "X PDF",
-  "version": "1.1.0",
-  "description": "X PDF - offline PDF editor, converter and document toolkit for Windows",
+  "productName": "N PDF",
+  "version": "1.2.0",
+  "description": "N PDF - offline PDF editor, converter and document toolkit for Windows",
   "author": {
-    "name": "X PDF"
+    "name": "N PDF"
   },
   "license": "AGPL-3.0-or-later",
   "private": true,
