@@ -1,6 +1,6 @@
-# X PDF test report
+# N PDF test report
 
-X PDF was called NayanPDF until version 1.1. Builds up to 16 below carry the old name (`NayanPDF_Setup.exe`, `NayanPDF.exe`).
+N PDF was called NayanPDF up to version 1.0 and X PDF in 1.1. Builds up to 16 below carry the name NayanPDF (`NayanPDF_Setup.exe`, `NayanPDF.exe`), builds 17 to 20 the name X PDF (`X-PDF_Setup.exe`, `X-PDF.exe`).
 
 What was tested, how, the results, the defects the tests found, and what has not been tested. Nothing in this report is reported as passed unless it was executed.
 

@@ -1,30 +1,30 @@
-# X PDF offline verification
+# N PDF offline verification
 
-X PDF was called NayanPDF until version 1.1; checks run on builds up to 16 refer to the old executable name.
+N PDF was called NayanPDF up to version 1.0 and X PDF in 1.1; checks run on builds up to 16 refer to `NayanPDF.exe`, builds 17 to 20 to `X-PDF.exe`.
 
-What was done to establish that X PDF works without an internet connection and does not contact external servers, what each check found, and which checks are still outstanding.
+What was done to establish that N PDF works without an internet connection and does not contact external servers, what each check found, and which checks are still outstanding.
 
 ## Bottom line
 
 - Every processing feature has been executed with **no network available at all** (Linux network namespace, no route to any host): 105 of 105 engine tests passed, covering OCR, Office conversion, PDF/A, digital signing and verification, redaction, compression, print preparation and every page operation. The full 32-scenario UI test, including text selection, markup, printing, saving and the Acrobat view modes, also passed under the same conditions (and its earlier 25-scenario version passed three times in a row).
 - Four channels by which a desktop PDF tool can leak traffic without the user noticing have been closed and each is covered by an automated test that fails if the protection is removed: remote images in Office files, remote resources in HTML, background requests from the user interface, and background downloads by the browser engine itself (a spell-check dictionary download found on Linux on 15 October 2026, §2.4).
-- On Windows, the **installed** application was tested with Windows Firewall blocking all outbound traffic for X PDF and every bundled engine: its self-test and the full engine suite passed, and while the app ran and displayed a document no X PDF process opened a single connection to a non-local address.
+- On Windows, the **installed** application was tested with Windows Firewall blocking all outbound traffic for N PDF and every bundled engine: its self-test and the full engine suite passed, and while the app ran and displayed a document no N PDF process opened a single connection to a non-local address.
 
 ## 1. How the application is built to stay offline
 
-| Component | What could reach the network | Control in X PDF |
+| Component | What could reach the network | Control in N PDF |
 |---|---|---|
 | User interface (Electron / Chromium) | Page requests, background services, spell-check dictionaries, component updates | Every request is cancelled unless it targets the app's own local schemes (`app:`, `nayan-doc:`) or in-memory data (`data:`, `blob:`) — `src/main/main.ts`. Content-Security-Policy on every page. Navigation and new windows blocked. Chromium background networking, component updates, domain reliability, sync, pings, phishing checks, translation and autofill server calls switched off. Spell-checker disabled. No auto-updater, crash reporter, analytics or telemetry module exists in the code |
 | Print and HTML-to-PDF windows | Remote images, fonts, scripts in the HTML | Separate sessions with the same request blocking; JavaScript disabled — `src/main/output.ts` |
-| Processing engine (Python) | Library code making HTTP calls | Runs in isolated mode (`-I`) with a minimal environment and no proxy settings. X PDF's engine imports no network module (static scan below). `pip` is not shipped |
+| Processing engine (Python) | Library code making HTTP calls | Runs in isolated mode (`-I`) with a minimal environment and no proxy settings. N PDF's engine imports no network module (static scan below). `pip` is not shipped |
 | Digital-signature validation (pyHanko) | Certificate revocation (CRL/OCSP), certificate download, timestamp servers | `allow_fetching=False`; the result states "Revocation not checked (offline)". Timestamping is not offered |
 | OCR (Tesseract) | Language-data download | Language data bundled in the installer; Tesseract only receives local image files |
 | PDF/A (Ghostscript) | File access outside the job | Runs with `-dSAFER` on local files only |
 | Office conversion (LibreOffice) | Linked images or data referenced by URL inside DOCX/XLSX/PPTX; external-link updates; update check; macros | Each private LibreOffice profile is seeded with: block untrusted referer links, never update links, never recalculate on load (so `WEBSERVICE()` and similar are not evaluated), macros disabled, update check disabled — `engine/nayanpdf_engine/ops/convert.py` |
 | Installer (NSIS) | Downloading components during setup | All components are inside the installer; no download plug-in is used; `publish: null` so no update feed is generated — `electron-builder.yml`, `build/installer.nsh` |
-| Scan to PDF (Windows Image Acquisition) | The scanner itself, which may be on the office network | X PDF talks only to Windows' own WIA service through a fixed PowerShell script; a network scanner is reached by that Windows service, as it would be from any Windows scanning app, not by X PDF. Scanned pages are written to the app's temp folder. Development builds can replace the scanner with a folder of images; the installed app ignores that switch — `src/main/scan.ts` |
+| Scan to PDF (Windows Image Acquisition) | The scanner itself, which may be on the office network | N PDF talks only to Windows' own WIA service through a fixed PowerShell script; a network scanner is reached by that Windows service, as it would be from any Windows scanning app, not by N PDF. Scanned pages are written to the app's temp folder. Development builds can replace the scanner with a folder of images; the installed app ignores that switch — `src/main/scan.ts` |
 | Read Out Loud | Online ("natural") voices | Only voices installed in Windows are used through the browser engine's speech synthesis; when none are installed the app says so. No voice is downloaded — `src/renderer/workspace/ReadAloud.ts` |
-| Links in PDFs | Opening a web address | X PDF stores links to web addresses for other readers but never opens them; `javascript:`, `file:` and `data:` links are refused — `engine/nayanpdf_engine/ops/links.py` |
+| Links in PDFs | Opening a web address | N PDF stores links to web addresses for other readers but never opens them; `javascript:`, `file:` and `data:` links are refused — `engine/nayanpdf_engine/ops/links.py` |
 | Accounts, licensing | Activation, sign-in | None exists |
 
 ## 2. Checks executed and their results
@@ -48,8 +48,8 @@ Result on 15 October 2026, current code: **105 passed, 0 failed** in 54 s (the e
 | Run | Requests received by the stand-in server | PDF produced |
 |---|---|---|
 | Stock LibreOffice, default profile (control) | 1 (`/tracker.png`) | Yes |
-| X PDF conversion (hardened profile) | **0** | Yes |
-| X PDF with the hardening deliberately removed (sensitivity check) | 1 — test fails as intended | Yes |
+| N PDF conversion (hardened profile) | **0** | Yes |
+| N PDF with the hardening deliberately removed (sensitivity check) | 1 — test fails as intended | Yes |
 
 The control run is the reason this protection exists: without it, opening a Word file for conversion would silently tell the file's author when and from where it was converted.
 
@@ -64,7 +64,7 @@ After all 32 UI scenarios (opening, editing, selecting and marking up text, reda
 - The browser's own resource log: **0 requests** to anything other than the app's local schemes.
 - Since 15 October 2026, on Linux, every app process (browser engine, GPU and utility processes, the Python engine) is started with its proxy setting pointing at a local recording proxy that refuses and logs every request. Any logged attempt fails the test. Result: **0 attempts**.
 
-The second check was added because the first cannot see requests the browser engine makes on its own. It found one: on Linux, Chromium tried to download spell-check dictionaries from a Google server at start-up, even though X PDF never uses the spell-checker. Every browser session is now hardened the moment it is created: spell-checker off, the dictionary address pointed at a closed local port and, on Linux, no spell-check languages (`src/main/main.ts`). With the fix removed, the check reports the attempt; with it, zero. On Windows, Chromium uses the Windows spell-checker and downloads no dictionaries, and the Windows acceptance test (§3) independently observed no remote connection from any X PDF process.
+The second check was added because the first cannot see requests the browser engine makes on its own. It found one: on Linux, Chromium tried to download spell-check dictionaries from a Google server at start-up, even though N PDF never uses the spell-checker. Every browser session is now hardened the moment it is created: spell-checker off, the dictionary address pointed at a closed local port and, on Linux, no spell-check languages (`src/main/main.ts`). With the fix removed, the check reports the attempt; with it, zero. On Windows, Chromium uses the Windows spell-checker and downloads no dictionaries, and the Windows acceptance test (§3) independently observed no remote connection from any N PDF process.
 
 ### 2.5 The whole UI test with no network
 
@@ -76,7 +76,7 @@ The complete UI test (§2.4) was run inside a network namespace that has only a 
 - `src/main`, `src/preload`: no `net` requests, `fetch` to remote hosts, `autoUpdater` or `crashReporter`.
 - `package.json`: no updater, analytics or telemetry package.
 
-Some bundled third-party libraries contain network code they never use in X PDF (for example aiohttp inside pyHanko's dependency tree and libcurl linked into Tesseract). They are listed in `docs/DEPENDENCIES.md`; the checks above show they are not exercised.
+Some bundled third-party libraries contain network code they never use in N PDF (for example aiohttp inside pyHanko's dependency tree and libcurl linked into Tesseract). They are listed in `docs/DEPENDENCIES.md`; the checks above show they are not exercised.
 
 ## 3. Windows acceptance test (executed)
 
@@ -85,7 +85,7 @@ Some bundled third-party libraries contain network code they never use in X PDF 
 | Step | Result |
 |---|---|
 | Silent per-user install; files, Start Menu shortcut, uninstall registration, version information | Pass |
-| Windows Firewall rules blocking all outbound traffic for `X-PDF.exe` (`NayanPDF.exe` before 1.1), the bundled Python, Tesseract, LibreOffice and Ghostscript (10 program rules) | Applied |
+| Windows Firewall rules blocking all outbound traffic for the app's executable (`NayanPDF.exe` up to 1.0, `X-PDF.exe` in 1.1, `N-PDF.exe` from 1.2), the bundled Python, Tesseract, LibreOffice and Ghostscript (10 program rules) | Applied |
 | Built-in self-test of the installed engines with traffic blocked: PDF engine, page operations, compression, qpdf, Office writers, digital-signature engine, OCR (eng, hin, guj), LibreOffice conversion, Ghostscript | 9 / 9 pass |
 | Full engine test suite against the installed runtime, traffic blocked | 105 / 105 pass |
 | Installed app launched (home screen, then with a PDF, which it edits and undoes); every TCP connection owned by its processes sampled throughout | Rendered and edited; **0 remote endpoints** and **0 listening ports** observed in both launches |
@@ -97,6 +97,6 @@ Separately, the 32-scenario UI test passed on Windows against the development bu
 ## 4. How you can verify it yourself on Windows
 
 1. Disconnect the computer from the internet (or disable Wi-Fi and unplug the network cable).
-2. Install from `X-PDF_Setup.exe` and start X PDF from the Start Menu.
+2. Install from `N-PDF_Setup.exe` and start N PDF from the Start Menu.
 3. Open a PDF; edit a line of text; save with Save As; compress it; convert it to Word and Excel; run OCR on a scanned PDF; convert a Word file to PDF.
-4. Optional, while connected: open Resource Monitor (`resmon.exe`) → Network → TCP Connections, and watch for `X-PDF.exe`, `python.exe`, `tesseract.exe`, `soffice.bin` or `gswin64c.exe`. None should appear with a remote address.
+4. Optional, while connected: open Resource Monitor (`resmon.exe`) → Network → TCP Connections, and watch for `N-PDF.exe`, `python.exe`, `tesseract.exe`, `soffice.bin` or `gswin64c.exe`. None should appear with a remote address.

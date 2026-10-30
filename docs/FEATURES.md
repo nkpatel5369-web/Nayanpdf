@@ -1,13 +1,13 @@
-# X PDF feature register
+# N PDF feature register
 
-Status of every feature in the NayanPDF brief (the product's name before version 1.1), using the five statuses the brief prescribes. A feature is marked **Fully implemented and tested** only where an automated test exercises it end to end and checks the output file; anything implemented but not covered by such a test is marked **Implemented with limitations** and the limitation says so.
+Status of every feature in the NayanPDF brief (the product's name up to version 1.0; X PDF in 1.1, N PDF from 1.2), using the five statuses the brief prescribes. A feature is marked **Fully implemented and tested** only where an automated test exercises it end to end and checks the output file; anything implemented but not covered by such a test is marked **Implemented with limitations** and the limitation says so.
 
 ## How to read the evidence column
 
 - **E:** engine test in `engine/tests/` (pytest, synthetic documents, output files reopened and inspected).
 - **U:** scenario in the UI end-to-end test `scripts/ui-e2e.mjs`, which drives the real Electron application, its main process and engine (see `docs/TEST_REPORT.md`).
 
-**Platforms.** The evidence codes refer to tests run on the Linux development build. The same 123 engine tests and 40 UI scenarios (41 from the right-click commands onwards) have also been run on Windows (GitHub Actions, Windows Server 2025), against the bundled Windows runtime, and the installed application passed the 82-point Windows acceptance test, including the upgrade from NayanPDF 1.0 (build 19). Windows 10/11 desktop editions and standard (non-administrator) accounts have not been tested.
+**Platforms.** The evidence codes refer to tests run on the Linux development build. The same 123 engine tests and 40 UI scenarios (41 from the right-click commands onwards) have also been run on Windows (GitHub Actions, Windows Server 2025), against the bundled Windows runtime, and the installed application passed the 93-point Windows acceptance test, including the upgrade from NayanPDF 1.0 and the right-click commands (build 20, under the name X PDF). Windows 10/11 desktop editions and standard (non-administrator) accounts have not been tested.
 
 ## Status summary
 
@@ -21,7 +21,7 @@ Status of every feature in the NayanPDF brief (the product's name before version
 
 Counts are register lines; a few features appear in more than one section because the brief lists them more than once. The six "Not implemented" lines are: in-place editing of rotated/vertical text, revocation checking and trusted timestamps (both need the internet), execution of form scripts (deliberately never run), form fields that depend on scripts (date/number formats, calculated fields, push buttons, barcodes), FDF comment files (XFDF is supported), and printing several documents in one action.
 
-No processing feature needs a paid licence or a separately installed component: everything ships inside `X-PDF_Setup.exe`. The one paid item is a code-signing certificate, which only removes the SmartScreen warning.
+No processing feature needs a paid licence or a separately installed component: everything ships inside `N-PDF_Setup.exe`. The one paid item is a code-signing certificate, which only removes the SmartScreen warning.
 
 ## 1. Home dashboard and workspace (brief §7)
 
@@ -29,7 +29,7 @@ No processing feature needs a paid licence or a separately installed component: 
 |---|---|---|
 | Dashboard tiles for all 15 required tools (Edit, Merge, Split, Compress, Convert, Organize, OCR, Create, Annotate, Sign, Protect, Redact, Compare, Extract Images, Fill Forms) plus Scan to PDF, Search Across Files, Prepare a Form, Watermark, Properties, Utilities | Fully implemented and tested | Tiles open the corresponding tool or document mode; merge, split, OCR, protect, compare and convert are driven through the UI by the test (U18–U23) |
 | Open File action | Fully implemented and tested | U1 (command-line open), Open button and Ctrl+O use the same path |
-| File Explorer right-click commands "Convert to PDF with X PDF" (Office, CSV, RTF, images, text, HTML) and "Combine files in X PDF" (the same plus PDFs), several files at once, as in Acrobat | Implemented with limitations | U39 (three files converted next to their originals, an existing PDF of the same name kept, results opened; three files of three kinds combined in the selected order); Windows acceptance test: commands registered after install and after the upgrade, the registered command run as Explorer runs it makes the installed app write the PDF, commands removed on uninstall. On Windows 11 they are under "Show more options" (the short menu needs a signed packaged extension). Explorer's own menu was not driven by a test |
+| File Explorer right-click commands "Convert to PDF with N PDF" (Office, CSV, RTF, images, text, HTML) and "Combine files in N PDF" (the same plus PDFs), several files at once, as in Acrobat | Implemented with limitations | U39 (three files converted next to their originals, an existing PDF of the same name kept, results opened; three files of three kinds combined in the selected order); Windows acceptance test: commands registered after install and after the upgrade, the registered command run as Explorer runs it makes the installed app write the PDF, commands removed on uninstall. On Windows 11 they are under "Show more options" (the short menu needs a signed packaged extension). Explorer's own menu was not driven by a test |
 | Drag-and-drop opening | Implemented with limitations | Implemented (files dropped anywhere are registered by the isolated preload script). Not covered by an automated test: Playwright cannot simulate an OS file drop |
 | Recent documents list | Implemented with limitations | Implemented, with a "Clear" action in Settings. Not covered by an automated test |
 | Multiple open documents in tabs | Fully implemented and tested | U: several scenarios run with two or three tabs open |
@@ -72,7 +72,7 @@ No processing feature needs a paid licence or a separately installed component: 
 | Search in searchable text | Fully implemented and tested | U4 |
 | Text selection and copy (drag, double-click a word, Ctrl+A for the page, Ctrl+C) | Fully implemented and tested | U8 (selection copied to the clipboard), U9. A drag may start in the margin or over highlighted text. Scanned pages need OCR first |
 | Metadata inspection | Fully implemented and tested | E: `test_metadata_edit_and_remove` |
-| Printing (Acrobat-style dialog) | Implemented with limitations | X PDF's own dialog: printer, copies and collate, all/current/range, odd/even, reverse, Fit / Actual size / Shrink oversized / Custom scale / Multiple pages per sheet (2–16, order, borders), orientation, paper, two-sided, black and white, comments & forms, quality, live sheet preview; prints straight to the chosen printer (U27 checks the produced sheets; E: `test_print_prepare_comments_and_forms_options`, `test_print_prepare_respects_permission`). Limitations: pages are sent as images at the chosen resolution (150/300/600 dpi); printer-specific options (trays, stapling) are reached through the optional Windows dialog; not tested on a physical printer |
+| Printing (Acrobat-style dialog) | Implemented with limitations | N PDF's own dialog: printer, copies and collate, all/current/range, odd/even, reverse, Fit / Actual size / Shrink oversized / Custom scale / Multiple pages per sheet (2–16, order, borders), orientation, paper, two-sided, black and white, comments & forms, quality, live sheet preview; prints straight to the chosen printer (U27 checks the produced sheets; E: `test_print_prepare_comments_and_forms_options`, `test_print_prepare_respects_permission`). Limitations: pages are sent as images at the chosen resolution (150/300/600 dpi); printer-specific options (trays, stapling) are reached through the optional Windows dialog; not tested on a physical printer |
 | Page count and file size | Fully implemented and tested | Page count in the toolbar, file size in Properties; E: `test_probe` |
 | Password-protected PDFs (with the password) | Fully implemented and tested | E: `test_open_encrypted_requires_password` (the password prompt itself is not driven by the UI test) |
 | Large documents without loading every page | Fully implemented and tested | E: `test_open_large` (300 pages). The viewer renders pages lazily (PDF.js) and the file is streamed by HTTP range requests from the local protocol |
@@ -80,7 +80,7 @@ No processing feature needs a paid licence or a separately installed component: 
 
 ## 3. Editing existing content (brief §9)
 
-X PDF edits the page content stream itself. It does not lay white boxes over the old text. Where the original embedded font has the glyphs needed, the new text is written in that original font; where it does not, a substitute font is used and the user is told.
+N PDF edits the page content stream itself. It does not lay white boxes over the old text. Where the original embedded font has the glyphs needed, the new text is written in that original font; where it does not, a substitute font is used and the user is told.
 
 | Feature | Status | Evidence / limitation |
 |---|---|---|
@@ -129,7 +129,7 @@ X PDF edits the page content stream itself. It does not lay white boxes over the
 | Comment summary PDF (page image beside each comment, replies and status) | Implemented with limitations | E and U32. Typeset with Latin fonts: comments written in Indian scripts may not display in the summary |
 | Comment list as CSV for Excel (UTF-8 with BOM) | Fully implemented and tested | E; U32 |
 | Links: drag a box and link it to a page of the document | Fully implemented and tested | E: links test; U34 (the link is followed to page 5) |
-| Links to a web address (http, https, mailto; javascript:, file: and data: refused); X PDF itself never opens them | Fully implemented and tested | E: links test (add, refuse unsafe schemes, delete) |
+| Links to a web address (http, https, mailto; javascript:, file: and data: refused); N PDF itself never opens them | Fully implemented and tested | E: links test (add, refuse unsafe schemes, delete) |
 | FDF comment files | Not implemented | XFDF only |
 
 ## 5. Page management (brief §10)
@@ -214,7 +214,7 @@ X PDF edits the page content stream itself. It does not lay white boxes over the
 | Create a self-signed certificate | Fully implemented and tested | U26 |
 | Signing with a USB token / smart card (PKCS#11) | Implemented with limitations | Implemented; **untested** because no hardware token was available. Requires the token vendor's driver (normally already installed with the token) |
 | Signature verification and status display | Fully implemented and tested | E: as above, including detection of a tampered file |
-| Revocation (CRL/OCSP) and trusted timestamps | Not implemented | Both need network access, which X PDF never uses. The verification panel states "Revocation not checked (offline)" |
+| Revocation (CRL/OCSP) and trusted timestamps | Not implemented | Both need network access, which N PDF never uses. The verification panel states "Revocation not checked (offline)" |
 | Warn before an operation could invalidate an existing signature | Fully implemented and tested | E: `test_signed_document_warns_before_modification` |
 | Signature image never presented as a digital signature | Fully implemented and tested | Separate panels, wording and result messages; the image panel states it provides no cryptographic protection (U13, U26 screenshots) |
 
@@ -281,7 +281,7 @@ X PDF edits the page content stream itself. It does not lay white boxes over the
 | Field properties: name, tooltip, required, read only, multi-line, character limit, choices | Fully implemented and tested | E: `test_rename_properties_move_and_delete`; U36 (drop-down named Quarter with four choices) |
 | Move, resize and delete fields; Delete key removes the selected widget | Fully implemented and tested | E as above (incl. one radio button and then the whole group); U36 (moved 40 px; deleted with the Delete key) |
 | Detect form fields (underscores, ruled lines, empty boxes and check squares beside a label); suggestions accepted or dropped on the page | Implemented with limitations | E: `test_detect_suggests_blanks_with_their_labels`; U36 (5 found, one accepted, one dropped, the rest added). Rule-based, tested on synthetic forms only; Acrobat's detection is trained and will find fields these rules miss |
-| Date/number formats, calculated fields, push buttons, barcode fields | Not implemented | Need form JavaScript, which X PDF never runs |
+| Date/number formats, calculated fields, push buttons, barcode fields | Not implemented | Need form JavaScript, which N PDF never runs |
 | Form scripts (JavaScript) | Not implemented | Never executed, for security. Calculated fields are not recalculated |
 | Filling radio groups made by other software (one button on, the rest off; group value written as a PDF name) | Fully implemented and tested | E: radio fill test (the defect it guards also affected third-party forms) |
 
@@ -361,9 +361,9 @@ X PDF edits the page content stream itself. It does not lay white boxes over the
 | IPC validation: sender origin, argument types, method allowlist, paths limited to files the user chose | Fully implemented and tested | `src/main/ipc.ts`, `src/main/access.ts`; exercised by every UI scenario |
 | No shell interpolation; external tools run with argument arrays | Fully implemented and tested | `engine/nayanpdf_engine/util/tools.py` |
 | Navigation and new windows blocked; all non-local requests cancelled; spell-check dictionary downloads disabled in every session | Fully implemented and tested | U41 (no page requests; on Linux, no attempt by any app process through a recording proxy) |
-| No open ports or listeners | Fully implemented and tested | Engine talks over stdin/stdout pipes only. Windows acceptance (builds 10 to 12): 0 listening TCP ports owned by X PDF processes, sampled throughout two launches of the installed app |
+| No open ports or listeners | Fully implemented and tested | Engine talks over stdin/stdout pipes only. Windows acceptance (builds 10 to 12): 0 listening TCP ports owned by N PDF processes, sampled throughout two launches of the installed app |
 | No telemetry, updater, accounts, activation | Fully implemented and tested | None exists in the code; see `docs/OFFLINE_VERIFICATION.md` |
-| Electron fuses (no ELECTRON_RUN_AS_NODE, no inspector, ASAR integrity) | Fully implemented and tested | Set at packaging time; read back from the installed executable by the Windows acceptance test (`NayanPDF.exe` in builds 10 to 13, `X-PDF.exe` from 1.1): Run-as-Node off, `NODE_OPTIONS` and inspector arguments ignored, ASAR integrity on, ASAR-only loading on |
+| Electron fuses (no ELECTRON_RUN_AS_NODE, no inspector, ASAR integrity) | Fully implemented and tested | Set at packaging time; read back from the installed executable by the Windows acceptance test (`NayanPDF.exe` in builds 10 to 13, `X-PDF.exe` in builds 19 and 20, `N-PDF.exe` from 1.2): Run-as-Node off, `NODE_OPTIONS` and inspector arguments ignored, ASAR integrity on, ASAR-only loading on |
 
 ## 21. Performance (brief §27)
 
@@ -388,12 +388,12 @@ X PDF edits the page content stream itself. It does not lay white boxes over the
 
 | Feature | Status | Evidence / limitation |
 |---|---|---|
-| `X-PDF_Setup.exe` (named `NayanPDF_Setup.exe` before 1.1), 64-bit, self-contained, nothing downloaded during or after installation | Fully implemented and tested | Windows acceptance test: installed copy passes its offline self-test (all nine engines including LibreOffice, Tesseract and Ghostscript) and the full engine test suite with outbound traffic blocked |
+| `N-PDF_Setup.exe` (`NayanPDF_Setup.exe` up to 1.0, `X-PDF_Setup.exe` in 1.1), 64-bit, self-contained, nothing downloaded during or after installation | Fully implemented and tested | Windows acceptance test (last passed by build 20, as `X-PDF_Setup.exe`; the N PDF result is in `docs/TEST_REPORT.md`): installed copy passes its offline self-test (all nine engines including LibreOffice, Tesseract and Ghostscript) and the full engine test suite with outbound traffic blocked |
 | Installs to the user's profile without requesting administrator rights | Implemented with limitations | Per-user installer that does not request elevation; on CI it ran under an administrator account, so a standard-account install has not been executed |
 | Choice of installation folder | Implemented with limitations | Offered on the installer's folder page; the automated test uses the silent default |
 | Start Menu shortcut, icon, version information, uninstall registration | Fully implemented and tested | Windows acceptance test |
 | Optional desktop shortcut | Implemented with limitations | Check box on the installer's last page; not exercised by the silent test |
 | Uninstall removes program, shortcut and registration; keeps user documents and settings | Fully implemented and tested | Windows acceptance test, followed by a successful reinstall |
-| Installed executable named `X-PDF.exe` (`NayanPDF.exe` before 1.1) | Fully implemented and tested | Windows acceptance test |
-| Upgrade in place from NayanPDF 1.0: one installation afterwards, old program and shortcuts removed, settings, recent files, saved signatures and actions carried over | Implemented with limitations | Windows acceptance test, build 19: NayanPDF build 13 installed, then X PDF over it: one registration, old executable and Start Menu shortcut gone, registered uninstaller present and working, planted settings file carried over. Saved signatures written by a real NayanPDF session were not part of the test |
+| Installed executable named `N-PDF.exe` (`NayanPDF.exe` up to 1.0, `X-PDF.exe` in 1.1) | Fully implemented and tested | Windows acceptance test (last passed by build 20, as `X-PDF.exe`; the N PDF result is in `docs/TEST_REPORT.md`) |
+| Upgrade in place from X PDF 1.1 and NayanPDF 1.0: one installation afterwards, old program, shortcuts and right-click commands replaced, a desktop shortcut kept, settings, recent files, saved signatures and actions carried over | Implemented with limitations | Windows acceptance test, builds 19 and 20: NayanPDF build 13 installed, then X PDF over it: one registration, old executable and Start Menu shortcut gone, registered uninstaller present and working, planted settings file carried over. For N PDF the test runs from X PDF build 20 and from NayanPDF build 13 and also checks the old right-click commands and the desktop shortcut; result in `docs/TEST_REPORT.md`. Saved signatures written by a real earlier session were not part of the test |
 | Code signing of the installer and executable | Requires paid licence | Needs a purchased code-signing certificate; until then Windows SmartScreen warns on first run |

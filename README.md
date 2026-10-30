@@ -1,6 +1,6 @@
-# X PDF
+# N PDF
 
-X PDF (called NayanPDF until version 1.1) is a fully offline PDF editor and document toolkit for Windows 10 and 11 (64-bit). Open, edit existing text and images, organise pages, compress, convert to and from Word, Excel and PowerPoint, OCR scanned documents, annotate, sign (image signatures and certificate-based digital signatures), protect, permanently redact, compare and batch-process PDFs. All processing happens on your computer; X PDF has no account, activation, subscription, telemetry or update check, and never downloads anything.
+N PDF (called NayanPDF up to version 1.0 and X PDF in 1.1) is a fully offline PDF editor and document toolkit for Windows 10 and 11 (64-bit). Open, edit existing text and images, organise pages, compress, convert to and from Word, Excel and PowerPoint, OCR scanned documents, annotate, sign (image signatures and certificate-based digital signatures), protect, permanently redact, compare and batch-process PDFs. All processing happens on your computer; N PDF has no account, activation, subscription, telemetry or update check, and never downloads anything.
 
 | Document | Purpose |
 |---|---|
@@ -11,28 +11,28 @@ X PDF (called NayanPDF until version 1.1) is a fully offline PDF editor and docu
 
 ## Current delivery status
 
-- **Windows installer:** built, installed and tested on a clean Windows machine by `.github/workflows/windows-installer.yml`. Every successful build is published as a GitHub pre-release (`v1.1.0-build.N`; `v1.0.0-build.N` up to build 13, under the old name) with `X-PDF_Setup.exe`, its SHA-256 and the acceptance report. Use the newest pre-release. Current: **v1.1.0-build.19**, `X-PDF_Setup.exe` 419.5 MB, SHA-256 `A52EB892C18FF2C3A2D9CF3DEA825C75F8423696014EE5A102B735A14D0DF815`.
-- **Evidence on Windows (build 19):** the 123 engine tests pass against the bundled runtime and again against the installed copy with outbound traffic blocked; the 40-scenario UI test passes; the 82-point acceptance test passes with no failures or warnings. It covers the upgrade from NayanPDF 1.0 (one installation afterwards, old program and shortcut removed, settings carried over, the registered uninstaller present and working), a fresh install, the security switches compiled into `X-PDF.exe`, the offline self-test, app launch with zero network connections and zero listening ports, uninstall and reinstall.
+- **Windows installer:** built, installed and tested on a clean Windows machine by `.github/workflows/windows-installer.yml`. Every successful build is published as a GitHub pre-release (`v1.2.0-build.N` from 1.2; earlier builds carry the earlier names: `v1.0.0-build.N` up to build 13 as NayanPDF, `v1.1.0-build.19` and `.20` as X PDF) with the installer, its SHA-256 and the acceptance report. Use the newest pre-release. Newest verified: **v1.1.0-build.20** (X PDF), `X-PDF_Setup.exe` 420.6 MB, SHA-256 `2B4DACF81B516FBC4C751FE70629EACEFF9F9CD685003969E6D465D6FB4878E3`. N PDF 1.2.0 (`N-PDF_Setup.exe`) is published by the first build of the renamed code that passes the same checks.
+- **Evidence on Windows (build 20, X PDF):** the 123 engine tests pass against the bundled runtime and again against the installed copy with outbound traffic blocked; the 41-scenario UI test passes; the 93-point acceptance test passes with no failures or warnings. It covers the upgrade from NayanPDF 1.0 (one installation afterwards, old program and shortcut removed, settings carried over, the registered uninstaller present and working), a fresh install, the right-click commands (registered, run as Explorer runs them, removed on uninstall), the security switches compiled into the executable, the offline self-test, app launch with zero network connections and zero listening ports, uninstall and reinstall. For N PDF the acceptance test adds the upgrade from X PDF build 20: its right-click commands and shortcuts replaced, the desktop shortcut kept.
 - **Not yet verified:** installation under a standard (non-administrator) Windows account, Windows 10 or Windows 11 desktop editions specifically (the CI machine is Windows Server 2025, Windows 11 kernel 10.0.26100), scanning with a physical scanner, and spoken audio from Read Out Loud.
 
 ## 1. Installing
 
-1. Download `X-PDF_Setup.exe` (and `X-PDF_Setup.exe.sha256`) from the repository's Releases page.
-2. Optional: check the file hash in PowerShell: `Get-FileHash .\X-PDF_Setup.exe` and compare with the `.sha256` file.
-3. Double-click `X-PDF_Setup.exe`. Accept the licence, choose the folder (default: `%LOCALAPPDATA%\Programs\X-PDF`; an upgrade from NayanPDF keeps its folder, `Programs\NayanPDF`) and, on the last page, tick "Create a desktop shortcut" if you want one.
-4. Start X PDF from the Start Menu.
+1. Download `N-PDF_Setup.exe` (and `N-PDF_Setup.exe.sha256`) from the repository's Releases page.
+2. Optional: check the file hash in PowerShell: `Get-FileHash .\N-PDF_Setup.exe` and compare with the `.sha256` file.
+3. Double-click `N-PDF_Setup.exe`. Accept the licence, choose the folder (default: `%LOCALAPPDATA%\Programs\N-PDF`; an upgrade keeps the folder of the version it replaces, `Programs\X-PDF` or `Programs\NayanPDF`) and, on the last page, tick "Create a desktop shortcut" if you want one.
+4. Start N PDF from the Start Menu.
 
 No administrator rights are needed and nothing is downloaded during or after installation. The installer is not code-signed, so Windows SmartScreen may show "Windows protected your PC": choose **More info → Run anyway** (signing requires a paid certificate; see Known limitations).
 
-During installation X PDF registers itself as an available program for `.pdf` files. It does not take over your default PDF viewer; set that in Windows Settings → Apps → Default apps if you want to.
+During installation N PDF registers itself as an available program for `.pdf` files. It does not take over your default PDF viewer; set that in Windows Settings → Apps → Default apps if you want to.
 
-## 2. Using X PDF
+## 2. Using N PDF
 
 ### Opening documents
 
-Open with **Open** (Ctrl+O), by dropping files on the window, from the recent list on Home, or with "Open with → X PDF" in Explorer. Each document opens in its own tab (Ctrl+Tab moves between them). Password-protected files ask for the password.
+Open with **Open** (Ctrl+O), by dropping files on the window, from the recent list on Home, or with "Open with → N PDF" in Explorer. Each document opens in its own tab (Ctrl+Tab moves between them). Password-protected files ask for the password.
 
-A document opens with only its pages on screen, at Acrobat's *Automatic* zoom. As in Acrobat, a PDF can ask to open with its bookmarks, thumbnails or attachments showing, in a two-page layout or on a given page, and X PDF honours that. Many PDFs exported from Word or LibreOffice ask for their bookmarks. If you never want the panel, choose Settings → Page display → *Navigation panel when a document opens* → **Never**.
+A document opens with only its pages on screen, at Acrobat's *Automatic* zoom. As in Acrobat, a PDF can ask to open with its bookmarks, thumbnails or attachments showing, in a two-page layout or on a given page, and N PDF honours that. Many PDFs exported from Word or LibreOffice ask for their bookmarks. If you never want the panel, choose Settings → Page display → *Navigation panel when a document opens* → **Never**.
 
 The **View** menu holds the page display options (single page, single page continuous, two page, two page scrolling, cover page), the zoom presets, rotate view, go to page, both panels, **Read mode** (Ctrl+H: toolbars hidden, Esc to leave), **Full screen** (Ctrl+L: one page at a time on black, arrow keys to turn pages, Esc to leave) and **Read Out Loud**. Hold the space bar and drag to move the page.
 
@@ -68,9 +68,9 @@ What the tools do:
 
 ### Printing
 
-Ctrl+P (or the printer button, or right-click → Print) opens X PDF's print dialog, laid out like Acrobat's:
+Ctrl+P (or the printer button, or right-click → Print) opens N PDF's print dialog, laid out like Acrobat's:
 
-- **Printer** (your Windows default or any installed printer; X PDF remembers your choice), **copies** and collate, **black and white**.
+- **Printer** (your Windows default or any installed printer; N PDF remembers your choice), **copies** and collate, **black and white**.
 - **Pages to print:** all, current page or a range such as `1-3, 5, 8-`, with odd/even pages only and reverse order.
 - **Page sizing & handling:** Fit, Actual size, Shrink oversized pages, Custom scale (%), or Multiple pages per sheet (2, 4, 6, 9 or 16, horizontal or vertical order, optional page border).
 - **Orientation** (auto/portrait/landscape), **paper size** (A4, A3, A5, Letter, Legal), **print on both sides** (long or short edge), **comments & forms** (document and markups, document only, form fields only) and **quality** (150/300/600 dpi).
@@ -91,21 +91,21 @@ Every change creates a revision you can undo (Ctrl+Z) and redo (Ctrl+Y). **Nothi
 
 ### Right-click in File Explorer
 
-Like Acrobat, X PDF adds two commands to the right-click menu of files in File Explorer:
+Like Acrobat, N PDF adds two commands to the right-click menu of files in File Explorer:
 
-- **Convert to PDF with X PDF** on Word, Excel, PowerPoint and OpenDocument files, CSV, RTF, images (PNG, JPEG, TIFF, BMP, GIF, WebP), text and HTML files. Each selected file becomes a PDF in the same folder, named like the original (an existing PDF of that name is never replaced; a number is added), and opens in X PDF.
-- **Combine files in X PDF** on the same types plus PDFs. Select several files, right-click, and the Create PDF tool opens with them in the order Explorer passed them; reorder if needed and choose Create PDF.
+- **Convert to PDF with N PDF** on Word, Excel, PowerPoint and OpenDocument files, CSV, RTF, images (PNG, JPEG, TIFF, BMP, GIF, WebP), text and HTML files. Each selected file becomes a PDF in the same folder, named like the original (an existing PDF of that name is never replaced; a number is added), and opens in N PDF.
+- **Combine files in N PDF** on the same types plus PDFs. Select several files, right-click, and the Create PDF tool opens with them in the order Explorer passed them; reorder if needed and choose Create PDF.
 
 On Windows 10 the commands appear directly in the menu. **On Windows 11 they appear under "Show more options"** (or Shift + right-click). Acrobat appears in Windows 11's short menu because it installs a signed, packaged shell extension; that needs a code-signing certificate (see Known limitations). The installer registers the commands for your Windows account only, and uninstalling removes them.
 
-Results go next to the source file unless you choose another folder (or set a default in Settings). X PDF never overwrites an existing file: it adds a number, for example `report_compressed (1).pdf`.
+Results go next to the source file unless you choose another folder (or set a default in Settings). N PDF never overwrites an existing file: it adds a number, for example `report_compressed (1).pdf`.
 
 ### Reading conversion results professionally
 
 - **PDF to Excel** converts a cell to a number only when the printed text is an unambiguous number (Indian or Western grouping, negatives in brackets, Dr/Cr kept as a format). Account numbers, GSTIN/PAN, invoice references and anything with leading zeros stay as text. The **Extraction Report** sheet shows, page by page, how many printed digits reached the cells and flags pages to check. Treat the output as a working copy that must be reviewed, not as a verified accounting record.
 - **OCR** reports a confidence figure per page and flags weak pages. OCR text is never guaranteed to be correct.
 - **PDF/A** output passes basic checks but is not formally validated; do not file it where certified compliance is required without validating it in a dedicated tool.
-- **Signature images** show intent only. Only the certificate-based **digital signature** protects the document against later changes; X PDF says which is which wherever signatures appear.
+- **Signature images** show intent only. Only the certificate-based **digital signature** protects the document against later changes; N PDF says which is which wherever signatures appear.
 
 ### Keyboard shortcuts
 
@@ -120,24 +120,24 @@ The assignments follow Acrobat on Windows. Shortcuts are ignored while you are t
 | Panels and modes | F4 right-hand panel, Shift+F4 All tools pane, Ctrl+D document properties, Ctrl+H read mode, Ctrl+L full screen, Esc leave read mode or full screen, hold Space and drag to move the page |
 | Read Out Loud | Ctrl+Shift+V read this page, Ctrl+Shift+B read to the end, Ctrl+Shift+C pause or resume, Ctrl+Shift+E stop |
 
-### Where X PDF keeps its data
+### Where N PDF keeps its data
 
 | Data | Location |
 |---|---|
-| Settings, recent list, saved signatures (encrypted with your Windows account), saved actions (`actions.json`, never with passwords) | `%APPDATA%\X PDF` |
-| Log file (no document content, passwords or file contents) | `%APPDATA%\X PDF\logs` |
-| Undo revisions, job working files and scanned pages | `%TEMP%\X-PDF` (removed when documents close and at the next start; Settings shows the size and can clean it up) |
+| Settings, recent list, saved signatures (encrypted with your Windows account), saved actions (`actions.json`, never with passwords) | `%APPDATA%\N PDF` |
+| Log file (no document content, passwords or file contents) | `%APPDATA%\N PDF\logs` |
+| Undo revisions, job working files and scanned pages | `%TEMP%\N-PDF` (removed when documents close and at the next start; Settings shows the size and can clean it up) |
 
-Upgrading from NayanPDF (the name before version 1.1): install X PDF over it; the installer replaces the old program in its folder (`Programs\NayanPDF`), and the first start copies `%APPDATA%\NayanPDF` to `%APPDATA%\X PDF`, so settings, recent files, saved signatures and saved actions carry over. The old folder is left in place; delete it when you no longer need it.
+Upgrading from X PDF (1.1) or NayanPDF (1.0), the earlier names of this app: install N PDF over it. The installer replaces the old program in its folder (`Programs\X-PDF` or `Programs\NayanPDF`), replaces its Start Menu shortcut and right-click commands, and keeps a desktop shortcut if you had one (renamed N PDF). The first start copies `%APPDATA%\X PDF` (or, from NayanPDF, `%APPDATA%\NayanPDF`) to `%APPDATA%\N PDF`, so settings, recent files, saved signatures and saved actions carry over. The old folder is left in place; delete it when you no longer need it.
 
 ## 3. Uninstalling
 
-Use Windows Settings → Apps → Installed apps → X PDF → Uninstall (Windows 10: Settings → Apps → Apps & features). This removes the program, its shortcuts and its temporary folder. **Your documents are never touched.** Settings, saved signatures and saved actions in `%APPDATA%\X PDF` are kept so a reinstall picks them up; delete that folder manually to remove them as well.
+Use Windows Settings → Apps → Installed apps → N PDF → Uninstall (Windows 10: Settings → Apps → Apps & features). This removes the program, its shortcuts and its temporary folder. **Your documents are never touched.** Settings, saved signatures and saved actions in `%APPDATA%\N PDF` are kept so a reinstall picks them up; delete that folder manually to remove them as well.
 
 ## 4. Known limitations
 
 - **Windows coverage:** tested on Windows Server 2025 in CI; not yet on a Windows 10 or 11 desktop or under a standard user account.
-- **Editing existing text** depends on how the PDF was made. Text is edited in its original font when the embedded font contains the needed characters; otherwise a similar font is substituted and X PDF tells you. Rotated or vertical text, text drawn as outlines and scanned pages cannot be edited in place (OCR or Convert to Word are offered instead). Long replacements are not reflowed into following lines; use paragraph mode or convert to Word for heavy rewording. Resizing an existing paragraph box is not yet available in the editor.
+- **Editing existing text** depends on how the PDF was made. Text is edited in its original font when the embedded font contains the needed characters; otherwise a similar font is substituted and N PDF tells you. Rotated or vertical text, text drawn as outlines and scanned pages cannot be edited in place (OCR or Convert to Word are offered instead). Long replacements are not reflowed into following lines; use paragraph mode or convert to Word for heavy rewording. Resizing an existing paragraph box is not yet available in the editor.
 - **Bold/italic** on edited text uses a substitute font family, because PDFs rarely embed the bold variant.
 - **PDF to Word/PowerPoint** quality depends on the source layout; complex multi-column pages may need tidying.
 - **PDF to Excel** does not merge cells in the output; spanning headings go into the first cell of the span.
@@ -148,37 +148,37 @@ Use Windows Settings → Apps → Installed apps → X PDF → Uninstall (Window
 - **PDF/A** is not formally validated (veraPDF needs Java and is not bundled).
 - **Printing** sends pages as images at the chosen resolution (150/300/600 dpi), which is sharp on paper but means the printer does not receive the PDF's text as text. Printer-specific options are set through the optional Windows dialog. Printing several documents in one action is not available.
 - **OCR languages bundled:** English, Hindi, Gujarati (plus orientation detection). Other Tesseract languages can be added offline by copying `.traineddata` files into `<install folder>\resources\tesseract\tessdata`.
-- **Prepare a form:** detection is rule-based (underlines, ruled lines, boxes, check squares beside a label), not trained like Acrobat's; every suggestion is reviewed before it is added. Date and number formats, calculated fields, push buttons and barcode fields are not available (they need form JavaScript, which X PDF never runs).
+- **Prepare a form:** detection is rule-based (underlines, ruled lines, boxes, check squares beside a label), not trained like Acrobat's; every suggestion is reviewed before it is added. Date and number formats, calculated fields, push buttons and barcode fields are not available (they need form JavaScript, which N PDF never runs).
 - **Comment review:** comments are exchanged as XFDF (FDF is not supported). The comment summary is typeset with Latin fonts; comments in Indian scripts may not display in the summary PDF.
 - **Read Out Loud** uses the speech voices installed in Windows; without any, it says so. Spoken audio was not verified in CI, because the build machines have no sound device.
-- **Saved actions** run the listed step types only: no conditional steps, no per-file prompts, no Bates numbering across files (use Batch for that). An image watermark step needs its image chosen again after X PDF restarts.
-- **Scan to PDF** uses Windows Image Acquisition (WIA), not TWAIN; scanners that only offer a TWAIN driver are not listed (scan to a folder on the device, then use Create PDF → Images with OCR). It runs a fixed script in Windows PowerShell, which some company policies block; X PDF then says so. It has **not been tested with a physical scanner**; the automated tests cover the no-scanner case on Windows and the full flow with a simulated scanner.
+- **Saved actions** run the listed step types only: no conditional steps, no per-file prompts, no Bates numbering across files (use Batch for that). An image watermark step needs its image chosen again after N PDF restarts.
+- **Scan to PDF** uses Windows Image Acquisition (WIA), not TWAIN; scanners that only offer a TWAIN driver are not listed (scan to a folder on the device, then use Create PDF → Images with OCR). It runs a fixed script in Windows PowerShell, which some company policies block; N PDF then says so. It has **not been tested with a physical scanner**; the automated tests cover the no-scanner case on Windows and the full flow with a simulated scanner.
 - **Right-click commands on Windows 11** sit under "Show more options", not in the short menu: the short menu only takes packaged, code-signed shell extensions. Explorer's own menu was not driven by the automated tests; the registered commands and what they do were.
 - **Code signing:** the installer and executable are not signed (no paid certificate), so SmartScreen warns on first run.
-- **Licence:** X PDF is AGPL-3.0 because it bundles MuPDF and Ghostscript under their AGPL terms. Free for personal use; if you distribute it, you must also offer its source (see `docs/DEPENDENCIES.md`).
+- **Licence:** N PDF is AGPL-3.0 because it bundles MuPDF and Ghostscript under their AGPL terms. Free for personal use; if you distribute it, you must also offer its source (see `docs/DEPENDENCIES.md`).
 
 ## 5. Troubleshooting
 
 | Symptom | Cause and fix |
 |---|---|
 | "Windows protected your PC" when running the installer | Unsigned installer. More info → Run anyway |
-| "Password required" or "Permission restricted" | The PDF is encrypted or restricts that action. Enter the open password, or the owner password to lift restrictions. X PDF does not bypass protection |
+| "Password required" or "Permission restricted" | The PDF is encrypted or restricts that action. Enter the open password, or the owner password to lift restrictions. N PDF does not bypass protection |
 | "No editable text was found" when editing | The page is a scan or the text is outlines. Run OCR, then use Add Text, or Convert to Word |
 | A replacement character looks different | The original embedded font lacks that character; a substitute font was used (the warning says so) |
-| Office to PDF fails or hangs | Close other LibreOffice windows; delete `%APPDATA%\X PDF\office-profiles` and retry. Password-protected Office files are not supported |
+| Office to PDF fails or hangs | Close other LibreOffice windows; delete `%APPDATA%\N PDF\office-profiles` and retry. Password-protected Office files are not supported |
 | OCR result is poor | Rescan at 300 dpi, choose the correct language in Settings, or try 400 dpi in the OCR tool |
 | "OCR language not installed" | Copy the `.traineddata` file into the tessdata folder (see Known limitations) |
 | A job seems stuck | Open Activity (top-right) and cancel it; cancelling stops the engine process and removes partial output |
-| Output name has "(1)" | A file with that name already existed; X PDF never overwrites |
+| Output name has "(1)" | A file with that name already existed; N PDF never overwrites |
 | Temp folder is large | Close documents you no longer need, or Settings → Temporary files → "Clean up leftovers now" |
-| Anything else | Check `%APPDATA%\X PDF\logs\nayanpdf.log` (contains operation names and error codes, never document contents or passwords) |
+| Anything else | Check `%APPDATA%\N PDF\logs\nayanpdf.log` (contains operation names and error codes, never document contents or passwords) |
 
 ## 6. Development
 
 ### Architecture
 
 ```
-X-PDF.exe (Electron 43)
+N-PDF.exe (Electron 43)
 ├── main process (TypeScript, src/main)
 │   ├── security: sandbox, context isolation, request blocking, IPC validation, path access registry
 │   ├── document sessions: revisions for undo/redo, atomic save, nayan-doc:// streaming to the viewer
@@ -234,13 +234,13 @@ npm ci
 python scripts/build_runtime_win.py     # assembles runtime\win: Python, Tesseract, Ghostscript, LibreOffice
 npm run build
 npx electron-builder --win nsis --x64 --publish never
-# -> release\X-PDF_Setup.exe
-powershell -File scripts\win-acceptance.ps1 -Installer release\X-PDF_Setup.exe -ReportDir acceptance
+# -> release\N-PDF_Setup.exe
+powershell -File scripts\win-acceptance.ps1 -Installer release\N-PDF_Setup.exe -ReportDir acceptance
 ```
 
 `build_runtime_win.py` downloads each component from its official source, verifies pinned SHA-256 hashes (and the Authenticode signature of the LibreOffice installer), extracts it without running any third-party installer except LibreOffice's administrative extract (`msiexec /a`, no system changes), and records versions and hashes in `runtime/win/MANIFEST.json`, which ships inside the application. Options: `--skip-libreoffice`, `--libreoffice-msi <file>`, `--only <component>`.
 
-Pushing to a `claude/**` or `main` branch runs `.github/workflows/windows-installer.yml`: build, engine tests against the bundled runtime, UI test on Windows, installer build, install/offline/uninstall/reinstall acceptance test, then a pre-release with `X-PDF_Setup.exe`, its hash and the acceptance report.
+Pushing to a `claude/**` or `main` branch runs `.github/workflows/windows-installer.yml`: build, engine tests against the bundled runtime, UI test on Windows, installer build, install/offline/uninstall/reinstall acceptance test, then a pre-release with `N-PDF_Setup.exe`, its hash and the acceptance report.
 
 ### Dependency management
 
