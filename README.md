@@ -11,8 +11,8 @@ N PDF (called NayanPDF up to version 1.0 and X PDF in 1.1) is a fully offline PD
 
 ## Current delivery status
 
-- **Windows installer:** built, installed and tested on a clean Windows machine by `.github/workflows/windows-installer.yml`. Every successful build is published as a GitHub pre-release (`v1.2.0-build.N` from 1.2; earlier builds carry the earlier names: `v1.0.0-build.N` up to build 13 as NayanPDF, `v1.1.0-build.19` and `.20` as X PDF) with the installer, its SHA-256 and the acceptance report. Use the newest pre-release. Newest verified: **v1.1.0-build.20** (X PDF), `X-PDF_Setup.exe` 420.6 MB, SHA-256 `2B4DACF81B516FBC4C751FE70629EACEFF9F9CD685003969E6D465D6FB4878E3`. N PDF 1.2.0 (`N-PDF_Setup.exe`) is published by the first build of the renamed code that passes the same checks.
-- **Evidence on Windows (build 20, X PDF):** the 123 engine tests pass against the bundled runtime and again against the installed copy with outbound traffic blocked; the 41-scenario UI test passes; the 93-point acceptance test passes with no failures or warnings. It covers the upgrade from NayanPDF 1.0 (one installation afterwards, old program and shortcut removed, settings carried over, the registered uninstaller present and working), a fresh install, the right-click commands (registered, run as Explorer runs them, removed on uninstall), the security switches compiled into the executable, the offline self-test, app launch with zero network connections and zero listening ports, uninstall and reinstall. For N PDF the acceptance test adds the upgrade from X PDF build 20: its right-click commands and shortcuts replaced, the desktop shortcut kept.
+- **Windows installer:** built, installed and tested on a clean Windows machine by `.github/workflows/windows-installer.yml`. Every successful build is published as a GitHub pre-release (`v1.2.0-build.N` from 1.2; earlier builds carry the earlier names: `v1.0.0-build.N` up to build 13 as NayanPDF, `v1.1.0-build.19` and `.20` as X PDF) with the installer, its SHA-256 and the acceptance report. Use the newest pre-release. Current: **v1.2.0-build.22**, `N-PDF_Setup.exe` 420.3 MB, SHA-256 `99B33C02F65FBBB129A256B78036C32F52F71245B372990299C4CBFEF891F753`.
+- **Evidence on Windows (build 22):** the 123 engine tests pass against the bundled runtime and again against the installed copy with outbound traffic blocked; the 42-scenario UI test passes; the 114-point acceptance test passes with no failures or warnings. It covers the upgrade from X PDF build 20 and from NayanPDF build 13 (one installation afterwards, old program, Start Menu shortcut and X PDF's right-click commands removed, the desktop shortcut kept as "N PDF", settings carried over, the registered uninstaller present and working), a fresh install, the right-click commands (registered, run as Explorer runs them, removed on uninstall), the security switches compiled into `N-PDF.exe`, the offline self-test, app launch with zero network connections and zero listening ports, uninstall and reinstall.
 - **Not yet verified:** installation under a standard (non-administrator) Windows account, Windows 10 or Windows 11 desktop editions specifically (the CI machine is Windows Server 2025, Windows 11 kernel 10.0.26100), scanning with a physical scanner, and spoken audio from Read Out Loud.
 
 ## 1. Installing
@@ -218,7 +218,7 @@ npm start              # runs the app; set NAYANPDF_PYTHON to your Python if it 
 
 ```
 python -m pytest engine/tests -q        # engine: 123 tests on synthetic documents
-node scripts/ui-e2e.mjs                 # UI end-to-end: 41 scenarios (Linux: run under xvfb-run)
+node scripts/ui-e2e.mjs                 # UI end-to-end: 42 scenarios (Linux: run under xvfb-run)
 node scripts/make-icons.mjs             # redraws build/icon.png and build/icon.ico from build/icon.svg
 ```
 

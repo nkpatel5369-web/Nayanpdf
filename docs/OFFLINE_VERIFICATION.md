@@ -80,19 +80,19 @@ Some bundled third-party libraries contain network code they never use in N PDF 
 
 ## 3. Windows acceptance test (executed)
 
-`scripts/win-acceptance.ps1`, run by `.github/workflows/windows-installer.yml` on a clean GitHub Actions machine (Windows Server 2025, x64), performs the brief's §29 acceptance procedure. Result for builds 10, 11 (15 October 2026) and 12 (28 October 2026): **67 of 67 checks passed** each (build 7: 63 of 63; build 3: 62 of 62, before later checks were added).
+`scripts/win-acceptance.ps1`, run by `.github/workflows/windows-installer.yml` on a clean GitHub Actions machine (Windows Server 2025, x64), performs the brief's §29 acceptance procedure. Result for build 22 (30 October 2026, N PDF 1.2.0): **114 of 114 checks passed**. Earlier: build 20, 93 of 93; build 19, 82 of 82; builds 10 to 12, 67 of 67 each; build 7, 63 of 63; build 3, 62 of 62 (later builds added checks).
 
 | Step | Result |
 |---|---|
 | Silent per-user install; files, Start Menu shortcut, uninstall registration, version information | Pass |
 | Windows Firewall rules blocking all outbound traffic for the app's executable (`NayanPDF.exe` up to 1.0, `X-PDF.exe` in 1.1, `N-PDF.exe` from 1.2), the bundled Python, Tesseract, LibreOffice and Ghostscript (10 program rules) | Applied |
 | Built-in self-test of the installed engines with traffic blocked: PDF engine, page operations, compression, qpdf, Office writers, digital-signature engine, OCR (eng, hin, guj), LibreOffice conversion, Ghostscript | 9 / 9 pass |
-| Full engine test suite against the installed runtime, traffic blocked | 105 / 105 pass |
-| Installed app launched (home screen, then with a PDF, which it edits and undoes); every TCP connection owned by its processes sampled throughout | Rendered and edited; **0 remote endpoints** and **0 listening ports** observed in both launches |
+| Full engine test suite against the installed runtime, traffic blocked | 123 / 123 pass (105 / 105 in builds 10 to 12) |
+| Installed app launched (after each of the two upgrades, then on the home screen, then with a PDF, which it edits and undoes); every TCP connection owned by its processes sampled throughout | Rendered and edited; **0 remote endpoints** and **0 listening ports** observed in all four launches |
 | Electron fuses read back from the installed executable (after install and after reinstall) | Run-as-Node off, `NODE_OPTIONS` ignored, inspector arguments ignored, ASAR integrity check on, app loaded only from its ASAR archive, no extra `file:` privileges |
 | Uninstall (user document and settings must survive), then reinstall and repeat the offline self-test | Pass |
 
-Separately, the 32-scenario UI test passed on Windows against the development build with the bundled Windows runtime (build 12). On Windows that test checks the page-level request log; traffic from the browser engine's own processes is covered by the connection sampling above.
+Separately, the 42-scenario UI test passed on Windows against the development build with the bundled Windows runtime (build 22). On Windows that test checks the page-level request log; traffic from the browser engine's own processes is covered by the connection sampling above.
 
 ## 4. How you can verify it yourself on Windows
 
