@@ -95,6 +95,7 @@ function Test-Upgrade {
   Record "Upgrade: no NayanPDF Start Menu shortcut left" (-not (Test-Path (Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\NayanPDF.lnk")))
   $un = Get-Uninstaller
   Record "Upgrade: registered uninstaller present" ($un -and (Test-Path $un)) "$un"
+  Test-ShellVerbs "Upgrade"
   Run-App "upgrade" @()
   $migrated = Join-Path $env:APPDATA "X PDF\settings.json"
   Record "Upgrade: settings carried over from NayanPDF" ((Test-Path $migrated) -and ((Get-Content $migrated -Raw) -match "Upgrade Check")) $migrated
@@ -103,6 +104,46 @@ function Test-Upgrade {
   Record "Upgrade: uninstall after the upgrade" ($p -and $p.ExitCode -eq 0 -and $null -eq (Get-UninstallEntry)) "$(if ($p) { "exit=$($p.ExitCode)" } else { 'uninstaller not found' })"
   Remove-Item -Recurse -Force $legacyDir, $legacyData, (Join-Path $env:APPDATA "X PDF") -ErrorAction SilentlyContinue
   $script:InstallDir = Join-Path $env:LOCALAPPDATA "Programs\X-PDF"
+}
+
+# Explorer right-click commands (registered per user by the installer).
+$Sfa = "HKCU:\Software\Classes\SystemFileAssociations"
+function Get-VerbCommand([string]$ext, [string]$key) {
+  $k = Join-Path $Sfa "$ext\shell\$key\command"
+  if (Test-Path -LiteralPath $k) { return (Get-ItemProperty -LiteralPath $k).'(default)' }
+  return $null
+}
+
+function Test-ShellVerbs([string]$label) {
+  $exe = Join-Path $InstallDir "X-PDF.exe"
+  $conv = Get-VerbCommand ".docx" "XPDF.ConvertToPdf"
+  $comb = Get-VerbCommand ".pdf" "XPDF.Combine"
+  Record "${label}: right-click 'Convert to PDF with X PDF' registered" ($conv -and $conv.Contains($exe) -and $conv.Contains("--convert-to-pdf")) "$conv"
+  Record "${label}: right-click 'Combine files in X PDF' registered" ($comb -and $comb.Contains($exe) -and $comb.Contains("--combine")) "$comb"
+  $types = @(".doc", ".xlsx", ".pptx", ".jpg", ".png", ".txt", ".html") | Where-Object { -not (Get-VerbCommand $_ "XPDF.ConvertToPdf") }
+  Record "${label}: Convert to PDF registered for Office, image, text and HTML files" ($types.Count -eq 0) "$(if ($types.Count) { 'missing: ' + ($types -join ', ') } else { '.doc .xlsx .pptx .jpg .png .txt .html checked' })"
+}
+
+# Runs the registered command for a text file exactly as Explorer would and waits
+# for the installed app to write the PDF next to it.
+function Test-ShellConvert([string]$dir) {
+  $txt = Join-Path $dir "right-click note.txt"
+  [IO.File]::WriteAllText($txt, "Right-click conversion check`r`nLine two")
+  $pdf = Join-Path $dir "right-click note.pdf"
+  Remove-Item $pdf -ErrorAction SilentlyContinue
+  $cmd = Get-VerbCommand ".txt" "XPDF.ConvertToPdf"
+  if (-not $cmd -or $cmd -notmatch '^"([^"]+)"\s+(.*)$') { Record "Right-click Convert to PDF runs the installed app" $false "command not registered"; return }
+  $exe = $Matches[1]
+  $arg = $Matches[2].Replace("%1", $txt)
+  $p = Start-Process -FilePath $exe -ArgumentList $arg -PassThru
+  $deadline = (Get-Date).AddSeconds(120)
+  while (-not (Test-Path $pdf) -and (Get-Date) -lt $deadline) { Start-Sleep -Milliseconds 500 }
+  Start-Sleep -Seconds 2
+  $pages = if (Test-Path $pdf) { & (Join-Path $InstallDir "resources\python\python.exe") -I -c "import pymupdf,sys; d=pymupdf.open(sys.argv[1]); print(d.page_count, 'Right-click conversion check' in d[0].get_text())" $pdf } else { "" }
+  Record "Right-click Convert to PDF runs the installed app and writes the PDF next to the file" ((Test-Path $pdf) -and ("$pages" -match "True")) "$pdf $pages"
+  Get-Process -Name "X-PDF" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+  Get-Process -Name "soffice", "soffice.bin" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+  Start-Sleep -Seconds 2
 }
 
 function Verify-Install([string]$label) {
@@ -115,6 +156,7 @@ function Verify-Install([string]$label) {
     Record "${label}: bundled $rel" (Test-Path (Join-Path $res $rel))
   }
   Record "${label}: Start Menu shortcut" (Test-Path $StartMenu) $StartMenu
+  Test-ShellVerbs $label
   $un = Get-Uninstaller
   Record "${label}: registered uninstaller present" ($un -and (Test-Path $un)) "$un"
   $u = Get-UninstallEntry
@@ -252,6 +294,7 @@ try {
   if ($TestDeps) { Run-EngineSuite }
   Run-App "home" @()
   Run-App "document" @("`"$userDoc`"")
+  Test-ShellConvert $docs
 
   $settingsDir = Join-Path $env:APPDATA "X PDF"
   Record "Settings folder created by the app" (Test-Path $settingsDir) $settingsDir $false
@@ -262,6 +305,7 @@ try {
   Record "Uninstall: program files removed" (-not (Test-Path (Join-Path $InstallDir "X-PDF.exe")))
   Record "Uninstall: Start Menu shortcut removed" (-not (Test-Path $StartMenu))
   Record "Uninstall: registration removed" ($null -eq (Get-UninstallEntry))
+  Record "Uninstall: right-click commands removed" ($null -eq (Get-VerbCommand ".docx" "XPDF.ConvertToPdf") -and $null -eq (Get-VerbCommand ".pdf" "XPDF.Combine"))
   Record "Uninstall: user document preserved" (Test-Path $userDoc) $userDoc
   Record "Uninstall: user settings preserved" (Test-Path $settingsDir) $settingsDir $false
 

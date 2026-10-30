@@ -9,7 +9,7 @@ import { existsSync, mkdirSync, rmSync, writeFileSync, copyFileSync, statSync, r
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { createServer } from "node:http";
 import { createHash } from "node:crypto";
 
@@ -56,14 +56,19 @@ await new Promise((r) => proxy.listen(0, "127.0.0.1", r));
 const proxyUrl = `http://127.0.0.1:${proxy.address().port}`;
 const proxyEnv = IS_WIN ? {} : { HTTPS_PROXY: proxyUrl, HTTP_PROXY: proxyUrl, https_proxy: proxyUrl, http_proxy: proxyUrl, ALL_PROXY: proxyUrl, NO_PROXY: "", no_proxy: "" };
 
-const app = await electron.launch({
-  // Resolved through the electron package: since Electron 43 the binary is
-  // downloaded on first use rather than at npm install time.
-  executablePath: createRequire(import.meta.url)("electron"),
-  // The Chromium sandbox cannot run as root in a Linux container; Windows keeps it.
-  args: [...(IS_WIN ? [] : ["--no-sandbox"]), root, src],
-  env: { ...process.env, ...proxyEnv, NAYANPDF_PYTHON: PY, NAYANPDF_TEST_DIALOGS: dialogFile, NAYANPDF_TEST_USERDATA: join(out, "profile"), NAYANPDF_TEST_SCANNER: join(out, "scanner"), ELECTRON_DISABLE_SECURITY_WARNINGS: "1" },
-  timeout: 60000,
+// Resolved through the electron package: since Electron 43 the binary is
+// downloaded on first use rather than at npm install time.
+const electronPath = createRequire(import.meta.url)("electron");
+// The Chromium sandbox cannot run as root in a Linux container; Windows keeps it.
+const baseArgs = [...(IS_WIN ? [] : ["--no-sandbox"]), root];
+const launchEnv = { ...process.env, ...proxyEnv, NAYANPDF_PYTHON: PY, NAYANPDF_TEST_DIALOGS: dialogFile, NAYANPDF_TEST_USERDATA: join(out, "profile"), NAYANPDF_TEST_SCANNER: join(out, "scanner"), ELECTRON_DISABLE_SECURITY_WARNINGS: "1" };
+const app = await electron.launch({ executablePath: electronPath, args: [...baseArgs, src], env: launchEnv, timeout: 60000 });
+// A second start of the app, as Explorer makes for a right-click command; it hands
+// its arguments to the running app and exits. Resolves with its exit code.
+const secondInstance = (args) => new Promise((resolve) => {
+  const c = spawn(electronPath, [...baseArgs, ...args], { env: launchEnv, stdio: "ignore" });
+  const t = setTimeout(() => { c.kill(); resolve("timeout"); }, 60000);
+  c.on("exit", (code) => { clearTimeout(t); resolve(code); });
 });
 // Test-hook lines from the main process, kept so scenarios can check what a
 // dialog would have offered (for example the file name Save As suggests).
@@ -1228,6 +1233,63 @@ try {
     const failed = Object.entries(checks).filter(([, x]) => !x).map(([k]) => k);
     record("Scan to PDF: no scanner reported plainly, then a simulated feeder scan with OCR", failed.length === 0,
       `${failed.length ? "failed: " + failed.join(", ") + "; " : Object.keys(checks).length + " checks; "}real scanner path said: "${reason.slice(0, 140)}". A physical scanner was NOT used.`);
+  });
+
+  await step("Explorer right-click: Convert to PDF and Combine files", async () => {
+    const checks = {};
+    const dir = join(work, "explorer");
+    rmSync(dir, { recursive: true, force: true });
+    mkdirSync(dir, { recursive: true });
+    const files = { docx: join(dir, "Engagement letter.docx"), txt: join(dir, "notes.txt"), png: join(dir, "logo.png"), pdf: join(dir, "a.pdf") };
+    copyFileSync(join(fx, "financial.docx"), files.docx);
+    copyFileSync(join(fx, "notes.txt"), files.txt);
+    copyFileSync(join(fx, "logo.png"), files.png);
+    copyFileSync(join(fx, "a.pdf"), files.pdf);
+    // A PDF already named like one conversion's result must not be replaced.
+    copyFileSync(join(fx, "b.pdf"), join(dir, "notes.pdf"));
+    const before = createHash("sha256").update(readFileSync(join(dir, "notes.pdf"))).digest("hex");
+    const tabsBefore = await page.locator(".tab:not(.home-tab)").count();
+    // Explorer starts one process per selected file, a moment apart.
+    const conv = [];
+    for (const f of [files.docx, files.txt, files.png]) {
+      conv.push(secondInstance(["--convert-to-pdf", f]));
+      await page.waitForTimeout(150);
+    }
+    const codes = await Promise.all(conv);
+    checks.secondInstancesExit = codes.every((c) => c === 0);
+    const expected = [join(dir, "Engagement letter.pdf"), join(dir, "notes (1).pdf"), join(dir, "logo.pdf")];
+    const t0 = Date.now();
+    while (!expected.every((f) => existsSync(f)) && Date.now() - t0 < 180000) await page.waitForTimeout(500);
+    checks.converted = expected.every((f) => existsSync(f));
+    checks.existingKept = createHash("sha256").update(readFileSync(join(dir, "notes.pdf"))).digest("hex") === before;
+    await page.waitForFunction((n) => document.querySelectorAll(".tab:not(.home-tab)").length >= n + 3, tabsBefore, { timeout: 60000 }).catch(() => undefined);
+    checks.opened = (await page.locator(".tab:not(.home-tab)").count()) >= tabsBefore + 3;
+    checks.oneWindow = app.windows().length === 1;
+    const txt = checks.converted ? pdfText(expected[0]) : "";
+    checks.docxText = /Profit|Loss|Statement/i.test(txt);
+    // Combine: three files of three kinds, in the order they were selected.
+    const comb = [];
+    for (const f of [files.pdf, files.png, files.txt]) {
+      comb.push(secondInstance(["--combine", f]));
+      await page.waitForTimeout(150);
+    }
+    await Promise.all(comb);
+    await page.waitForSelector('.tool-head h1:has-text("Create PDF")', { timeout: 30000 });
+    await page.waitForFunction(() => document.querySelectorAll(".file-list .file-row, .file-row").length >= 3, null, { timeout: 30000 }).catch(() => undefined);
+    const listed = await page.locator(".file-row").allTextContents();
+    checks.combineListed = listed.length === 3 && /a\.pdf/.test(listed[0]) && /logo\.png/.test(listed[1]) && /notes\.txt/.test(listed[2]);
+    await shot("26-explorer-combine");
+    await page.click('button.primary:has-text("Create PDF")');
+    const combined = join(dir, "combined.pdf");
+    const t1 = Date.now();
+    while (!existsSync(combined) && Date.now() - t1 < 180000) await page.waitForTimeout(500);
+    const ct = existsSync(combined) ? pdfText(combined) : "";
+    const aPages = Number((pdfText(files.pdf).match(/PAGES (\d+)/) || [])[1]);
+    const cPages = Number((ct.match(/PAGES (\d+)/) || [])[1]);
+    checks.combined = cPages > aPages + 1 && /Report|A/.test(ct);
+    const failed = Object.entries(checks).filter(([, v]) => !v).map(([k]) => k);
+    record("Explorer right-click: Convert to PDF and Combine files", failed.length === 0,
+      `${failed.length ? "failed: " + failed.join(", ") + "; " : Object.keys(checks).length + " checks; "}second instances exited ${codes.join("/")}; listed ${JSON.stringify(listed.map((x) => x.slice(0, 30)))}; combined ${cPages} pages (a.pdf ${aPages} + image + text). Explorer's own menu is not driven by this test`);
   });
 
   await step("Settings and dark theme", async () => {

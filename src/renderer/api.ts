@@ -59,6 +59,7 @@ export const api = {
   scan: (o: { deviceId: string; source: "flatbed" | "feeder"; colour: "color" | "gray" | "bw"; dpi: number }) =>
     call<{ pages: { path: string; thumb: string; width: number; height: number }[] }>("scan:start", o),
   cancelScan: () => call("scan:cancel"),
+  shellReady: () => call("shell:ready"),
   actions: () => call<SavedAction[]>("actions:list"),
   saveAction: (a: Partial<SavedAction> & { name: string; steps: any[] }) => call<SavedAction[]>("actions:save", a),
   deleteAction: (id: string) => call<SavedAction[]>("actions:delete", id),

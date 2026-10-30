@@ -45,6 +45,7 @@ export const INVOKE_CHANNELS = [
   "scan:devices",
   "scan:start",
   "scan:cancel",
+  "shell:ready",
   "convert:htmlToPdf",
   "window:confirm",
 ] as const;
@@ -58,6 +59,7 @@ export const EVENT_CHANNELS = [
   "settings:changed",
   "menu:command",
   "scan:page",
+  "app:shellCommand",
 ] as const;
 export type EventChannel = (typeof EVENT_CHANNELS)[number];
 

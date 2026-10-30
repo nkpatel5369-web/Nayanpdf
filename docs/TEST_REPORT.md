@@ -10,7 +10,7 @@ What was tested, how, the results, the defects the tests found, and what has not
 |---|---|---|
 | Engine test suite (pytest, synthetic documents) | Linux development build | **123 / 123 passed** |
 | Engine test suite with networking disabled | Linux, empty network namespace | **123 / 123 passed** (29 October 2026) |
-| UI end-to-end test (real Electron app, 40 scenarios) | Linux development build (xvfb) | **40 / 40 passed**; see §4 for run history |
+| UI end-to-end test (real Electron app, 41 scenarios) | Linux development build (xvfb) | **41 / 41 passed** after the right-click scenario was added; see §4 for run history |
 | UI end-to-end test with networking disabled | Linux, network namespace with loopback only | **40 / 40 passed** (29 October 2026) |
 | Any outbound attempt by any app process (recording proxy) | Linux | **0** (the check detects the spell-check download that existed before the fix) |
 | Office linked-content leak test, sensitivity check | Linux | Leak detected with protection removed; none with protection |
@@ -98,8 +98,9 @@ All 105 were also run inside a Linux network namespace with no usable network in
 | 36 | Prepare a form | 9 checks on a flat registration form: 5 blanks suggested and none added; one accepted, one dropped, the rest added; radio group of two with the group name remembered; drop-down named with four choices; field moved 40 px; field deleted with the Delete key; saved file has the five fields with their types and choices; filling it selects exactly one radio button; no renderer error during the scenario | Pass |
 | 37 | Saved actions | 6 checks: five ready-made actions; a new action (watermark, remove properties, password) saved; run on two files: both need the password, carry the watermark and have no author, the 20-page file keeps 20 pages; originals byte-identical; no password in `actions.json`; the action deleted | Pass |
 | 38 | Scan to PDF | The real scanner path reports why it cannot scan (Linux: works on Windows; Windows CI: no scanner) and keeps Scan disabled; then a simulated two-page feeder scan, pages swapped, saved with OCR: 2 pages, recognised text in the swapped order, opened in a tab. **No physical scanner was used** | Pass |
-| 39 | Settings and dark theme | Theme switched | Pass |
-| 40 | No network requests by the app | 0 page requests; on Linux 0 attempts by any app process through a recording proxy | Pass |
+| 39 | Explorer right-click commands | Started as Explorer does (one extra app start per selected file, 150 ms apart): three files (Word, text, image) converted next to their originals, `notes.pdf` already present and left byte-identical (the new one is `notes (1).pdf`), three tabs opened, one window, the extra starts exited with code 0; then a PDF, an image and a text file combined in the selected order into one 6-page PDF. Explorer's own menu is not driven | Pass |
+| 40 | Settings and dark theme | Theme switched | Pass |
+| 41 | No network requests by the app | 0 page requests; on Linux 0 attempts by any app process through a recording proxy | Pass |
 
 **Run history.** The suite was run repeatedly while it was being extended. The Merge scenario (now 18) failed in 3 of 8 complete runs before the fix for defect 13, and the Compare scenario (now 22) failed in the same runs only because it uses the merged file as input. After the fix: 3 consecutive complete runs with networking disabled, 25 / 25 each.
 
@@ -177,4 +178,5 @@ Screenshots of every scenario are written to `test-results/ui/` (not committed).
 | Read Out Loud producing audible speech | Not run | CI machines have no sound device; the app's handling of that case is tested |
 | Prepare a form detection on real client forms | Not run, by design | Synthetic forms only; detection is rule-based and its suggestions are reviewed by the user |
 | Upgrade from NayanPDF with data the app wrote itself | Partly | Build 19 upgraded a real NayanPDF 1.0 installation and carried over a planted settings file; saved signatures encrypted by a real NayanPDF session were not part of the test |
+| File Explorer's own right-click menu (the entries appearing, Windows 11 "Show more options") | Not run | Explorer cannot be driven by the test tools; the registry entries, the registered command run as Explorer runs it, and the app's handling of several files are tested |
 | Real-world documents | Not run, by design | The brief requires synthetic test documents |

@@ -15,6 +15,7 @@ import { appTempBase, appTempRoot } from "./paths";
 import * as store from "./store";
 import { testAnswer } from "./testhooks";
 import { cancelScan, listScanners, scan } from "./scan";
+import { shellReady } from "./shell";
 
 const FILTERS: Record<string, Electron.FileFilter[]> = {
   pdf: [{ name: "PDF documents", extensions: ["pdf"] }],
@@ -342,6 +343,7 @@ const handlers: Record<string, Handler> = {
     store.deleteSignature(str(payload, "id"));
     return store.listSignatures();
   },
+  "shell:ready": () => shellReady(),
   "scan:devices": () => listScanners(),
   "scan:start": (e, payload) => {
     const p = obj(payload);

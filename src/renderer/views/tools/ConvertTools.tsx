@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { FileImage, FileSpreadsheet, FileText, Presentation, FileCode2, Image, Type, Globe, FileType2 } from "lucide-react";
 import { api, dirName, joinPath, stem } from "../../api";
 import { useApp } from "../../store";
-import { FileEntry, FileList, JobView, OutputDir, useJob } from "../../components/common";
+import { FileEntry, FileList, JobView, OutputDir, probeFile, useJob } from "../../components/common";
 import { Check, Field, Notice, Seg } from "../../components/ui";
 import { toolById } from "../../tools";
 import { RunBar, SourcePicker, Src, ToolPage, outDirOf, outPath, srcParams, useInitialSource } from "./shared";
@@ -305,6 +305,23 @@ function ToPdf() {
 export function CreateTool(props: { args?: any }) {
   const [files, setFiles] = useState<FileEntry[]>(() => (props.args?.files || []).map((p: string) => ({ path: p })));
   const [name, setName] = useState("combined");
+  // "Combine files in X PDF" from Explorer while this tool is already open: take the new selection.
+  useEffect(() => {
+    if (props.args?.from !== "explorer") return;
+    const paths: string[] = props.args.files || [];
+    setFiles(paths.map((p) => ({ path: p })));
+    // Same checks as files added by hand: page count, thumbnail, password-protected files flagged.
+    let alive = true;
+    (async () => {
+      for (const p of paths) {
+        const info = await probeFile(p);
+        if (alive) setFiles((fs) => fs.map((f) => (f.path === p ? { ...f, ...info } : f)));
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [props.args?.at]);
   const [bm, setBm] = useState(true);
   const [pageSize, setPageSize] = useState("A4");
   const [outDir, setOutDir] = useState<string | null>(null);

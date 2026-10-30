@@ -11,6 +11,7 @@ import { registerIpc } from "./ipc";
 import { log } from "./log";
 import { appTempBase, appTempRoot, preloadPath, rendererDir } from "./paths";
 import { getSettings } from "./store";
+import { parseShellArgs, queueShell, setShellWindow } from "./shell";
 import { testAnswer } from "./testhooks";
 
 // Automated UI tests use a throw-away profile so they never touch a real user's
@@ -72,11 +73,21 @@ function pdfArgs(argv: string[]): string[] {
   return argv.filter((a) => !a.startsWith("-") && extname(a).toLowerCase() === ".pdf" && existsSync(a) && statSync(a).isFile()).map((a) => resolve(a));
 }
 
-if (!app.requestSingleInstanceLock()) {
+// A second start (double-click on a PDF, or an Explorer right-click command) hands its
+// arguments to the running instance. They travel as additionalData because Chromium
+// may add or reorder switches in the argv it reports.
+const ownArgs = process.argv.slice(app.isPackaged ? 1 : 2);
+if (!app.requestSingleInstanceLock({ argv: ownArgs })) {
   app.quit();
 } else {
-  app.on("second-instance", (_e, argv) => {
-    const files = pdfArgs(argv.slice(1));
+  app.on("second-instance", (_e, argv, _cwd, data: any) => {
+    const args: string[] = Array.isArray(data?.argv) && data.argv.every((a: unknown) => typeof a === "string") ? data.argv : argv.slice(1);
+    const shell = parseShellArgs(args);
+    if (shell) {
+      queueShell(shell.verb, shell.files);
+      return;
+    }
+    const files = pdfArgs(args);
     files.forEach((f) => access.allowInput(f));
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
@@ -247,9 +258,15 @@ app.whenReady().then(() => {
   docs.registerDocProtocol();
   registerIpc();
   getSettings();
-  const files = pdfArgs(process.argv.slice(app.isPackaged ? 1 : 2));
-  files.forEach((f) => access.allowInput(f));
-  pendingOpen.push(...files);
+  setShellWindow(() => mainWindow);
+  const shell = parseShellArgs(ownArgs);
+  if (shell) {
+    queueShell(shell.verb, shell.files);
+  } else {
+    const files = pdfArgs(ownArgs);
+    files.forEach((f) => access.allowInput(f));
+    pendingOpen.push(...files);
+  }
   cleanupOldTemp();
   createWindow();
   enginePool.warmUp();

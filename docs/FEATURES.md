@@ -7,14 +7,14 @@ Status of every feature in the NayanPDF brief (the product's name before version
 - **E:** engine test in `engine/tests/` (pytest, synthetic documents, output files reopened and inspected).
 - **U:** scenario in the UI end-to-end test `scripts/ui-e2e.mjs`, which drives the real Electron application, its main process and engine (see `docs/TEST_REPORT.md`).
 
-**Platforms.** The evidence codes refer to tests run on the Linux development build. The same 123 engine tests and 40 UI scenarios have also been run on Windows (GitHub Actions, Windows Server 2025), against the bundled Windows runtime, and the installed application passed the 82-point Windows acceptance test, including the upgrade from NayanPDF 1.0 (build 19). Windows 10/11 desktop editions and standard (non-administrator) accounts have not been tested.
+**Platforms.** The evidence codes refer to tests run on the Linux development build. The same 123 engine tests and 40 UI scenarios (41 from the right-click commands onwards) have also been run on Windows (GitHub Actions, Windows Server 2025), against the bundled Windows runtime, and the installed application passed the 82-point Windows acceptance test, including the upgrade from NayanPDF 1.0 (build 19). Windows 10/11 desktop editions and standard (non-administrator) accounts have not been tested.
 
 ## Status summary
 
 | Status | Register lines |
 |---|---|
 | Fully implemented and tested | 199 |
-| Implemented with limitations | 51 |
+| Implemented with limitations | 52 |
 | Not implemented | 6 |
 | Requires optional dependency | 0 |
 | Requires paid licence | 1 |
@@ -29,6 +29,7 @@ No processing feature needs a paid licence or a separately installed component: 
 |---|---|---|
 | Dashboard tiles for all 15 required tools (Edit, Merge, Split, Compress, Convert, Organize, OCR, Create, Annotate, Sign, Protect, Redact, Compare, Extract Images, Fill Forms) plus Scan to PDF, Search Across Files, Prepare a Form, Watermark, Properties, Utilities | Fully implemented and tested | Tiles open the corresponding tool or document mode; merge, split, OCR, protect, compare and convert are driven through the UI by the test (U18–U23) |
 | Open File action | Fully implemented and tested | U1 (command-line open), Open button and Ctrl+O use the same path |
+| File Explorer right-click commands "Convert to PDF with X PDF" (Office, CSV, RTF, images, text, HTML) and "Combine files in X PDF" (the same plus PDFs), several files at once, as in Acrobat | Implemented with limitations | U39 (three files converted next to their originals, an existing PDF of the same name kept, results opened; three files of three kinds combined in the selected order); Windows acceptance test: commands registered after install and after the upgrade, the registered command run as Explorer runs it makes the installed app write the PDF, commands removed on uninstall. On Windows 11 they are under "Show more options" (the short menu needs a signed packaged extension). Explorer's own menu was not driven by a test |
 | Drag-and-drop opening | Implemented with limitations | Implemented (files dropped anywhere are registered by the isolated preload script). Not covered by an automated test: Playwright cannot simulate an OS file drop |
 | Recent documents list | Implemented with limitations | Implemented, with a "Clear" action in Settings. Not covered by an automated test |
 | Multiple open documents in tabs | Fully implemented and tested | U: several scenarios run with two or three tabs open |
@@ -50,11 +51,11 @@ No processing feature needs a paid licence or a separately installed component: 
 | Search within document | Fully implemented and tested | U4 |
 | Document properties panel (pages, file size, page sizes, PDF version, encryption, fonts) | Fully implemented and tested | E: `test_probe`, `test_inspect_and_integrity`; panel shown in U screenshots |
 | Save (Ctrl+S) and Save As (Ctrl+Shift+S) | Fully implemented and tested | U10: Save As writes a new file and the original is byte-identical afterwards. U28: Save As suggests the document's own name in its own folder (no added suffix); replacing the original needs one confirmation per document per session, after which Ctrl+S saves straight to it. The confirmation can be switched off in Settings |
-| Light and dark themes | Fully implemented and tested | U39 |
+| Light and dark themes | Fully implemented and tested | U40 |
 | Windows display scaling / high-DPI | Implemented with limitations | Uses Chromium's native per-monitor DPI handling and vector UI icons. Not tested on a Windows high-DPI display |
 | Conversion centre with output folder, page ranges, quality, OCR options | Fully implemented and tested | U16, U23 |
 | Batch workspace with queue, status, output location, errors | Fully implemented and tested | U17, E: `test_batch_continues_after_invalid_file` |
-| Settings: theme, default folder, OCR languages, export settings, compression preset, recent files, temp files | Implemented with limitations | All settings are stored locally and applied. Only the theme setting is exercised by an automated test (U39) |
+| Settings: theme, default folder, OCR languages, export settings, compression preset, recent files, temp files | Implemented with limitations | All settings are stored locally and applied. Only the theme setting is exercised by an automated test (U40) |
 
 ## 2. PDF viewing (brief §8)
 
@@ -359,7 +360,7 @@ X PDF edits the page content stream itself. It does not lay white boxes over the
 | Restricted preload bridge with channel allowlist | Fully implemented and tested | `src/preload/preload.ts`, `src/shared/ipc.ts` |
 | IPC validation: sender origin, argument types, method allowlist, paths limited to files the user chose | Fully implemented and tested | `src/main/ipc.ts`, `src/main/access.ts`; exercised by every UI scenario |
 | No shell interpolation; external tools run with argument arrays | Fully implemented and tested | `engine/nayanpdf_engine/util/tools.py` |
-| Navigation and new windows blocked; all non-local requests cancelled; spell-check dictionary downloads disabled in every session | Fully implemented and tested | U40 (no page requests; on Linux, no attempt by any app process through a recording proxy) |
+| Navigation and new windows blocked; all non-local requests cancelled; spell-check dictionary downloads disabled in every session | Fully implemented and tested | U41 (no page requests; on Linux, no attempt by any app process through a recording proxy) |
 | No open ports or listeners | Fully implemented and tested | Engine talks over stdin/stdout pipes only. Windows acceptance (builds 10 to 12): 0 listening TCP ports owned by X PDF processes, sampled throughout two launches of the installed app |
 | No telemetry, updater, accounts, activation | Fully implemented and tested | None exists in the code; see `docs/OFFLINE_VERIFICATION.md` |
 | Electron fuses (no ELECTRON_RUN_AS_NODE, no inspector, ASAR integrity) | Fully implemented and tested | Set at packaging time; read back from the installed executable by the Windows acceptance test (`NayanPDF.exe` in builds 10 to 13, `X-PDF.exe` from 1.1): Run-as-Node off, `NODE_OPTIONS` and inspector arguments ignored, ASAR integrity on, ASAR-only loading on |

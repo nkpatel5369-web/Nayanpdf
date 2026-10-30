@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import { BrandMark } from "./components/BrandMark";
 import { ActionsView } from "./views/ActionsView";
+import { runShellCommand } from "./shellCommands";
 import { Activity, FolderOpen, Home as HomeIcon, Layers, Moon, Settings as SettingsIcon, Sun, Wrench, X, ArrowLeftRight, Menu as MenuIcon } from "lucide-react";
 import type { DocState, JobInfo, Settings } from "@shared/ipc";
 import { api, on } from "./api";
@@ -32,7 +33,10 @@ export function App() {
       on("doc:changed", (s: DocState) => useApp.getState().updateDocState(s)),
       on("settings:changed", (s: Settings) => { setSettings(s); applyTheme(s.theme); }),
       on("app:openFiles", async (files: string[]) => { for (const f of files) await openDocument(f); }),
+      on("app:shellCommand", (c: any) => runShellCommand(c)),
     ];
+    // Listening now: right-click commands from Explorer can be delivered.
+    api.shellReady().catch(() => undefined);
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     const mqh = () => applyTheme(useApp.getState().settings.theme);
     mq.addEventListener("change", mqh);

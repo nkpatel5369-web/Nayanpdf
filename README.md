@@ -89,6 +89,15 @@ Every change creates a revision you can undo (Ctrl+Z) and redo (Ctrl+Y). **Nothi
 - **Search across files** (Ctrl+Shift+F) finds a word, number or phrase in every PDF of a folder (with sub-folders) or in all open documents, optionally in comments too; a result opens the file at that page with the term highlighted. Password-protected and scanned files are listed as not searched, with the reason.
 - **Scan to PDF** takes pages from the scanner connected to the computer (flatbed or document feeder; colour, greyscale or black and white; 150 to 600 dpi), lets you reorder or remove pages and saves one PDF, searchable if OCR is ticked. It uses Windows Image Acquisition, the scanner support built into Windows.
 
+### Right-click in File Explorer
+
+Like Acrobat, X PDF adds two commands to the right-click menu of files in File Explorer:
+
+- **Convert to PDF with X PDF** on Word, Excel, PowerPoint and OpenDocument files, CSV, RTF, images (PNG, JPEG, TIFF, BMP, GIF, WebP), text and HTML files. Each selected file becomes a PDF in the same folder, named like the original (an existing PDF of that name is never replaced; a number is added), and opens in X PDF.
+- **Combine files in X PDF** on the same types plus PDFs. Select several files, right-click, and the Create PDF tool opens with them in the order Explorer passed them; reorder if needed and choose Create PDF.
+
+On Windows 10 the commands appear directly in the menu. **On Windows 11 they appear under "Show more options"** (or Shift + right-click). Acrobat appears in Windows 11's short menu because it installs a signed, packaged shell extension; that needs a code-signing certificate (see Known limitations). The installer registers the commands for your Windows account only, and uninstalling removes them.
+
 Results go next to the source file unless you choose another folder (or set a default in Settings). X PDF never overwrites an existing file: it adds a number, for example `report_compressed (1).pdf`.
 
 ### Reading conversion results professionally
@@ -144,6 +153,7 @@ Use Windows Settings → Apps → Installed apps → X PDF → Uninstall (Window
 - **Read Out Loud** uses the speech voices installed in Windows; without any, it says so. Spoken audio was not verified in CI, because the build machines have no sound device.
 - **Saved actions** run the listed step types only: no conditional steps, no per-file prompts, no Bates numbering across files (use Batch for that). An image watermark step needs its image chosen again after X PDF restarts.
 - **Scan to PDF** uses Windows Image Acquisition (WIA), not TWAIN; scanners that only offer a TWAIN driver are not listed (scan to a folder on the device, then use Create PDF → Images with OCR). It runs a fixed script in Windows PowerShell, which some company policies block; X PDF then says so. It has **not been tested with a physical scanner**; the automated tests cover the no-scanner case on Windows and the full flow with a simulated scanner.
+- **Right-click commands on Windows 11** sit under "Show more options", not in the short menu: the short menu only takes packaged, code-signed shell extensions. Explorer's own menu was not driven by the automated tests; the registered commands and what they do were.
 - **Code signing:** the installer and executable are not signed (no paid certificate), so SmartScreen warns on first run.
 - **Licence:** X PDF is AGPL-3.0 because it bundles MuPDF and Ghostscript under their AGPL terms. Free for personal use; if you distribute it, you must also offer its source (see `docs/DEPENDENCIES.md`).
 
@@ -208,7 +218,7 @@ npm start              # runs the app; set NAYANPDF_PYTHON to your Python if it 
 
 ```
 python -m pytest engine/tests -q        # engine: 123 tests on synthetic documents
-node scripts/ui-e2e.mjs                 # UI end-to-end: 40 scenarios (Linux: run under xvfb-run)
+node scripts/ui-e2e.mjs                 # UI end-to-end: 41 scenarios (Linux: run under xvfb-run)
 node scripts/make-icons.mjs             # redraws build/icon.png and build/icon.ico from build/icon.svg
 ```
 
