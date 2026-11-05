@@ -8,6 +8,9 @@ on:
       - "README.md"
       - "scripts/ui-e2e.mjs"
       - ".github/workflows/ui-windows.yml"
+      - "android/**"
+      - ".github/workflows/android.yml"
+      - "scripts/make_android_test_assets.py"
   workflow_dispatch:
 
 permissions:

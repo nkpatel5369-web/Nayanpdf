@@ -1,0 +1,62 @@
+name: Android
+
+# Builds N PDF for Android and tests it on Android emulators: the PDF engine's
+# instrumented tests now; the app's own tests are added with the app.
+on:
+  push:
+    branches: ["claude/**", "main"]
+    paths:
+      - "android/**"
+      - ".github/workflows/android.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Enable KVM for the Android emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Engine tests on an Android 14 emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
+          working-directory: android
+          script: |
+            ./gradlew --no-daemon :engine:connectedDebugAndroidTest
+            adb logcat -d -s NPDF-PERF:I NPDF-COMPRESS:I > engine-log.txt || true
+
+      - name: Upload test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-tests
+          path: |
+            android/engine/build/reports/androidTests/
+            android/engine/build/outputs/androidTest-results/
+            android/engine-log.txt
+          if-no-files-found: warn
