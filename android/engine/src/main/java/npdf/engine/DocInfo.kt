@@ -4,7 +4,6 @@ import com.artifex.mupdf.fitz.Document
 import com.artifex.mupdf.fitz.Outline
 import com.artifex.mupdf.fitz.PDFDocument
 import com.artifex.mupdf.fitz.Quad
-import com.artifex.mupdf.fitz.StructuredText
 
 /** Document properties, bookmarks and search. */
 object DocInfo {
@@ -49,14 +48,8 @@ object DocInfo {
     /** Finds [query] on one page (1-based); each hit may span several lines (several quads). */
     fun searchPage(doc: PDFDocument, pageNumber: Int, query: String, matchCase: Boolean = false): List<Hit> {
         if (query.isBlank()) return emptyList()
-        val page = doc.loadPage(pageNumber - 1)
-        val st = page.toStructuredText()
-        try {
-            val res = st.search(query, if (matchCase) StructuredText.SEARCH_EXACT else StructuredText.SEARCH_IGNORE_CASE)
-            return res.map { Hit(pageNumber, it) }
-        } finally {
-            st.destroy()
-        }
+        val text = PageText.of(doc.loadPage(pageNumber - 1) as com.artifex.mupdf.fitz.PDFPage)
+        return text.search(query, matchCase).map { Hit(pageNumber, it) }
     }
 
     /** Plain text of a page, in reading order (for Read Out Loud and copying). */

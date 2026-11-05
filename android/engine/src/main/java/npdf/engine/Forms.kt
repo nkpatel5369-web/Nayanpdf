@@ -77,7 +77,10 @@ object Forms {
         if (isOn(w) != checked) throw PdfError(Codes.VERIFY_FAILED, "The box could not be changed.")
     }
 
+    /** Whether this check box or radio button itself is on: its own appearance state, not the group's value. */
     fun isOn(w: PDFWidget): Boolean {
+        val state = w.getObject().get("AS")
+        if (state.isName) return state.asName() != "Off"
         val v = w.value ?: return false
         return v.isNotEmpty() && v != "Off"
     }

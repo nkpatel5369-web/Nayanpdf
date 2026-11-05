@@ -58,12 +58,14 @@ object Annotations {
     }
 
     /** A text box comment. */
-    fun addTextBox(doc: PDFDocument, pageNumber: Int, rect: Rect, text: String, fontSize: Float = 12f, argb: Int = 0xFF000000.toInt(), author: String? = null): Int {
+    fun addTextBox(doc: PDFDocument, pageNumber: Int, rect: Rect, text: String, fontSize: Float = 12f, argb: Int = 0xFF000000.toInt(),
+                   author: String? = null, borderWidth: Float = 1f): Int {
         annotatable(doc)
         if (text.isBlank()) throw PdfError(Codes.INVALID, "Enter the text for the box.")
         val page = Pdf.page(doc, pageNumber)
         val a = page.createAnnotation(PDFAnnotation.TYPE_FREE_TEXT)
         a.rect = rect
+        a.borderWidth = borderWidth
         a.setDefaultAppearance("Helv", fontSize, colorOf(argb))
         return finish(a, author, text)
     }
@@ -192,9 +194,19 @@ object Annotations {
         when {
             a.type == PDFAnnotation.TYPE_INK -> a.inkList = a.inkList.map { s -> s.map { Point(it.x + dx, it.y + dy) }.toTypedArray() }.toTypedArray()
             a.type == PDFAnnotation.TYPE_LINE -> { val l = a.line; a.setLine(Point(l[0].x + dx, l[0].y + dy), Point(l[1].x + dx, l[1].y + dy)) }
-            a.hasQuadPoints() -> a.quadPoints = a.quadPoints.map { q -> Quad(q.ul_x + dx, q.ul_y + dy, q.ur_x + dx, q.ur_y + dy, q.ll_x + dx, q.ll_y + dy, q.lr_x + dx, q.lr_y + dy) }.toTypedArray()
+            a.quadPointCount > 0 -> a.quadPoints = a.quadPoints.map { q -> Quad(q.ul_x + dx, q.ul_y + dy, q.ur_x + dx, q.ur_y + dy, q.ll_x + dx, q.ll_y + dy, q.lr_x + dx, q.lr_y + dy) }.toTypedArray()
             else -> { val r = a.rect; a.rect = Rect(r.x0 + dx, r.y0 + dy, r.x1 + dx, r.y1 + dy) }
         }
+        a.update()
+    }
+
+    /** Moves and resizes a box-shaped comment (note, text box, shape, stamp) to [rect]. */
+    fun setRect(doc: PDFDocument, pageNumber: Int, id: Int, rect: Rect) {
+        annotatable(doc)
+        val page = Pdf.page(doc, pageNumber)
+        val a = find(page, id)
+        if (!a.hasRect()) throw PdfError(Codes.NOT_SUPPORTED, "This comment cannot be resized.")
+        a.rect = rect
         a.update()
     }
 

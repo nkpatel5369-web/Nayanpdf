@@ -5,7 +5,6 @@ import com.artifex.mupdf.fitz.ColorSpace
 import com.artifex.mupdf.fitz.Document
 import com.artifex.mupdf.fitz.Matrix
 import com.artifex.mupdf.fitz.Rect
-import com.artifex.mupdf.fitz.StructuredText
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -91,11 +90,33 @@ class SecurityCompressOcrTest {
         assertTrue("the page looks exactly the same", before.contentEquals(after))
         val text = Fixtures.text(saved, 1)
         for (w in words) assertTrue("${w.text} in $text", text.contains(w.text))
-        val hits = p2.toStructuredText().search("Revenue", StructuredText.SEARCH_IGNORE_CASE)
+        val hits = DocInfo.searchPage(saved, 1, "Revenue")
         assertEquals(1, hits.size)
-        val hb = Pdf.quadRect(hits[0][0])
+        val hb = Pdf.quadRect(hits[0].quads[0])
         assertTrue("search box matches the word: $hb", Math.abs(hb.x0 - 90f) < 2f && Math.abs(hb.x1 - 128f) < 2f && Math.abs(hb.y1 - 156f) < 2f)
         assertTrue(TextLayer.hasText(saved, 1))
+    }
+
+    @Test
+    fun searchFindsPhrasesAcrossLinesAndSelectionWorks() {
+        val d = Fixtures.open("financial.pdf")
+        val hits = DocInfo.searchPage(d, 1, "revenue   FROM operations")
+        assertEquals("whitespace and case do not matter", 1, hits.size)
+        val t = PageText.of(d.loadPage(0) as com.artifex.mupdf.fitz.PDFPage)
+        // Select from the middle of "Revenue" to the middle of "operations": whole words.
+        val line = t.lines.first { it.text.startsWith("Revenue from operations") }
+        val b = line.bbox
+        val r = t.selectionRange(b.x0 + 5f, (b.y0 + b.y1) / 2, b.x1 - 5f, (b.y0 + b.y1) / 2, words = true)!!
+        assertEquals("Revenue from operations", t.text(r))
+        val q = t.quads(r)
+        assertEquals(1, q.size)
+        val qr = Pdf.quadRect(q[0])
+        assertTrue("selection box $qr inside line $b", qr.x0 >= b.x0 - 0.5f && qr.x1 <= b.x1 + 0.5f)
+        // A selection over two lines gives one quad per line and a line break in the text.
+        val second = t.lines.first { it.text.trim() == "(45,000.00)" }.bbox
+        val r2 = t.selectionRange(b.x0 + 1f, (b.y0 + b.y1) / 2, second.x1 - 1f, (second.y0 + second.y1) / 2, words = true)!!
+        assertTrue(t.text(r2).contains("\n"))
+        assertTrue(t.quads(r2).size >= 2)
     }
 
     @Test

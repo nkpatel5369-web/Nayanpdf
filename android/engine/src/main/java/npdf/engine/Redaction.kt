@@ -10,7 +10,6 @@ import com.artifex.mupdf.fitz.PDFPage
 import com.artifex.mupdf.fitz.Pixmap
 import com.artifex.mupdf.fitz.Quad
 import com.artifex.mupdf.fitz.Rect
-import com.artifex.mupdf.fitz.StructuredText
 
 /**
  * Permanent redaction (same rules as the Windows engine): areas are first
@@ -102,7 +101,7 @@ object Redaction {
         for (i in 0 until doc.countPages()) {
             val page = doc.loadPage(i) as PDFPage
             val r = (page.annotations ?: emptyArray()).filter { it.type == PDFAnnotation.TYPE_REDACT }.flatMap { a ->
-                if (a.hasQuadPoints()) a.quadPoints.map { Pdf.quadRect(it) } else listOf(a.rect)
+                if (a.quadPointCount > 0) a.quadPoints.map { Pdf.quadRect(it) } else listOf(a.rect)
             }
             if (r.isNotEmpty()) out[i + 1] = r
         }
@@ -131,19 +130,14 @@ object Redaction {
         val wanted = secrets.map { it.trim() }.filter { it.isNotEmpty() }
         for (i in 0 until doc.countPages()) {
             val page = doc.loadPage(i) as PDFPage
-            val st = page.toStructuredText()
-            try {
-                for (s in wanted) if (st.search(s, StructuredText.SEARCH_IGNORE_CASE).isNotEmpty()) remaining.add("page ${i + 1}: \"$s\"")
-                val areas = marked[i + 1] ?: continue
-                val text = PageText.of(st)
-                for (r in areas) {
-                    val inside = text.textIn(Pdf.grow(r, -0.5f)).trim()
-                    if (inside.isNotEmpty()) remaining.add("page ${i + 1}: \"$inside\"")
-                    checked++
-                    if (rendersDark(page, r)) dark++
-                }
-            } finally {
-                st.destroy()
+            val text = PageText.of(page)
+            for (s in wanted) if (text.search(s).isNotEmpty()) remaining.add("page ${i + 1}: \"$s\"")
+            val areas = marked[i + 1] ?: continue
+            for (r in areas) {
+                val inside = text.textIn(Pdf.grow(r, -0.5f)).trim()
+                if (inside.isNotEmpty()) remaining.add("page ${i + 1}: \"$inside\"")
+                checked++
+                if (rendersDark(page, r)) dark++
             }
         }
         val report = Report(marked.size, marked.values.sumOf { it.size }, remaining, dark, checked)

@@ -28,7 +28,7 @@ object Pages {
         val set = pages.toSortedSet()
         if (set.isEmpty()) return
         if (set.size >= count) throw PdfError(Codes.INVALID, "A PDF needs at least one page: you cannot delete them all.")
-        for (n in set.reversed()) {
+        for (n in set.sortedDescending()) {
             if (n < 1 || n > count) throw PdfError(Codes.INVALID, "Page $n does not exist.")
             doc.deletePage(n - 1)
         }
@@ -140,11 +140,11 @@ object Pages {
     fun addImagePage(doc: PDFDocument, bytes: ByteArray, size: PageSize, margin: Float) {
         val image = try { Image(bytes) } catch (e: RuntimeException) { throw PdfError(Codes.INVALID, "A picture could not be read.") }
         val (dw, dh) = ImageEdit.displaySize(image)
-        // Pictures without resolution information are treated as 96 dpi.
-        val xres = image.xResolution.takeIf { it > 0 } ?: 96
-        val yres = image.yResolution.takeIf { it > 0 } ?: 96
-        val natW = dw * 72f / (if (image.orientation in 5..8) yres else xres)
-        val natH = dh * 72f / (if (image.orientation in 5..8) xres else yres)
+        // Page-sized: the picture's longer side spans the long side of an A4 page.
+        // (Phone photos carry no meaningful resolution, so none is read.)
+        val natScale = 841.89f / maxOf(dw, dh)
+        val natW = dw * natScale
+        val natH = dh * natScale
         val (pw, ph) = when (size) {
             PageSize.FIT -> (natW + 2 * margin) to (natH + 2 * margin)
             else -> if (dw > dh) size.h to size.w else size.w to size.h

@@ -42,7 +42,23 @@ class Span(
 class Line(val bbox: Rect, val dir: Point) {
     val spans = mutableListOf<Span>()
     val text: String get() = spans.joinToString("") { it.text }
-    val horizontal: Boolean get() = kotlin.math.abs(dir.y) <= 0.01f && dir.x > 0
+
+    /**
+     * True when the line reads left to right along the page's horizontal axis,
+     * judged from where its characters actually are (the reported direction is
+     * not reliable on pages stored rotated).
+     */
+    val horizontal: Boolean
+        get() {
+            val chars = spans.flatMap { it.chars }.filter { it.c != ' '.code }
+            if (chars.size < 2) {
+                val q = chars.firstOrNull()?.quad ?: return true
+                return kotlin.math.abs(q.ur_y - q.ul_y) <= kotlin.math.abs(q.ur_x - q.ul_x) * 0.05f + 0.01f && q.ur_x > q.ul_x
+            }
+            val a = chars.first().origin; val b = chars.last().origin
+            val size = spans.first().size.coerceAtLeast(1f)
+            return b.x > a.x && kotlin.math.abs(b.y - a.y) < size * 0.2f
+        }
 }
 
 class Block(val bbox: Rect) {
@@ -85,6 +101,99 @@ class PageText(val blocks: List<Block>) {
     }
 
     fun allText(): String = blocks.joinToString("\n\n") { b -> b.lines.joinToString("\n") { it.text } }
+
+    /** Characters in reading order, each with the index of its line. */
+    private val ordered: List<Pair<TextChar, Int>> by lazy {
+        val out = ArrayList<Pair<TextChar, Int>>()
+        lines.forEachIndexed { li, ln -> ln.spans.forEach { sp -> sp.chars.forEach { out.add(it to li) } } }
+        out
+    }
+
+    /**
+     * Finds [query] (whitespace-insensitive, optionally ignoring case). Lines of
+     * a block are searched as one run, so a phrase may continue on the next line.
+     * Each hit is one quad per line it covers.
+     */
+    fun search(query: String, matchCase: Boolean = false): List<Array<Quad>> {
+        val q = query.trim().replace(Regex("\\s+"), " ")
+        if (q.isEmpty()) return emptyList()
+        val re = Regex(Regex.escape(q).replace(" ", "\\E\\s+\\Q"), if (matchCase) emptySet() else setOf(RegexOption.IGNORE_CASE))
+        val out = mutableListOf<Array<Quad>>()
+        for (b in blocks) {
+            val sb = StringBuilder()
+            val map = ArrayList<TextChar?>()
+            val lineOf = ArrayList<Int>()
+            b.lines.forEachIndexed { li, ln ->
+                if (li > 0) { sb.append(' '); map.add(null); lineOf.add(-1) }
+                for (sp in ln.spans) for (ch in sp.chars) {
+                    val str = String(Character.toChars(ch.c))
+                    sb.append(str)
+                    repeat(str.length) { map.add(ch); lineOf.add(li) }
+                }
+            }
+            for (m in re.findAll(sb)) {
+                val byLine = LinkedHashMap<Int, Rect>()
+                for (k in m.range) {
+                    val ch = map[k] ?: continue
+                    val li = lineOf[k]
+                    byLine[li] = byLine[li]?.let { Pdf.union(it, ch.bbox) } ?: ch.bbox
+                }
+                if (byLine.isNotEmpty()) out.add(byLine.values.map { Pdf.rectQuad(it) }.toTypedArray())
+            }
+        }
+        return out
+    }
+
+    /** Index (in reading order) of the character nearest to page point (x, y). */
+    fun nearestChar(x: Float, y: Float): Int {
+        var best = -1
+        var bestD = Float.MAX_VALUE
+        ordered.forEachIndexed { i, (ch, _) ->
+            val r = ch.bbox
+            val dx = if (x < r.x0) r.x0 - x else if (x > r.x1) x - r.x1 else 0f
+            val dy = if (y < r.y0) r.y0 - y else if (y > r.y1) y - r.y1 else 0f
+            // Vertical distance counts more: a point beside a line belongs to that line.
+            val d = dx + dy * 3f
+            if (d < bestD) { bestD = d; best = i }
+        }
+        return best
+    }
+
+    /** Range of characters between two page points, optionally widened to whole words. */
+    fun selectionRange(ax: Float, ay: Float, bx: Float, by: Float, words: Boolean): IntRange? {
+        if (ordered.isEmpty()) return null
+        var i = nearestChar(ax, ay); var j = nearestChar(bx, by)
+        if (i < 0 || j < 0) return null
+        if (i > j) { val t = i; i = j; j = t }
+        if (words) {
+            fun space(k: Int) = Character.isWhitespace(ordered[k].first.c)
+            while (i > 0 && !space(i - 1) && ordered[i - 1].second == ordered[i].second) i--
+            while (j + 1 < ordered.size && !space(j + 1) && ordered[j + 1].second == ordered[j].second) j++
+        }
+        return i..j
+    }
+
+    /** One quad per line for a character range. */
+    fun quads(range: IntRange): Array<Quad> {
+        val byLine = LinkedHashMap<Int, Rect>()
+        for (k in range) {
+            val (ch, li) = ordered.getOrNull(k) ?: continue
+            if (Character.isWhitespace(ch.c) && (k == range.first || k == range.last)) continue
+            byLine[li] = byLine[li]?.let { Pdf.union(it, ch.bbox) } ?: ch.bbox
+        }
+        return byLine.values.map { Pdf.rectQuad(it) }.toTypedArray()
+    }
+
+    /** The text of a character range, with line breaks between lines. */
+    fun text(range: IntRange): String = buildString {
+        var lastLine = -1
+        for (k in range) {
+            val (ch, li) = ordered.getOrNull(k) ?: continue
+            if (lastLine >= 0 && li != lastLine) append('\n')
+            appendCodePoint(ch.c)
+            lastLine = li
+        }
+    }.trim()
 
     companion object {
         fun center(r: Rect) = Point((r.x0 + r.x1) / 2, (r.y0 + r.y1) / 2)
