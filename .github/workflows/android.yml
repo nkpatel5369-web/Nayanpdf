@@ -47,8 +47,13 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
           working-directory: android
           script: |
-            ./gradlew --no-daemon :engine:connectedDebugAndroidTest
+            adb logcat -G 16M || true
+            adb logcat -c || true
+            ./gradlew --no-daemon :engine:connectedDebugAndroidTest || touch engine-failed
+            adb logcat -d > logcat-engine.txt || true
+            adb logcat -d -b crash > crash-engine.txt || true
             adb logcat -d -s NPDF-PERF:I NPDF-COMPRESS:I > engine-log.txt || true
+            test ! -f engine-failed
 
       - name: Upload test evidence
         if: always()
@@ -59,4 +64,6 @@ jobs:
             android/engine/build/reports/androidTests/
             android/engine/build/outputs/androidTest-results/
             android/engine-log.txt
+            android/logcat-engine.txt
+            android/crash-engine.txt
           if-no-files-found: warn

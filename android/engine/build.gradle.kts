@@ -12,7 +12,13 @@ android {
     defaultConfig {
         minSdk = 26
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // Each test in its own process: a native crash fails one test, not the run.
+        testInstrumentationRunnerArguments["clearPackageData"] = "true"
         consumerProguardFiles("consumer-rules.pro")
+    }
+
+    testOptions {
+        execution = "ANDROIDX_TEST_ORCHESTRATOR"
     }
 
     compileOptions {
@@ -36,4 +42,6 @@ dependencies {
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
     androidTestImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.exifinterface:exifinterface:1.4.1")
+    androidTestUtil("androidx.test:orchestrator:1.6.1")
+    androidTestUtil("androidx.test.services:test-services:1.6.0")
 }
