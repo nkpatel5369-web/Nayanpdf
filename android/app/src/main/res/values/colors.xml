@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="brand">#C8102E</color>
+    <color name="brand_dark">#8E0B21</color>
+    <color name="brand_container">#FFDADC</color>
+    <color name="page_outline">#C9C9CF</color>
+    <color name="page_fold">#F1F1F4</color>
+    <color name="viewer_bg">#E5E7EC</color>
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+    <color name="search_hit">#66FFC107</color>
+    <color name="search_current">#88FF5722</color>
+    <color name="selection">#553F51D9</color>
+    <color name="redact_mark">#55C8102E</color>
+</resources>

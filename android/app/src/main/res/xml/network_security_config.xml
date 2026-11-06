@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Defence in depth on top of having no INTERNET permission: no plain-text traffic,
+     and no certificate authority is trusted, so no secure connection could succeed either. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors />
+    </base-config>
+</network-security-config>

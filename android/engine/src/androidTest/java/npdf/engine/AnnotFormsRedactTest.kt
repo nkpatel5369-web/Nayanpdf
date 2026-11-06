@@ -89,7 +89,16 @@ class AnnotFormsRedactTest {
         val texts = matches.map { it.text }
         assertTrue(texts.toString(), texts.contains("ABCDE1234F") && texts.contains("27ABCDE1234F1Z5"))
         for (m in matches) Redaction.mark(d, m.page, quads = m.quads)
-        val report = Redaction.apply(d, secrets = texts.distinct())
+        val areas = Redaction.marks(d)[1].orEmpty()
+        val report = try {
+            Redaction.apply(d, secrets = texts.distinct())
+        } catch (e: PdfError) {
+            // Show where the remaining characters are relative to the marked areas.
+            val t = PageText.of(d.loadPage(0) as PDFPage)
+            val line = t.lines.firstOrNull { it.text.contains("Confidential") }
+            val chars = line?.spans?.flatMap { it.chars }?.joinToString(" ") { c -> "${String(Character.toChars(c.c))}@${c.bbox.x0.toInt()}-${c.bbox.x1.toInt()}" }
+            throw AssertionError("${e.message}\nareas: ${areas.joinToString { "${it.x0.toInt()}-${it.x1.toInt()},${it.y0.toInt()}-${it.y1.toInt()}" }}\nline: $chars")
+        }
         assertTrue(report.passed)
         val saved = Fixtures.roundTrip(d)
         for (i in 1..saved.countPages()) {

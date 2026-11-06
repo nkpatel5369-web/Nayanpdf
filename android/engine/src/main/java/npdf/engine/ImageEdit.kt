@@ -33,9 +33,17 @@ object ImageEdit {
         }
     }
 
+    /**
+     * The picture's EXIF orientation (1-8). MuPDF reports orientation in its own
+     * numbering (load-jpeg.c maps EXIF 1..8 to 1,5,3,7,6,4,8,2); this undoes that.
+     */
+    fun exifOrientation(image: Image): Int = MUPDF_TO_EXIF.getOrElse(image.orientation) { 1 }
+
+    private val MUPDF_TO_EXIF = intArrayOf(1, 1, 8, 3, 6, 2, 5, 4, 7)
+
     /** Width and height of the image as displayed (EXIF orientations 5-8 swap them). */
     fun displaySize(image: Image): Pair<Float, Float> {
-        val o = image.orientation
+        val o = exifOrientation(image)
         return if (o in 5..8) image.height.toFloat() to image.width.toFloat() else image.width.toFloat() to image.height.toFloat()
     }
 
@@ -76,7 +84,7 @@ object ImageEdit {
         val rot = ((page.getObject().getInheritable("Rotate").takeIf { it.isNumber }?.asInteger() ?: 0) % 360 + 360) % 360
         val (dw, dh) = displaySize(image)
         if (keepAspect) userBox = if (rot == 90 || rot == 270) fit(userBox, dh, dw) else fit(userBox, dw, dh)
-        val m = Matrix(placementMatrix(Rect(0f, 0f, 1f, 1f), image.orientation), pageUprightMatrix(rot, userBox))
+        val m = Matrix(placementMatrix(Rect(0f, 0f, 1f, 1f), exifOrientation(image)), pageUprightMatrix(rot, userBox))
         val name = Pdf.addResource(doc, page, "XObject", "NpI", doc.addImage(image))
         val ops = "q ${Pdf.n(m.a)} ${Pdf.n(m.b)} ${Pdf.n(m.c)} ${Pdf.n(m.d)} ${Pdf.n(m.e)} ${Pdf.n(m.f)} cm /$name Do Q\n"
         if (behind) {

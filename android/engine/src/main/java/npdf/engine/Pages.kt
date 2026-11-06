@@ -153,7 +153,7 @@ object Pages {
         val s = minOf(availW / natW, availH / natH, if (size == PageSize.FIT) 1f else Float.MAX_VALUE)
         val w = natW * s; val h = natH * s
         val box = Rect((pw - w) / 2, (ph - h) / 2, (pw - w) / 2 + w, (ph - h) / 2 + h)
-        val m = ImageEdit.placementMatrix(box, image.orientation)
+        val m = ImageEdit.placementMatrix(box, ImageEdit.exifOrientation(image))
         val res = doc.newDictionary()
         val xo = doc.newDictionary()
         xo.put("Im1", doc.addImage(image))

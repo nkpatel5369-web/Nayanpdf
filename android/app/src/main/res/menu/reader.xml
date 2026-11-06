@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item android:id="@+id/action_search" android:icon="@drawable/ic_search" android:title="Find" app:showAsAction="always" />
+    <item android:id="@+id/action_undo" android:icon="@drawable/ic_undo" android:title="Undo" app:showAsAction="always" />
+    <item android:id="@+id/action_redo" android:icon="@drawable/ic_redo" android:title="Redo" app:showAsAction="ifRoom" />
+    <item android:id="@+id/action_save" android:title="Save" app:showAsAction="never" />
+    <item android:id="@+id/action_save_as" android:title="Save as…" app:showAsAction="never" />
+    <item android:id="@+id/action_share" android:title="Share" app:showAsAction="never" />
+    <item android:id="@+id/action_print" android:title="Print" app:showAsAction="never" />
+    <item android:id="@+id/action_read" android:title="Read Out Loud" app:showAsAction="never" />
+    <item android:id="@+id/action_goto" android:title="Go to page…" app:showAsAction="never" />
+    <item android:id="@+id/action_bookmarks" android:title="Bookmarks" app:showAsAction="never" />
+    <item android:id="@+id/action_comments" android:title="All comments" app:showAsAction="never" />
+    <item android:id="@+id/action_organize" android:title="Organize pages" app:showAsAction="never" />
+    <item android:id="@+id/action_ocr" android:title="Make text searchable (OCR)" app:showAsAction="never" />
+    <item android:id="@+id/action_compress" android:title="Compress" app:showAsAction="never" />
+    <item android:id="@+id/action_protect" android:title="Protect with password" app:showAsAction="never" />
+    <item android:id="@+id/action_unprotect" android:title="Remove password" app:showAsAction="never" />
+    <item android:id="@+id/action_split" android:title="Split" app:showAsAction="never" />
+    <item android:id="@+id/action_flatten" android:title="Flatten comments and fields" app:showAsAction="never" />
+    <item android:id="@+id/action_properties" android:title="Properties" app:showAsAction="never" />
+</menu>

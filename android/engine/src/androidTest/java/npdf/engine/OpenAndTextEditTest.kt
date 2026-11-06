@@ -179,6 +179,10 @@ class OpenAndTextEditTest {
     fun editOnRotatedPageStaysUpright() {
         val d = Fixtures.open("rotated.pdf")
         val rect = Fixtures.line(d, 1, "Rotated page marker R-001")
+        val ln = PageText.of(d.loadPage(0) as PDFPage).lines.first()
+        val ch = ln.spans.flatMap { it.chars }
+        val info = "dir=${ln.dir} bbox=${ln.bbox} first=${ch.first().origin} last=${ch.last().origin} size=${ln.spans.first().size} page=${d.loadPage(0).bounds}"
+        assertTrue("line reads horizontally: $info", ln.horizontal)
         val r = TextEdit.editText(d, 1, rect, "Rotated page marker R-002")
         val saved = Fixtures.roundTrip(d)
         val line = PageText.of(saved.loadPage(0) as PDFPage).lines.first { it.text.contains("R-002") }

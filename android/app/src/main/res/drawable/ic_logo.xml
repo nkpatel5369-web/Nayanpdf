@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The N PDF mark at toolbar size: white page, red N (build/icon-small.svg). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="28dp"
+    android:height="28dp"
+    android:viewportWidth="1024"
+    android:viewportHeight="1024">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M206,72 H690 L878,260 V888 Q878,952 814,952 H206 Q142,952 142,888 V136 Q142,72 206,72 Z"
+        android:strokeColor="#C9C9CF"
+        android:strokeLineJoin="round"
+        android:strokeWidth="44" />
+    <path
+        android:fillColor="#F1F1F4"
+        android:pathData="M690,72 V196 Q690,260 754,260 H878"
+        android:strokeColor="#C9C9CF"
+        android:strokeLineJoin="round"
+        android:strokeWidth="44" />
+    <path
+        android:pathData="M358.8,760 L358.8,340 L661.2,760 L661.2,340"
+        android:strokeColor="#C8102E"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeWidth="88" />
+</vector>

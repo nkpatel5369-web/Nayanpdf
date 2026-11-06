@@ -1,7 +1,8 @@
 name: Android
 
-# Builds N PDF for Android and tests it on Android emulators: the PDF engine's
-# instrumented tests now; the app's own tests are added with the app.
+# Builds N PDF for Android, checks that it requests no network permission, tests
+# the PDF engine and the app (release build) on Android 14 and Android 11
+# emulators, and publishes the APK as a pre-release when everything passes.
 on:
   push:
     branches: ["claude/**", "main"]
@@ -20,7 +21,7 @@ concurrency:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 150
     steps:
       - uses: actions/checkout@v4
 
@@ -31,13 +32,37 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      - name: Signing key for this build only (test builds)
+        run: |
+          pw=$(openssl rand -hex 24)
+          echo "::add-mask::$pw"
+          keytool -genkeypair -keystore "$RUNNER_TEMP/npdf-test.p12" -storetype PKCS12 -storepass "$pw" -keypass "$pw" \
+            -alias npdf -keyalg RSA -keysize 3072 -validity 3650 -dname "CN=N PDF test build" > /dev/null 2>&1
+          echo "NPDF_KEYSTORE=$RUNNER_TEMP/npdf-test.p12" >> "$GITHUB_ENV"
+          echo "NPDF_KEYSTORE_PASSWORD=$pw" >> "$GITHUB_ENV"
+
+      - name: Build the APK and the test APKs
+        working-directory: android
+        run: ./gradlew --no-daemon :app:assembleRelease :app:assembleReleaseAndroidTest :engine:assembleDebugAndroidTest
+
+      - name: Permission audit (no network access)
+        working-directory: android
+        run: |
+          apk=app/build/outputs/apk/release/app-release.apk
+          aapt2=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)aapt2
+          "$aapt2" dump permissions "$apk" | tee ../permissions.txt
+          if grep -E "INTERNET|NETWORK|WIFI|BLUETOOTH|NEARBY|LOCATION|CAMERA|READ_EXTERNAL|WRITE_EXTERNAL|MANAGE_EXTERNAL|CONTACTS|SMS|PHONE" ../permissions.txt; then
+            echo "::error::The APK requests a permission N PDF must not have"; exit 1
+          fi
+          ls -l "$apk"
+
       - name: Enable KVM for the Android emulator
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      - name: Engine tests on an Android 14 emulator
+      - name: Engine and app tests on an Android 14 emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
@@ -49,21 +74,85 @@ jobs:
           script: |
             adb logcat -G 16M || true
             adb logcat -c || true
-            ./gradlew --no-daemon :engine:connectedDebugAndroidTest || touch engine-failed
-            adb logcat -d > logcat-engine.txt || true
-            adb logcat -d -b crash > crash-engine.txt || true
-            adb logcat -d -s NPDF-PERF:I NPDF-COMPRESS:I > engine-log.txt || true
-            test ! -f engine-failed
+            ./gradlew --no-daemon :engine:connectedDebugAndroidTest || touch failed
+            ./gradlew --no-daemon :app:connectedReleaseAndroidTest || touch failed
+            adb logcat -d > logcat-api34.txt || true
+            adb logcat -d -s NPDF-PERF:I NPDF-COMPRESS:I NPDF-NET:I NPDF-OCR:I > npdf-log-api34.txt || true
+            mkdir -p results/api34/engine results/api34/app
+            cp -r engine/build/outputs/androidTest-results/. results/api34/engine/ || true
+            cp -r app/build/outputs/androidTest-results/. results/api34/app/ || true
+            test ! -f failed
 
-      - name: Upload test evidence
+      - name: App tests on an Android 11 emulator
+        if: always()
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
+          working-directory: android
+          script: |
+            adb logcat -G 16M || true
+            adb logcat -c || true
+            ./gradlew --no-daemon :app:connectedReleaseAndroidTest || touch failed30
+            adb logcat -d > logcat-api30.txt || true
+            adb logcat -d -s NPDF-PERF:I NPDF-NET:I NPDF-OCR:I > npdf-log-api30.txt || true
+            mkdir -p results/api30/app
+            cp -r app/build/outputs/androidTest-results/. results/api30/app/ || true
+            test ! -f failed30
+
+      - name: Test summary
+        if: always()
+        run: |
+          python3 - <<'EOF' | tee android/summary.md
+          import glob, xml.etree.ElementTree as ET
+          print("| Android | Suite | Tests | Failed |")
+          print("|---|---|---|---|")
+          for api in ("api34", "api30"):
+              for suite in ("engine", "app"):
+                  tests = failed = 0
+                  for path in glob.glob(f"android/results/{api}/{suite}/**/TEST-*.xml", recursive=True):
+                      t = ET.parse(path).getroot()
+                      tests += int(t.get("tests", 0)); failed += int(t.get("failures", 0)) + int(t.get("errors", 0))
+                  if tests:
+                      print(f"| {api[3:]} | {suite} | {tests} | {failed} |")
+          EOF
+          cat android/npdf-log-api34.txt android/npdf-log-api30.txt 2>/dev/null | grep -E 'NPDF' | sed 's/^.*\(NPDF-[A-Z]*\)/\1/' | tee -a android/summary.md || true
+
+      - name: Upload APK and test evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: android-tests
+          name: n-pdf-android
           path: |
-            android/engine/build/reports/androidTests/
-            android/engine/build/outputs/androidTest-results/
-            android/engine-log.txt
-            android/logcat-engine.txt
-            android/crash-engine.txt
+            android/app/build/outputs/apk/release/app-release.apk
+            android/results/
+            android/summary.md
+            android/logcat-api34.txt
+            android/logcat-api30.txt
+            android/npdf-log-*.txt
+            permissions.txt
           if-no-files-found: warn
+
+      - name: Publish pre-release with the APK
+        if: success() && github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(grep -oP 'versionName = "\K[^"]+' android/app/build.gradle.kts)
+          tag="android-v$version-build.${{ github.run_number }}"
+          cp android/app/build/outputs/apk/release/app-release.apk N-PDF-Android.apk
+          sha=$(sha256sum N-PDF-Android.apk | cut -d' ' -f1)
+          echo "$sha  N-PDF-Android.apk" > N-PDF-Android.apk.sha256
+          size=$(du -m N-PDF-Android.apk | cut -f1)
+          {
+            echo "Test build of ${{ github.sha }} for Android 8.0 and later. All tests passed on Android 14 and Android 11 emulators (android-summary.md)."
+            echo
+            echo "N-PDF-Android.apk  ${size} MB  SHA-256 $sha"
+            echo
+            echo "Signed with a key made for this build only: uninstall an earlier N PDF test build before installing this one. Your PDFs are not affected."
+          } > notes.txt
+          cp android/summary.md android-summary.md
+          gh release create "$tag" N-PDF-Android.apk N-PDF-Android.apk.sha256 android-summary.md --target ${{ github.sha }} --prerelease --title "N PDF for Android $tag" --notes-file notes.txt

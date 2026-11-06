@@ -253,7 +253,7 @@ object TextEdit {
         val pending = mutableListOf<Pending>()
         for (a in page.annotations ?: emptyArray()) {
             if (a.type != PDFAnnotation.TYPE_REDACT) continue
-            pending.add(Pending(a.rect, if (a.quadPointCount > 0) a.quadPoints else null,
+            pending.add(Pending(a.rect, if (a.hasQuadPoints() && a.quadPointCount > 0) a.quadPoints else null,
                 if (a.hasInteriorColor()) a.interiorColor else null, a.contents, if (a.hasAuthor()) a.author else null))
             page.deleteAnnotation(a)
         }

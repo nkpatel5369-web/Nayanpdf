@@ -92,6 +92,7 @@ class ImagesAndPagesTest {
             setAttribute(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_ROTATE_90.toString())
             saveAttributes()
         }
+        assertEquals("EXIF 6 as read through MuPDF", 6, ImageEdit.exifOrientation(com.artifex.mupdf.fitz.Image(f.readBytes())))
         val d = PDFDocument()
         Pages.addImagePage(d, f.readBytes(), Pages.PageSize.FIT, 0f)
         val page = d.loadPage(0)

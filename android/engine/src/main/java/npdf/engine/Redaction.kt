@@ -101,7 +101,7 @@ object Redaction {
         for (i in 0 until doc.countPages()) {
             val page = doc.loadPage(i) as PDFPage
             val r = (page.annotations ?: emptyArray()).filter { it.type == PDFAnnotation.TYPE_REDACT }.flatMap { a ->
-                if (a.quadPointCount > 0) a.quadPoints.map { Pdf.quadRect(it) } else listOf(a.rect)
+                if (a.hasQuadPoints() && a.quadPointCount > 0) a.quadPoints.map { Pdf.quadRect(it) } else listOf(a.rect)
             }
             if (r.isNotEmpty()) out[i + 1] = r
         }

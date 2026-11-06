@@ -194,7 +194,7 @@ object Annotations {
         when {
             a.type == PDFAnnotation.TYPE_INK -> a.inkList = a.inkList.map { s -> s.map { Point(it.x + dx, it.y + dy) }.toTypedArray() }.toTypedArray()
             a.type == PDFAnnotation.TYPE_LINE -> { val l = a.line; a.setLine(Point(l[0].x + dx, l[0].y + dy), Point(l[1].x + dx, l[1].y + dy)) }
-            a.quadPointCount > 0 -> a.quadPoints = a.quadPoints.map { q -> Quad(q.ul_x + dx, q.ul_y + dy, q.ur_x + dx, q.ur_y + dy, q.ll_x + dx, q.ll_y + dy, q.lr_x + dx, q.lr_y + dy) }.toTypedArray()
+            a.hasQuadPoints() && a.quadPointCount > 0 -> a.quadPoints = a.quadPoints.map { q -> Quad(q.ul_x + dx, q.ul_y + dy, q.ur_x + dx, q.ur_y + dy, q.ll_x + dx, q.ll_y + dy, q.lr_x + dx, q.lr_y + dy) }.toTypedArray()
             else -> { val r = a.rect; a.rect = Rect(r.x0 + dx, r.y0 + dy, r.x1 + dx, r.y1 + dy) }
         }
         a.update()

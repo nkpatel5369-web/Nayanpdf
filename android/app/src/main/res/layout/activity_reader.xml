@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/colorSurface"
+    android:orientation="vertical">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        app:navigationContentDescription="Back"
+        app:navigationIcon="@drawable/ic_back" />
+
+    <LinearLayout
+        android:id="@+id/searchBar"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="12dp"
+        android:paddingEnd="4dp"
+        android:visibility="gone">
+
+        <EditText
+            android:id="@+id/searchField"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="Find in document"
+            android:imeOptions="actionSearch"
+            android:importantForAutofill="no"
+            android:inputType="text"
+            android:singleLine="true" />
+
+        <TextView
+            android:id="@+id/searchCount"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="8dp"
+            android:textAppearance="?attr/textAppearanceBodySmall" />
+
+        <ImageButton
+            android:id="@+id/searchPrev"
+            style="?attr/borderlessButtonStyle"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:contentDescription="Previous match"
+            android:src="@drawable/ic_up" />
+
+        <ImageButton
+            android:id="@+id/searchNext"
+            style="?attr/borderlessButtonStyle"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:contentDescription="Next match"
+            android:src="@drawable/ic_down" />
+
+        <ImageButton
+            android:id="@+id/searchClose"
+            style="?attr/borderlessButtonStyle"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:contentDescription="Close search"
+            android:src="@drawable/ic_close" />
+    </LinearLayout>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <npdf.app.PdfView
+            android:id="@+id/pdf"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:contentDescription="Document pages" />
+
+        <com.google.android.material.progressindicator.LinearProgressIndicator
+            android:id="@+id/progress"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top"
+            android:indeterminate="true"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top|center_horizontal"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/chip_bg"
+            android:paddingHorizontal="14dp"
+            android:paddingVertical="6dp"
+            android:textColor="@color/white"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/pageChip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|center_horizontal"
+            android:layout_marginBottom="12dp"
+            android:background="@drawable/chip_bg"
+            android:contentDescription="Go to page"
+            android:paddingHorizontal="14dp"
+            android:paddingVertical="6dp"
+            android:textColor="@color/white" />
+
+        <LinearLayout
+            android:id="@+id/ttsBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:background="?attr/colorSurfaceContainer"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="12dp"
+            android:visibility="gone">
+
+            <ImageButton
+                android:id="@+id/ttsPlay"
+                style="?attr/borderlessButtonStyle"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:contentDescription="Pause or resume"
+                android:src="@drawable/ic_pause" />
+
+            <TextView
+                android:id="@+id/ttsText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textAppearance="?attr/textAppearanceBodyMedium" />
+
+            <ImageButton
+                android:id="@+id/ttsStop"
+                style="?attr/borderlessButtonStyle"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:contentDescription="Stop reading"
+                android:src="@drawable/ic_stop" />
+        </LinearLayout>
+    </FrameLayout>
+
+    <HorizontalScrollView
+        android:id="@+id/toolScroll"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="?attr/colorSurfaceContainerLow"
+        android:scrollbars="none"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:id="@+id/toolRow"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingHorizontal="4dp" />
+    </HorizontalScrollView>
+
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/modes"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:labelVisibilityMode="labeled"
+        app:menu="@menu/reader_modes" />
+</LinearLayout>
