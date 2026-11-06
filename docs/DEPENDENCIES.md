@@ -54,3 +54,7 @@ TypeScript, Vite, esbuild, electron-builder (MIT), pytest and reportlab (test fi
 | SumatraPDF for printing | Would add another GPL executable; printing is implemented with the bundled renderer and the Windows print dialog |
 | veraPDF (PDF/A validation) | Requires a Java runtime (~150 MB); PDF/A output is checked with basic pre-flight checks and labelled as not formally validated |
 | Online OCR / conversion services | Violate the offline requirement |
+
+## Android edition
+
+N PDF for Android ships a smaller set: MuPDF 1.28.2 (Android "fitz" library, AGPL-3.0), Tesseract4Android 4.8.0 (Tesseract, Leptonica, libjpeg, libpng; Apache-2.0 and BSD-style licences), tessdata_fast 4.1.0 for English, Hindi and Gujarati (Apache-2.0, SHA-256 pinned at build time), the glyphless font from Tesseract (Apache-2.0), AndroidX and Material Components (Apache-2.0), and the Kotlin runtime and coroutines (Apache-2.0). None of them is given network access: the app holds no network permission. See `docs/ANDROID.md`.

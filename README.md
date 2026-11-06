@@ -8,11 +8,13 @@ N PDF (called NayanPDF up to version 1.0 and X PDF in 1.1) is a fully offline PD
 | `docs/TEST_REPORT.md` | Tests executed, results, failures and tests not yet run |
 | `docs/OFFLINE_VERIFICATION.md` | How offline operation was established |
 | `docs/DEPENDENCIES.md` | Every bundled component, its licence and distribution conditions |
+| `docs/ANDROID.md` | N PDF for Android: installing, features, no-network enforcement, speed, tests, limitations |
 
 ## Current delivery status
 
 - **Windows installer:** built, installed and tested on a clean Windows machine by `.github/workflows/windows-installer.yml`. Every successful build is published as a GitHub pre-release (`v1.2.0-build.N` from 1.2; earlier builds carry the earlier names: `v1.0.0-build.N` up to build 13 as NayanPDF, `v1.1.0-build.19` and `.20` as X PDF) with the installer, its SHA-256 and the acceptance report. Use the newest pre-release. Current: **v1.2.0-build.22**, `N-PDF_Setup.exe` 420.3 MB, SHA-256 `99B33C02F65FBBB129A256B78036C32F52F71245B372990299C4CBFEF891F753`.
 - **Evidence on Windows (build 22):** the 123 engine tests pass against the bundled runtime and again against the installed copy with outbound traffic blocked; the 42-scenario UI test passes; the 114-point acceptance test passes with no failures or warnings. It covers the upgrade from X PDF build 20 and from NayanPDF build 13 (one installation afterwards, old program, Start Menu shortcut and X PDF's right-click commands removed, the desktop shortcut kept as "N PDF", settings carried over, the registered uninstaller present and working), a fresh install, the right-click commands (registered, run as Explorer runs them, removed on uninstall), the security switches compiled into `N-PDF.exe`, the offline self-test, app launch with zero network connections and zero listening ports, uninstall and reinstall.
+- **Android:** N PDF for Android test build **android-v1.2.0-build.5** (`N-PDF-Android.apk`, 36 MB, SHA-256 `762560a571979436f6fa70371c569cc5aea05ea38c70e076d551787c5f3609a6`): no internet access, no certificate signatures; all 34 engine and 14 app tests pass on Android 14 and Android 11 emulators. See `docs/ANDROID.md`.
 - **Not yet verified:** installation under a standard (non-administrator) Windows account, Windows 10 or Windows 11 desktop editions specifically (the CI machine is Windows Server 2025, Windows 11 kernel 10.0.26100), scanning with a physical scanner, and spoken audio from Read Out Loud.
 
 ## 1. Installing
@@ -258,5 +260,6 @@ src/renderer            React user interface
 src/shared              IPC channel list and shared types
 scripts/                build, packaging, Windows acceptance and UI test scripts
 build/                  installer resources (icon, licence page, NSIS additions)
+android/                N PDF for Android (engine module on MuPDF, app module, instrumented tests)
 docs/                   feature register, test report, offline verification, dependencies
 ```

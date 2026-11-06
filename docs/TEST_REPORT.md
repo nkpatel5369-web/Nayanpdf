@@ -182,3 +182,16 @@ Screenshots of every scenario are written to `test-results/ui/` (not committed).
 | Upgrade with data the app wrote itself | Partly | Build 22 upgraded real X PDF 1.1 and NayanPDF 1.0 installations and carried over a planted settings file; UI scenario 42 checks the copy of settings and saved actions. Saved signatures encrypted by a real earlier session were not part of the test |
 | File Explorer's own right-click menu (the entries appearing, Windows 11 "Show more options") | Not run | Explorer cannot be driven by the test tools; the registry entries, the registered command run as Explorer runs it, and the app's handling of several files are tested |
 | Real-world documents | Not run, by design | The brief requires synthetic test documents |
+
+## 7. Android edition
+
+Full details, including what each suite covers and the defects found, are in `docs/ANDROID.md` (section Test evidence).
+
+| Test set | Where executed | Result |
+|---|---|---|
+| Permission audit of the APK (`aapt2 dump permissions`) | GitHub Actions, build 5 | Pass: only the app-internal `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` |
+| Engine instrumented tests | Android 14 emulator (x86_64), build 5 | **34 / 34 passed** |
+| App instrumented tests, release build | Android 14 emulator, build 5 | **14 / 14 passed** |
+| App instrumented tests, release build | Android 11 emulator, build 5 | **14 / 14 passed** |
+
+Earlier Android runs (builds 1 to 4) failed and led to the fixes listed in `docs/ANDROID.md`. Not run: physical phones, Android versions other than 11 and 14, audible speech, printing to a printer, OCR accuracy for Hindi and Gujarati.
