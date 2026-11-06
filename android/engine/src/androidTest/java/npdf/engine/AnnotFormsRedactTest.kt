@@ -7,6 +7,7 @@ import com.artifex.mupdf.fitz.Point
 import com.artifex.mupdf.fitz.Rect
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
@@ -100,6 +101,14 @@ class AnnotFormsRedactTest {
             throw AssertionError("${e.message}\nareas: ${areas.joinToString { "${it.x0.toInt()}-${it.x1.toInt()},${it.y0.toInt()}-${it.y1.toInt()}" }}\nline: $chars")
         }
         assertTrue(report.passed)
+        assertTrue("text beside the marks stays where it was: ${report.textMoved}", report.textMoved.isEmpty())
+        // The comma that followed the PAN must still start where the PAN ended (MuPDF 1.28.5 moved it left).
+        val pan = areas.first()
+        val comma = PageText.of(d.loadPage(0) as PDFPage).lines.flatMap { l -> l.spans.flatMap { it.chars } }
+            .filter { it.c == ','.code && it.bbox.y0 < pan.y1 && it.bbox.y1 > pan.y0 && it.bbox.x0 > pan.x0 }
+            .minByOrNull { it.bbox.x0 }
+        assertNotNull("comma after the PAN kept", comma)
+        assertTrue("comma after the PAN not moved into the box: ${comma!!.bbox} vs $pan", comma.bbox.x0 >= pan.x1 - 0.5f)
         val saved = Fixtures.roundTrip(d)
         for (i in 1..saved.countPages()) {
             val t = Fixtures.text(saved, i)

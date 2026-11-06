@@ -36,7 +36,10 @@ kotlin {
 }
 
 dependencies {
-    api("com.artifex.mupdf:fitz:1.28.5")
+    // 1.28.2, the MuPDF version the Windows build uses. 1.28.5 mis-spaces the text that
+    // follows a removed run of characters (redaction and text editing): the rest of the
+    // line slides left by the width of the first removed character.
+    api("com.artifex.mupdf:fitz:1.28.2")
 
     androidTestImplementation("androidx.test:runner:1.7.0")
     androidTestImplementation("androidx.test.ext:junit:1.3.0")

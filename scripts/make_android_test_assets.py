@@ -65,8 +65,9 @@ def rotated(dest: str):
     d = pymupdf.open()
     p = d.new_page(width=595, height=842)
     p.set_rotation(90)
-    # Text written so that it is horizontal as the page is shown.
-    p.insert_text((100, 100), "Rotated page marker R-001", fontsize=14)
+    # Written turned by 90 degrees in the stored page, so that it reads left to right,
+    # starting 100 pt from the top-left corner, as the page is shown.
+    p.insert_text((100, 742), "Rotated page marker R-001", fontsize=14, rotate=90)
     d.save(dest)
 
 

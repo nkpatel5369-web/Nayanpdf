@@ -10,6 +10,7 @@ import com.artifex.mupdf.fitz.PDFPage
 import com.artifex.mupdf.fitz.Pixmap
 import com.artifex.mupdf.fitz.Quad
 import com.artifex.mupdf.fitz.Rect
+import kotlin.math.abs
 
 /**
  * Permanent redaction (same rules as the Windows engine): areas are first
@@ -30,8 +31,11 @@ object Redaction {
     )
 
     class Match(val page: Int, val text: String, val quads: List<Quad>, val label: String)
-    class Report(val pages: Int, val areas: Int, val textRemaining: List<String>, val darkAreas: Int, val checkedAreas: Int) {
-        val passed: Boolean get() = textRemaining.isEmpty() && darkAreas == checkedAreas
+    class Report(
+        val pages: Int, val areas: Int, val textRemaining: List<String>, val darkAreas: Int, val checkedAreas: Int,
+        val textMoved: List<String> = emptyList(),
+    ) {
+        val passed: Boolean get() = textRemaining.isEmpty() && textMoved.isEmpty() && darkAreas == checkedAreas
     }
 
     /**
@@ -117,6 +121,8 @@ object Redaction {
         Pdf.require(doc, Document.PERMISSION_EDIT, "redaction")
         val marked = marks(doc)
         if (marked.isEmpty()) throw PdfError(Codes.INVALID, "There are no redaction marks to apply.")
+        // Where the characters outside the marks are, to check afterwards that none of them moved.
+        val before = marked.mapValues { (pageNo, areas) -> Anchors(PageText.of(Pdf.page(doc, pageNo)), areas) }
         for (pageNo in marked.keys) {
             val page = Pdf.page(doc, pageNo)
             page.applyRedactions(true, PDFPage.REDACT_IMAGE_PIXELS,
@@ -125,6 +131,7 @@ object Redaction {
         }
         // Verification.
         val remaining = mutableListOf<String>()
+        val moved = mutableListOf<String>()
         var dark = 0
         var checked = 0
         val wanted = secrets.map { it.trim() }.filter { it.isNotEmpty() }
@@ -133,6 +140,7 @@ object Redaction {
             val text = PageText.of(page)
             for (s in wanted) if (text.search(s).isNotEmpty()) remaining.add("page ${i + 1}: \"$s\"")
             val areas = marked[i + 1] ?: continue
+            before[i + 1]?.moved(text)?.let { moved.add("page ${i + 1}: \"$it\"") }
             for (r in areas) {
                 val inside = text.textIn(Pdf.grow(r, -0.5f)).trim()
                 if (inside.isNotEmpty()) remaining.add("page ${i + 1}: \"$inside\"")
@@ -140,13 +148,57 @@ object Redaction {
                 if (rendersDark(page, r)) dark++
             }
         }
-        val report = Report(marked.size, marked.values.sumOf { it.size }, remaining, dark, checked)
+        val report = Report(marked.size, marked.values.sumOf { it.size }, remaining, dark, checked, moved)
         if (!report.passed) {
             throw PdfError(Codes.VERIFY_FAILED, "Redaction could not be verified (" +
-                (if (remaining.isNotEmpty()) "text still present: ${remaining.take(3).joinToString("; ")}" else "an area does not render as covered") +
-                "). The document was not changed.")
+                when {
+                    remaining.isNotEmpty() -> "text still present: ${remaining.take(3).joinToString("; ")}"
+                    moved.isNotEmpty() -> "text next to a marked area moved: ${moved.take(3).joinToString("; ")}"
+                    else -> "an area does not render as covered"
+                } + "). The document was not changed.")
         }
         return report
+    }
+
+    /**
+     * The characters of a page that do not touch any marked area, by position.
+     * After redaction each of them must still be where it was: removing marked
+     * text must never shift the text around it.
+     */
+    private class Anchors(text: PageText, private val areas: List<Rect>) {
+        private val byChar = HashMap<Int, MutableList<Rect>>()
+
+        init {
+            forEachKept(text) { ch -> byChar.getOrPut(ch.c) { mutableListOf() }.add(ch.bbox) }
+        }
+
+        private fun forEachKept(text: PageText, f: (TextChar) -> Unit) {
+            for (ln in text.lines) for (sp in ln.spans) for (ch in sp.chars) {
+                if (Character.isWhitespace(ch.c)) continue
+                val b = ch.bbox
+                if (areas.any { Pdf.area(Pdf.intersect(Pdf.grow(it, 0.5f), b)) > 0f }) continue
+                f(ch)
+            }
+        }
+
+        /** The first character (with its neighbours) found away from where it was, or null. */
+        fun moved(after: PageText): String? {
+            var found: String? = null
+            for (ln in after.lines) {
+                val chars = ln.spans.flatMap { it.chars }
+                chars.forEachIndexed { k, ch ->
+                    if (found != null || Character.isWhitespace(ch.c)) return@forEachIndexed
+                    val b = ch.bbox
+                    if (areas.any { Pdf.area(Pdf.intersect(Pdf.grow(it, 0.5f), b)) > 0f }) return@forEachIndexed
+                    val same = byChar[ch.c]?.any { abs(it.x0 - b.x0) < 0.6f && abs(it.y0 - b.y0) < 0.6f } ?: false
+                    if (!same) found = buildString {
+                        for (j in maxOf(0, k - 3)..minOf(chars.size - 1, k + 3)) appendCodePoint(chars[j].c)
+                    } + " at x ${b.x0.toInt()}"
+                }
+                if (found != null) break
+            }
+            return found
+        }
     }
 
     /** True when the centre part of [r] renders (almost) black. */

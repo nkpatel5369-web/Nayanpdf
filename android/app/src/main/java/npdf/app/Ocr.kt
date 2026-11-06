@@ -63,6 +63,9 @@ class Ocr(private val ctx: Context) {
         try {
             if (!api.init(dataPath(langs), langs.joinToString("+"))) throw PdfError(Codes.NOT_SUPPORTED, "The OCR language data could not be loaded.")
             api.pageSegMode = TessBaseAPI.PageSegMode.PSM_AUTO
+            // A bitmap carries no resolution. Left to guess, Tesseract over-estimates it and
+            // its layout analysis then drops whole table columns, so state the real one.
+            api.setVariable("user_defined_dpi", (scale * 72f).roundToInt().toString())
             api.setImage(bmp)
             api.getUTF8Text()
             val words = mutableListOf<TextLayer.Word>()

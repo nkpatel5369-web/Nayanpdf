@@ -42,7 +42,11 @@ class NoNetworkTest {
         assertNotNull("a socket connection must be refused", sock)
         val msg = sock.toString()
         Log.i("NPDF-NET", "socket attempt: $msg")
-        assertTrue("refused by Android, not by the network: $msg", sock is SecurityException || msg.contains("EACCES") || msg.contains("Permission denied"))
+        // Without the INTERNET permission Android refuses to create the socket at all:
+        // EACCES on older releases, EPERM ("Operation not permitted") on current ones.
+        // A network-level failure would instead be a timeout or "connection refused".
+        val refused = sock is SecurityException || listOf("EACCES", "Permission denied", "EPERM", "Operation not permitted").any { msg.contains(it) }
+        assertTrue("refused by Android, not by the network: $msg", refused)
         val dns = runCatching { InetAddress.getByName("example.com") }.exceptionOrNull()
         assertNotNull("a name lookup must fail", dns)
         Log.i("NPDF-NET", "lookup attempt: $dns")

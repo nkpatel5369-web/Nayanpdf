@@ -1,5 +1,6 @@
 package npdf.app
 
+import android.content.Intent
 import android.net.Uri
 import android.util.Log
 import android.widget.EditText
@@ -9,6 +10,7 @@ import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.Espresso.openActionBarOverflowOrOptionsMenu
 import androidx.test.espresso.action.ViewActions.click
 import androidx.test.espresso.action.ViewActions.replaceText
+import androidx.test.espresso.action.ViewActions.scrollTo
 import androidx.test.espresso.action.ViewActions.swipeRight
 import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.RootMatchers.isDialog
@@ -69,7 +71,7 @@ class ReaderUiTest {
         val sc = TestKit.openReader(TestKit.asset("a.pdf"))
         val s = TestKit.waitOpen(sc)
         onView(withId(R.id.mode_comment)).perform(click())
-        onView(withText("Note")).perform(click())
+        onView(withText("Note")).perform(scrollTo(), click())
         onView(withId(R.id.pdf)).perform(TestKit.tapPage(0, 300f, 300f))
         onView(withHint("Your comment")).inRoot(isDialog()).perform(replaceText("Checked by the UI test"))
         onView(withText("OK")).inRoot(isDialog()).perform(click())
@@ -86,7 +88,7 @@ class ReaderUiTest {
         val s = TestKit.waitOpen(sc)
         val line = TestKit.engine(s) { PageText.of(it.loadPage(0) as PDFPage).lines.first { l -> l.text.trim() == "Marker A-001" }.bbox }
         onView(withId(R.id.mode_edit)).perform(click())
-        onView(withText("Edit text")).perform(click())
+        onView(withText("Edit text")).perform(scrollTo(), click())
         onView(withId(R.id.pdf)).perform(TestKit.tapPage(0, (line.x0 + line.x1) / 2, (line.y0 + line.y1) / 2))
         onView(withHint("Text")).inRoot(isDialog()).perform(replaceText("Marker A-999"))
         onView(withText("Apply")).inRoot(isDialog()).perform(click())
@@ -123,7 +125,7 @@ class ReaderUiTest {
         val sc = TestKit.openReader(TestKit.asset("a.pdf"))
         val s = TestKit.waitOpen(sc)
         onView(withId(R.id.mode_sign)).perform(click())
-        onView(withText("Signature")).perform(click())
+        onView(withText("Signature")).perform(scrollTo(), click())
         onView(isAssignableFrom(SignaturePad::class.java)).inRoot(isDialog()).perform(swipeRight())
         onView(withText("Place")).inRoot(isDialog()).perform(click())
         onView(withId(R.id.pdf)).perform(TestKit.tapPage(0, 350f, 650f))
@@ -136,13 +138,13 @@ class ReaderUiTest {
         val sc = TestKit.openReader(TestKit.asset("c.pdf"))
         val s = TestKit.waitOpen(sc)
         assertEquals(4, s.sizes.size)
-        val org = ActivityScenario.launch(OrganizeActivity::class.java)
+        // Opened from the reader, as the app does (the organiser works on the open document).
+        TestKit.on(sc) { it.startActivity(Intent(it, OrganizeActivity::class.java)) }
         onView(withText("2")).perform(click())
-        onView(withText("Delete")).perform(click())
+        onView(withText("Delete")).perform(scrollTo(), click())
         onView(withText("Delete")).inRoot(isDialog()).perform(click())
         TestKit.waitFor("page deleted") { s.sizes.size == 3 }
         assertFalse(text(s, 2).contains("C page 2"))
-        org.close()
         sc.close()
     }
 
