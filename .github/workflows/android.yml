@@ -70,6 +70,7 @@ jobs:
           sudo udevadm trigger --name-match=kvm
 
       - name: Engine and app tests on an Android 14 emulator
+        timeout-minutes: 50
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
@@ -92,7 +93,8 @@ jobs:
             test ! -f failed
 
       - name: App tests on an Android 11 emulator
-        if: always()
+        if: ${{ !cancelled() }}
+        timeout-minutes: 35
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 30
@@ -113,7 +115,7 @@ jobs:
             test ! -f failed30
 
       - name: Test summary
-        if: always()
+        if: ${{ !cancelled() }}
         run: |
           python3 - <<'EOF' | tee android/summary.md
           import glob, xml.etree.ElementTree as ET
@@ -138,7 +140,7 @@ jobs:
           cat android/npdf-log-api34.txt android/npdf-log-api30.txt 2>/dev/null | grep -E 'NPDF' | sed 's/^.*\(NPDF-[A-Z]*\)/\1/' | tee -a android/summary.md || true
 
       - name: Upload APK and test evidence
-        if: always()
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
           name: n-pdf-android
