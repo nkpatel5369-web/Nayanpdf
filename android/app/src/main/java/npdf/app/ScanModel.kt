@@ -244,7 +244,8 @@ object ScanProcessor {
         fun corrected(part: Part): Raster {
             val src = toRaster(decode({ session.file(part.file).inputStream() }, photoMax))
             val q = part.quad?.let { scaleQuad(it, part, src) }
-            return if (q == null) src else Warp.warp(src, q, maxSide)
+            // Cut just inside the detected edge: its pixels are part paper, part background.
+            return if (q == null) src else Warp.warp(src, q.shrunk(0.006f), maxSide)
         }
         var r: Raster
         if (page.kind == ScanKind.IDCARD) {

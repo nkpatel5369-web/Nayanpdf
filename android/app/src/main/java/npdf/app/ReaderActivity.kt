@@ -120,6 +120,9 @@ class ReaderActivity : AppCompatActivity(), PdfView.Listener {
         setContentView(b.root)
         Ui.fitSystemBars(b.root)
         setSupportActionBar(b.toolbar)
+        // The document name starts after the back button: centred between it and the icons it had room
+        // for only a few letters on a phone.
+        b.toolbar.isTitleCentered = false; b.toolbar.isSubtitleCentered = false
         supportActionBar?.setDisplayShowTitleEnabled(true)
         b.toolbar.setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
         b.pdf.listener = this

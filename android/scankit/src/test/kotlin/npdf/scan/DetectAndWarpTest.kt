@@ -139,6 +139,15 @@ class DetectAndWarpTest {
         assertTrue("better than the edge lengths on average", sumNew < sumOld / 5)
     }
 
+    @Test
+    fun shrunkOutlineStaysCentredAndProportional() {
+        val q = Quad(Pt(100f, 100f), Pt(900f, 100f), Pt(900f, 1100f), Pt(100f, 1100f), floatArrayOf(10f, 0f, 0f, 0f))
+        val s = q.shrunk(0.006f)
+        assertEquals(102.4f, s.tl.x, 0.01f); assertEquals(103f, s.tl.y, 0.01f)
+        assertEquals(897.6f, s.br.x, 0.01f); assertEquals(1097f, s.br.y, 0.01f)
+        assertEquals(9.94f, s.bulge[0], 0.01f)
+    }
+
     /** A page photographed straight on, or a photo with no perspective to read, keeps the edge lengths. */
     @Test
     fun frontalOutlinesKeepTheirEdgeLengths() {

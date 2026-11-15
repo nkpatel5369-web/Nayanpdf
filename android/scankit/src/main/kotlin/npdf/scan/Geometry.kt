@@ -35,6 +35,17 @@ data class Quad(
 
     fun scaled(s: Float) = Quad(tl * s, tr * s, br * s, bl * s, FloatArray(4) { bulge[it] * s })
 
+    /**
+     * The outline pulled in towards its centre by [fraction] of its size (0.006: 0.3 % on each side),
+     * so a corrected page does not carry the sliver of background blended into its edge pixels.
+     */
+    fun shrunk(fraction: Float): Quad {
+        val cx = (tl.x + tr.x + br.x + bl.x) / 4; val cy = (tl.y + tr.y + br.y + bl.y) / 4
+        val k = 1f - fraction
+        fun p(q: Pt) = Pt(cx + (q.x - cx) * k, cy + (q.y - cy) * k)
+        return Quad(p(tl), p(tr), p(br), p(bl), FloatArray(4) { bulge[it] * k })
+    }
+
     fun isConvex(): Boolean {
         val c = corners
         var sign = 0
