@@ -1,36 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Material 3 colour scheme generated from the brand red (#C8102E), content variant, 2021 spec. Used on Android 8 to 11; Android 12 and later use the wallpaper's colours (Material You). -->
-    <color name="md_primary">#9E001F</color>
+    <!-- Material 3 colour scheme generated from the brand red (#C8102E), tonal spot variant (the one Android uses for wallpaper colours), 2021 spec. Used on Android 8 to 11; Android 12 and later use the wallpaper's colours (Material You). -->
+    <color name="md_primary">#904A49</color>
     <color name="md_on_primary">#FFFFFF</color>
-    <color name="md_primary_container">#C8102E</color>
-    <color name="md_on_primary_container">#FFDAD8</color>
-    <color name="md_secondary">#A5393C</color>
+    <color name="md_primary_container">#FFDAD8</color>
+    <color name="md_on_primary_container">#733333</color>
+    <color name="md_secondary">#775655</color>
     <color name="md_on_secondary">#FFFFFF</color>
-    <color name="md_secondary_container">#FE7B7C</color>
-    <color name="md_on_secondary_container">#73121B</color>
-    <color name="md_tertiary">#783D00</color>
+    <color name="md_secondary_container">#FFDAD8</color>
+    <color name="md_on_secondary_container">#5D3F3E</color>
+    <color name="md_tertiary">#745A2F</color>
     <color name="md_on_tertiary">#FFFFFF</color>
-    <color name="md_tertiary_container">#9B5100</color>
-    <color name="md_on_tertiary_container">#FFDCC4</color>
+    <color name="md_tertiary_container">#FFDEAC</color>
+    <color name="md_on_tertiary_container">#5A4319</color>
     <color name="md_error">#BA1A1A</color>
     <color name="md_on_error">#FFFFFF</color>
     <color name="md_error_container">#FFDAD6</color>
     <color name="md_on_error_container">#93000A</color>
     <color name="md_surface">#FFF8F7</color>
-    <color name="md_on_surface">#281717</color>
-    <color name="md_surface_variant">#FFDAD8</color>
-    <color name="md_on_surface_variant">#5C403F</color>
-    <color name="md_outline">#906F6E</color>
-    <color name="md_outline_variant">#E5BDBB</color>
-    <color name="md_surface_dim">#F2D3D1</color>
+    <color name="md_on_surface">#231919</color>
+    <color name="md_surface_variant">#F4DDDC</color>
+    <color name="md_on_surface_variant">#524342</color>
+    <color name="md_outline">#857372</color>
+    <color name="md_outline_variant">#D7C1C0</color>
+    <color name="md_surface_dim">#E8D6D5</color>
     <color name="md_surface_bright">#FFF8F7</color>
     <color name="md_surface_container_lowest">#FFFFFF</color>
     <color name="md_surface_container_low">#FFF0EF</color>
-    <color name="md_surface_container">#FFE9E8</color>
-    <color name="md_surface_container_high">#FFE1E0</color>
-    <color name="md_surface_container_highest">#FBDBDA</color>
-    <color name="md_inverse_surface">#3F2C2B</color>
+    <color name="md_surface_container">#FCEAE9</color>
+    <color name="md_surface_container_high">#F6E4E3</color>
+    <color name="md_surface_container_highest">#F0DEDD</color>
+    <color name="md_inverse_surface">#382E2D</color>
     <color name="md_inverse_on_surface">#FFEDEB</color>
     <color name="md_inverse_primary">#FFB3B1</color>
     <!-- Fixed colours: the brand (logo), the camera screen, page marks and highlights. -->
