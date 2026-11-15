@@ -332,6 +332,7 @@ object Kit {
             private set
 
         init {
+            tag = ANCHOR
             labelVisibilityMode = LABEL_VISIBILITY_LABELED
             setOnItemSelectedListener { item ->
                 val changed = item.itemId != selected
@@ -363,11 +364,21 @@ object Kit {
     fun banner(a: Activity, message: String, @Suppress("UNUSED_PARAMETER") icon: Int? = null, millis: Long = 2400) {
         val root = a.findViewById<ViewGroup>(android.R.id.content) ?: return
         val sb = Snackbar.make(root, message, if (millis > 3000) Snackbar.LENGTH_LONG else Snackbar.LENGTH_SHORT)
-        root.findViewWithTag<View>(ANCHOR)?.takeIf { it.isShown }?.let { sb.anchorView = it }
+        // Above the highest bottom bar on screen (a floating palette, a Scan button, the navigation
+        // bar), so the message never covers a control someone is about to tap.
+        val anchors = ArrayList<View>().also { anchorsIn(root, it) }
+        anchors.filter { it.isShown && it.height > 0 }
+            .minByOrNull { v -> IntArray(2).also { v.getLocationOnScreen(it) }[1] }
+            ?.let { sb.anchorView = it }
         (sb.view.findViewById<TextView>(com.google.android.material.R.id.snackbar_text))?.maxLines = 4
         sb.show()
     }
 
-    /** Tag for the bottom bar a snackbar should sit above. */
+    private fun anchorsIn(v: View, out: MutableList<View>) {
+        if (v.tag == ANCHOR) out += v
+        if (v is ViewGroup) for (i in 0 until v.childCount) anchorsIn(v.getChildAt(i), out)
+    }
+
+    /** Tag for the bottom bars a snackbar should sit above; the highest one shown wins. */
     const val ANCHOR = "snackbar_anchor"
 }

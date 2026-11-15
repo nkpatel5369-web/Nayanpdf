@@ -10,7 +10,7 @@
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
-        android:layout_height="52dp"
+        android:layout_height="64dp"
         app:navigationContentDescription="Back"
         app:navigationIcon="@drawable/ic_back"
         app:title="Organize pages" />

@@ -221,7 +221,7 @@ class ScanActivity : AppCompatActivity() {
         column.addView(stage, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
 
         // Modes.
-        val modes = HorizontalScrollView(this).apply { isHorizontalScrollBarEnabled = false }
+        val modes = HorizontalScrollView(this).apply { isHorizontalScrollBarEnabled = false; tag = Kit.ANCHOR }
         modeRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER; setPadding(Kit.dpi(ctx, 24), 0, Kit.dpi(ctx, 24), 0) }
         for (k in ScanKind.values()) {
             modeRow.addView(Kit.text(this, k.label, 14f, 500).apply {

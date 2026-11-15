@@ -100,10 +100,22 @@ jobs:
             cp -r app/build/outputs/androidTest-results/. results/api34/app/ || true
             test ! -f failed
 
-      # The Android 11 emulator process has twice exited mid-run (runs 17 and 20: the device went
-      # offline, then "not found", and the emulator console refused connections) while every test
-      # that had run had passed. A lost emulator is not a test result, so that one case, and only
-      # that case, gets one re-run on a fresh emulator. Any failed test fails the job, re-run or not.
+      # The first Android 11 emulator was lost mid-run in runs 17, 20 and 22, each time about 150
+      # seconds after the Android 14 emulator shut down, while a second Android 11 emulator (run 22)
+      # ran to the end. The emulator's netsim daemon is shared between emulators and outlives the
+      # one that started it, so whatever the previous emulator left running is stopped first.
+      - name: Stop what the previous emulator left running
+        if: ${{ !cancelled() }}
+        run: |
+          ps -eo pid,etime,cmd | grep -E "netsimd|qemu-system|emulator/emulator" | grep -v grep || echo "nothing left"
+          pkill -f netsimd || true
+          pkill -f qemu-system || true
+          for i in $(seq 1 30); do pgrep -f "netsimd|qemu-system" > /dev/null || break; sleep 1; done
+          pgrep -fa "netsimd|qemu-system" || echo "all stopped"
+          adb kill-server || true
+
+      # A lost emulator is not a test result, so that one case, and only that case, gets one re-run
+      # on a fresh emulator. Any failed test fails the job, re-run or not.
       - name: App tests on an Android 11 emulator
         id: api30
         if: ${{ !cancelled() }}
@@ -130,6 +142,14 @@ jobs:
             cp -r app/build/outputs/androidTest-results/. results/api30/app/ || true
             if [ -f failed30 ] && grep -qE "Test run failed to complete|device offline" api30-run1.log && ! grep -rqE 'failures="[1-9]|errors="[1-9]' results/api30/app; then touch lost30; echo "::warning::The Android 11 emulator stopped responding with no failed test; re-running on a fresh emulator"; fi
             test -f ok30
+
+      - name: Stop what the lost emulator left running
+        if: ${{ !cancelled() && hashFiles('android/lost30') != '' }}
+        run: |
+          pkill -f netsimd || true
+          pkill -f qemu-system || true
+          for i in $(seq 1 30); do pgrep -f "netsimd|qemu-system" > /dev/null || break; sleep 1; done
+          adb kill-server || true
 
       - name: App tests on a fresh Android 11 emulator (only after the first one was lost)
         if: ${{ !cancelled() && hashFiles('android/lost30') != '' }}

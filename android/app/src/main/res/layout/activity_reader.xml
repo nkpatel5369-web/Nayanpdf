@@ -11,14 +11,14 @@
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
-        android:layout_height="52dp"
+        android:layout_height="64dp"
         app:navigationContentDescription="Back"
         app:navigationIcon="@drawable/ic_back" />
 
     <LinearLayout
         android:id="@+id/searchBar"
         android:layout_width="match_parent"
-        android:layout_height="52dp"
+        android:layout_height="64dp"
         android:background="@color/bar"
         android:gravity="center_vertical"
         android:orientation="horizontal"
@@ -187,6 +187,7 @@
             android:fadingEdgeLength="20dp"
             android:requiresFadingEdge="horizontal"
             android:scrollbars="none"
+            android:tag="snackbar_anchor"
             android:visibility="gone">
 
             <LinearLayout
@@ -206,6 +207,7 @@
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/modes"
         style="@style/Npdf.ModeBar"
+        android:tag="snackbar_anchor"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:menu="@menu/reader_modes" />

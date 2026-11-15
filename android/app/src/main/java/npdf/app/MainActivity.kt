@@ -178,7 +178,7 @@ class MainActivity : AppCompatActivity() {
         p.content.setPadding(0, 0, 0, Kit.dpi(ctx, 96))
 
         fab = ExtendedFloatingActionButton(this).apply {
-            id = R.id.scanBtn
+            id = R.id.scanBtn; tag = Kit.ANCHOR
             text = "Scan"
             setIconResource(R.drawable.ic_scan)
             contentDescription = "Scan"
