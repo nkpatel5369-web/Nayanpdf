@@ -327,7 +327,8 @@ object Ios {
                 isClickable = true; isFocusable = true
                 contentDescription = label
                 addView(ImageView(ctx).apply { setImageResource(icon); imageTintList = tint; isDuplicateParentStateEnabled = true }, LayoutParams(dpi(ctx, 25), dpi(ctx, 25)))
-                addView(text(ctx, label, 10.5f, 500).apply { setTextColor(tint); isDuplicateParentStateEnabled = true; setPadding(0, dpi(ctx, 2), 0, 0) })
+                addView(text(ctx, label, 10.5f, 500).apply { setTextColor(tint); isDuplicateParentStateEnabled = true; setPadding(0, dpi(ctx, 2), 0, 0); gravity = Gravity.CENTER_HORIZONTAL; maxLines = 1 },
+                    LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT))
                 setOnClickListener { select(id, true) }
             }
             items[id] = item

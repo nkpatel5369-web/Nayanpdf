@@ -108,7 +108,7 @@ object TextInfo {
             .let { ls -> val top = ls.take(8); top.maxByOrNull { it.height } }?.text?.trim()
         if (heading != null) out.add(safeName(heading))
         out.add(fallback)
-        return out.map(::safeName).filter { it.isNotBlank() }.distinct().take(4)
+        return out.map(::safeName).filter { it.isNotBlank() }.distinctBy { it.lowercase() }.take(4)
     }
 
     /** Removes characters not allowed in file names and trims the length. */

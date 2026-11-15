@@ -115,6 +115,7 @@ class ReaderActivity : AppCompatActivity(), PdfView.Listener {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Ui.edgeToEdge(this)
         b = ActivityReaderBinding.inflate(layoutInflater)
         setContentView(b.root)
         Ui.fitSystemBars(b.root)
@@ -214,8 +215,11 @@ class ReaderActivity : AppCompatActivity(), PdfView.Listener {
 
     fun updateTitle() {
         val s = session ?: return
-        supportActionBar?.title = (if (s.dirty) "• " else "") + s.name
+        val t = (if (s.dirty) "• " else "") + s.name
+        supportActionBar?.title = t
         supportActionBar?.subtitle = "${s.sizes.size} page" + if (s.sizes.size == 1) "" else "s"
+        // Long names are shortened in the middle, so the end of the name stays visible.
+        for (i in 0 until b.toolbar.childCount) (b.toolbar.getChildAt(i) as? android.widget.TextView)?.takeIf { it.text == t }?.ellipsize = android.text.TextUtils.TruncateAt.MIDDLE
     }
 
     private fun rememberRecent() {

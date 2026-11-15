@@ -47,6 +47,9 @@ class TextInfoQrTest {
         assertEquals("Tax Invoice 2026-03-31", s[0])
         assertTrue(s.contains("ACME Traders Private Limited"))
         assertEquals("Scan 2026-11-15 10.32", s.last())
+        // The same words in another case are offered once.
+        val undated = TextInfo.nameSuggestions(listOf(TextLine("TAX INVOICE", 30f), TextLine("Item 1 Consulting services 1,000.00", 14f)), "Scan")
+        assertEquals(listOf("Tax Invoice", "Scan"), undated)
         assertEquals("a b c", TextInfo.safeName("a/b:c"))
         assertEquals("Scan 2026-11-15 10.32", TextInfo.defaultName("Scan", LocalDateTime.of(2026, 11, 15, 10, 32)))
     }

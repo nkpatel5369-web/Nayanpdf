@@ -97,6 +97,7 @@ class ScanReviewActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Ui.edgeToEdge(this)
         buildUi()
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() { overlayBack?.invoke() ?: close() }
@@ -127,8 +128,9 @@ class ScanReviewActivity : AppCompatActivity() {
 
     private fun buildUi() {
         val ctx = this
-        val root = FrameLayout(this).apply { setBackgroundColor(Ios.color(ctx, R.color.viewer_bg)) }
-        val column = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        // The bar colour shows under the status and navigation bars; the pages sit on the viewer grey.
+        val root = FrameLayout(this).apply { setBackgroundColor(Ios.color(ctx, R.color.bar)) }
+        val column = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(Ios.color(ctx, R.color.viewer_bg)) }
         root.addView(column)
         // Top bar: close, title (tap to rename), save.
         val bar = FrameLayout(this).apply { setBackgroundColor(Ios.color(ctx, R.color.bar)); minimumHeight = Ios.dpi(ctx, 52) }

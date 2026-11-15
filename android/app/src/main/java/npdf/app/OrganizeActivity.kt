@@ -43,6 +43,7 @@ class OrganizeActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Ui.edgeToEdge(this)
         val session = DocSession.current
         if (session == null) { finish(); return }
         s = session

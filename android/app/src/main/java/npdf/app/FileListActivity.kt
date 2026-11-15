@@ -33,6 +33,7 @@ abstract class FileListActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Ui.edgeToEdge(this)
         b = ActivityListBinding.inflate(layoutInflater)
         setContentView(b.root)
         Ui.fitSystemBars(b.root)

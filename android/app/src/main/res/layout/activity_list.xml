@@ -4,7 +4,7 @@
     android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg"
+    android:background="@color/bar"
     android:orientation="vertical">
 
     <com.google.android.material.appbar.MaterialToolbar
@@ -21,6 +21,7 @@
 
     <TextView
         android:id="@+id/hint"
+        android:background="@color/bg"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:paddingHorizontal="32dp"
@@ -31,7 +32,8 @@
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginHorizontal="16dp"
+        android:background="@color/bg"
+        android:paddingHorizontal="16dp"
         android:layout_weight="1">
 
         <androidx.recyclerview.widget.RecyclerView
@@ -44,6 +46,7 @@
 
     <LinearLayout
         android:id="@+id/options"
+        android:background="@color/bg"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"

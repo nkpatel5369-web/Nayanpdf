@@ -5,6 +5,7 @@ import android.content.res.ColorStateList
 import android.graphics.Color
 import android.util.TypedValue
 import android.view.View
+import androidx.activity.enableEdgeToEdge
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.button.MaterialButton
@@ -13,6 +14,16 @@ import kotlin.math.max
 
 object Ui {
     /** Keeps content clear of the status bar, navigation bar, display cutout and keyboard. */
+    /**
+     * Draws the screen behind transparent system bars on every Android version (Android 15 and later
+     * do this anyway), so the status bar takes the colour of the bar or page beneath it instead of a
+     * solid theme colour. [darkBars] keeps light status icons over a dark screen (the camera).
+     */
+    fun edgeToEdge(a: androidx.activity.ComponentActivity, darkBars: Boolean = false) {
+        if (darkBars) a.enableEdgeToEdge(androidx.activity.SystemBarStyle.dark(Color.TRANSPARENT), androidx.activity.SystemBarStyle.dark(Color.TRANSPARENT))
+        else a.enableEdgeToEdge()
+    }
+
     fun fitSystemBars(root: View) {
         ViewCompat.setOnApplyWindowInsetsListener(root) { v, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
