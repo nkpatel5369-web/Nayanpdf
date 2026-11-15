@@ -130,6 +130,20 @@ class ScannerTest {
         val d = Pdf.open(copyToFile(uri, "pdf").absolutePath)
         assertEquals(1, d.countPages())
         val text = DocInfo.pageText(d, 1)
+        if (!(text.contains("INVOICE") && text.contains("ACME"))) {
+            // Evidence for the failure: the recognised words as code points, and the saved page's text layer.
+            val bmp = ScanProcessor.cached(session, page)
+            val r = Ocr(ctx).recognizeBitmap(bmp, 300, listOf("eng"))
+            Log.i("NPDF-SCAN", "words: " + r.words.take(4).joinToString { w -> w.text + "=" + w.text.map { "%04x".format(it.code) } })
+            val po = (d.loadPage(0) as PDFPage).getObject()
+            Log.i("NPDF-SCAN", "page: " + po.toString(false, true).take(600))
+            Log.i("NPDF-SCAN", "fonts: " + po.get("Resources").get("Font").toString(false, true).take(300))
+            val c = po.get("Contents")
+            val last = if (c.isArray) c.get(c.size() - 1) else c
+            Log.i("NPDF-SCAN", "text layer: " + String(last.readStream(), Charsets.ISO_8859_1).take(400))
+            val f0 = po.get("Resources").get("Font")
+            for (k in npdf.engine.Pdf.dictKeys(f0)) Log.i("NPDF-SCAN", "font $k: " + f0.get(k).toString(false, true).take(400))
+        }
         assertTrue("searchable: $text", text.contains("INVOICE") && text.contains("ACME"))
     }
 

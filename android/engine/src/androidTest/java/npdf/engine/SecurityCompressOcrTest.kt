@@ -97,6 +97,28 @@ class SecurityCompressOcrTest {
         assertTrue(TextLayer.hasText(saved, 1))
     }
 
+    /** A scan PDF built as the scanner builds it: a new document, the font made first, a picture page, then the words. */
+    @Test
+    fun textLayerOnANewPicturePageIsSearchable() {
+        val bmp = android.graphics.Bitmap.createBitmap(600, 800, android.graphics.Bitmap.Config.ARGB_8888)
+        android.graphics.Canvas(bmp).drawColor(android.graphics.Color.WHITE)
+        val jpeg = java.io.ByteArrayOutputStream().also { bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, it) }.toByteArray()
+        val doc = com.artifex.mupdf.fitz.PDFDocument()
+        val font = TextLayer.newFont(doc)
+        val box = Pages.addImagePage(doc, jpeg, Pages.PageSize.FIT, 0f)
+        val words = listOf(TextLayer.Word("TAX", Rect(box.x0 + 50f, box.y0 + 50f, box.x0 + 90f, box.y0 + 64f), 95f),
+            TextLayer.Word("INVOICE", Rect(box.x0 + 95f, box.y0 + 50f, box.x0 + 180f, box.y0 + 64f), 95f))
+        assertEquals(2, TextLayer.addWords(doc, 1, words, font))
+        val page = doc.loadPage(0) as com.artifex.mupdf.fitz.PDFPage
+        android.util.Log.i("NPDF-OCR", "new scan page: ${page.getObject().toString(false, true).take(400)}")
+        val f = Fixtures.out("newscan.pdf")
+        Pdf.save(doc, f)
+        val back = Pdf.open(f.absolutePath)
+        val text = Fixtures.text(back, 1)
+        android.util.Log.i("NPDF-OCR", "new scan page text: ${text.map { "%04x".format(it.code) }.take(40)}")
+        assertTrue("searchable: $text", text.contains("TAX") && text.contains("INVOICE"))
+    }
+
     @Test
     fun searchFindsPhrasesAcrossLinesAndSelectionWorks() {
         val d = Fixtures.open("financial.pdf")
