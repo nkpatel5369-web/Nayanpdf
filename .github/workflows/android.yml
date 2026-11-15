@@ -55,9 +55,12 @@ jobs:
           apk=app/build/outputs/apk/release/app-release.apk
           aapt2=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)aapt2
           "$aapt2" dump permissions "$apk" | tee ../permissions.txt
-          if grep -E "INTERNET|NETWORK|WIFI|BLUETOOTH|NEARBY|LOCATION|CAMERA|READ_EXTERNAL|WRITE_EXTERNAL|MANAGE_EXTERNAL|CONTACTS|SMS|PHONE" ../permissions.txt; then
+          if grep -E "INTERNET|NETWORK|WIFI|BLUETOOTH|NEARBY|LOCATION|READ_EXTERNAL|WRITE_EXTERNAL|MANAGE_EXTERNAL|CONTACTS|SMS|PHONE|AUDIO|MEDIA" ../permissions.txt; then
             echo "::error::The APK requests a permission N PDF must not have"; exit 1
           fi
+          # Exactly these permissions: the scanner's camera and AndroidX's app-internal receiver permission.
+          others=$(grep -oE "name='[^']+'" ../permissions.txt | sort -u | grep -vE "android.permission.CAMERA|DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" || true)
+          if [ -n "$others" ]; then echo "::error::Unexpected permissions: $others"; exit 1; fi
           ls -l "$apk"
 
       - name: Enable KVM for the Android emulator
@@ -73,13 +76,14 @@ jobs:
           arch: x86_64
           target: google_apis
           disable-animations: true
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back emulated -camera-front none
           working-directory: android
           script: |
             adb logcat -G 16M || true
             adb logcat -c || true
             ./gradlew --no-daemon :engine:connectedDebugAndroidTest || touch failed
             ./gradlew --no-daemon :app:connectedReleaseAndroidTest || touch failed
+            mkdir -p results/api34/screens && adb pull /sdcard/Download/npdf-screens/. results/api34/screens/ || true
             adb logcat -d > logcat-api34.txt || true
             adb logcat -d -s NPDF-PERF:I NPDF-COMPRESS:I NPDF-NET:I NPDF-OCR:I NPDF-EXPORT:I NPDF-SCANEDIT:I NPDF-SCAN:I > npdf-log-api34.txt || true
             mkdir -p results/api34/engine results/api34/app
@@ -95,12 +99,13 @@ jobs:
           arch: x86_64
           target: google_apis
           disable-animations: true
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back emulated -camera-front none
           working-directory: android
           script: |
             adb logcat -G 16M || true
             adb logcat -c || true
             ./gradlew --no-daemon :app:connectedReleaseAndroidTest || touch failed30
+            mkdir -p results/api30/screens && adb pull /sdcard/Download/npdf-screens/. results/api30/screens/ || true
             adb logcat -d > logcat-api30.txt || true
             adb logcat -d -s NPDF-PERF:I NPDF-NET:I NPDF-OCR:I NPDF-SCAN:I > npdf-log-api30.txt || true
             mkdir -p results/api30/app

@@ -4,13 +4,13 @@
     android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?attr/colorSurface"
+    android:background="@color/bar"
     android:orientation="vertical">
 
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
+        android:layout_height="52dp"
         app:navigationContentDescription="Back"
         app:navigationIcon="@drawable/ic_back"
         app:title="Organize pages" />
@@ -19,10 +19,16 @@
         android:id="@+id/hint"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
         android:paddingHorizontal="16dp"
         android:paddingBottom="8dp"
         android:text="Tap pages to select them. Long-press and drag to move a page."
-        android:textAppearance="?attr/textAppearanceBodySmall" />
+        android:textAppearance="@style/Npdf.Text.Footnote" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0.5dp"
+        android:background="@color/separator" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/grid"
@@ -31,12 +37,19 @@
         android:layout_weight="1"
         android:background="@color/viewer_bg"
         android:clipToPadding="false"
-        android:padding="6dp" />
+        android:padding="8dp" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0.5dp"
+        android:background="@color/separator" />
 
     <HorizontalScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="?attr/colorSurfaceContainerLow"
+        android:background="@color/bar"
+        android:fadingEdgeLength="20dp"
+        android:requiresFadingEdge="horizontal"
         android:scrollbars="none">
 
         <LinearLayout
@@ -44,6 +57,6 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:paddingHorizontal="4dp" />
+            android:padding="4dp" />
     </HorizontalScrollView>
 </LinearLayout>

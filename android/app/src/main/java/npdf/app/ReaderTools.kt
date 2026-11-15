@@ -14,7 +14,6 @@ import com.artifex.mupdf.fitz.Point
 import com.artifex.mupdf.fitz.Quad
 import com.artifex.mupdf.fitz.Rect
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
 import npdf.app.Dialogs.selectedIndex
 import npdf.engine.Annotations
@@ -123,7 +122,7 @@ class ReaderTools(private val a: ReaderActivity) {
             "Date" -> "Tap where the date goes."
             else -> return
         }
-        Snackbar.make(b.pdf, msg, Snackbar.LENGTH_SHORT).show()
+        Ios.banner(a, msg)
     }
 
     // ------------------------------------------------------------ edit helper
@@ -197,7 +196,7 @@ class ReaderTools(private val a: ReaderActivity) {
         items.add(if (resizable) "Move or resize" else "Move"); acts.add { b.pdf.tool = AdjustTool(page, info.rect, resizable) { r ->
             if (resizable) edit("Move", setOf(page)) { Annotations.setRect(it, page + 1, info.id, r) }
             else edit("Move", setOf(page)) { Annotations.move(it, page + 1, info.id, r.x0 - info.rect.x0, r.y0 - info.rect.y0) }
-        }; Snackbar.make(b.pdf, "Drag to move; drag the corner dot to resize.", Snackbar.LENGTH_SHORT).show() }
+        }; Ios.banner(a, "Drag to move; drag the corner dot to resize.") }
         items.add("Delete"); acts.add { edit("Delete comment", setOf(page)) { Annotations.delete(it, page + 1, info.id) } }
         if (info.contents.isNotBlank() && !canText) { items.add(0, "Show text"); acts.add(0) { Dialogs.message(a, info.typeName, info.contents) } }
         val i = Dialogs.choose(a, title + if (info.contents.isNotBlank()) ": " + info.contents.take(60) else "", items) ?: return@launch
@@ -218,6 +217,7 @@ class ReaderTools(private val a: ReaderActivity) {
         if (found == null) { Ui.toast(a, "No editable text here. Scanned pages need OCR first; use Add text for new text."); return@launch }
         val (line, block, size) = found
         val ctx = a
+        if (line.spans.all { TextEdit.isOcrFont(it.fontName) }) { editScannedAt(page, line, x); return@launch }
         val (til, et) = Dialogs.field(ctx, "Text", line.text.trimEnd(), InputType.TYPE_CLASS_TEXT, 1)
         val paragraph = Dialogs.check(ctx, "Edit the whole paragraph (${block.lines.size} lines)", false)
         paragraph.visibility = if (block.lines.size > 1) View.VISIBLE else View.GONE
@@ -238,7 +238,18 @@ class ReaderTools(private val a: ReaderActivity) {
             else TextEdit.editText(d, page + 1, line.bbox, text, fontSize = fs, fit = fitMode)
         } ?: return@launch
         val msg = (listOf("Edited in ${res.font}" + if (res.fontKind == "original") " (the original font)." else ".") + res.warnings).joinToString("\n")
-        if (res.warnings.isEmpty()) Snackbar.make(b.pdf, msg, Snackbar.LENGTH_SHORT).show() else Dialogs.message(a, "Text edited", msg)
+        if (res.warnings.isEmpty()) Ios.banner(a, msg) else Dialogs.message(a, "Text edited", msg)
+    }
+
+    /** Scanned text (recognised by OCR): edit the words under the finger; size and colour follow the scan. */
+    private suspend fun editScannedAt(page: Int, line: npdf.engine.Line, x: Float) {
+        val (text0, rect) = TextEdit.ocrChunkAt(line, x) ?: return
+        val (til, et) = Dialogs.field(a, "Text", text0, InputType.TYPE_CLASS_TEXT, 1)
+        val note = Dialogs.label(a, "Scanned text: the words are replaced in a matching font, size and colour. The scan's pixels under them are removed.")
+        if (!Dialogs.custom(a, "Edit scanned text", Dialogs.column(a, til, note), "Apply")) return
+        val text = et.text?.toString() ?: ""
+        val res = edit("Edit scanned text", setOf(page)) { d -> TextEdit.editText(d, page + 1, rect, text) } ?: return
+        Ios.banner(a, "Edited in ${res.font}", R.drawable.ic_check)
     }
 
     private fun addTextAt(page: Int, r: Rect) = a.lifecycleScope.launch {
@@ -253,7 +264,7 @@ class ReaderTools(private val a: ReaderActivity) {
         val family = listOf("helvetica", "times", "courier")[font.selectedIndex().coerceAtLeast(0)]
         val box = Rect(r.x0, r.y0, max(r.x1, r.x0 + 40f), r.y1)
         val label = edit("Add text", setOf(page)) { TextEdit.insertText(it, page + 1, box, text, size, 0xFF000000.toInt(), family) }
-        if (label != null) Snackbar.make(b.pdf, "Text added ($label).", Snackbar.LENGTH_SHORT).show()
+        if (label != null) Ios.banner(a, "Text added ($label).")
     }
 
     private fun pickImageThenPlace() {
@@ -265,7 +276,7 @@ class ReaderTools(private val a: ReaderActivity) {
                     b.pdf.tool = null
                 }
             }
-            Snackbar.make(b.pdf, "Drag where the picture goes, or tap.", Snackbar.LENGTH_LONG).show()
+            Ios.banner(a, "Drag where the picture goes, or tap.")
         }
         a.imageLauncher.launch("image/*")
     }
@@ -278,7 +289,7 @@ class ReaderTools(private val a: ReaderActivity) {
         when (i) {
             0 -> {
                 b.pdf.tool = AdjustTool(page, pl.rect, true) { r -> edit("Move picture", setOf(page)) { ImageEdit.edit(it, page + 1, pl.rect, "transform", newRect = r) } }
-                Snackbar.make(b.pdf, "Drag to move; drag the corner dot to resize.", Snackbar.LENGTH_SHORT).show()
+                Ios.banner(a, "Drag to move; drag the corner dot to resize.")
             }
             1 -> {
                 a.pendingImageAction = { bytes -> a.lifecycleScope.launch { edit("Replace picture", setOf(page)) { ImageEdit.edit(it, page + 1, pl.rect, "replace", replacement = bytes) } } }
@@ -354,10 +365,10 @@ class ReaderTools(private val a: ReaderActivity) {
             a.lifecycleScope.launch {
                 edit("Signature", setOf(p)) { Annotations.addSignatureImage(it, p + 1, r, png, author) }
                 b.pdf.tool = null
-                Snackbar.make(b.pdf, "Signature placed. Tap it to move or resize.", Snackbar.LENGTH_SHORT).show()
+                Ios.banner(a, "Signature placed. Tap it to move or resize.")
             }
         }
-        Snackbar.make(b.pdf, "Tap where the signature goes, or drag its box.", Snackbar.LENGTH_LONG).show()
+        Ios.banner(a, "Tap where the signature goes, or drag its box.")
     }
 
     // --------------------------------------------------------------- redact

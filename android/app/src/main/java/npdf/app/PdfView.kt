@@ -347,6 +347,54 @@ class PdfView @JvmOverloads constructor(context: Context, attrs: AttributeSet? =
     private val pagePaint = Paint().apply { color = Color.WHITE }
     private val edgePaint = Paint().apply { color = 0x22000000; style = Paint.Style.STROKE; strokeWidth = 1f }
     private val bmpPaint = Paint(Paint.FILTER_BITMAP_FLAG)
+
+    /** Pages drawn with inverted colours for reading in the dark (the file is not changed). */
+    var darkPages = false
+        set(v) {
+            field = v
+            bmpPaint.colorFilter = if (v) android.graphics.ColorMatrixColorFilter(android.graphics.ColorMatrix(floatArrayOf(
+                -1f, 0f, 0f, 0f, 255f, 0f, -1f, 0f, 0f, 255f, 0f, 0f, -1f, 0f, 255f, 0f, 0f, 0f, 1f, 0f))) else null
+            pagePaint.color = if (v) Color.BLACK else Color.WHITE
+            invalidate()
+        }
+
+    // Page scrubber: a handle on the right edge for moving quickly through long documents.
+    private var scrubUntil = 0L
+    private var scrubbing = false
+    private val scrubPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x99000000.toInt() }
+    private val bubblePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xE62C2C2E.toInt() }
+    private val bubbleText = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE; textSize = 15f * resources.displayMetrics.scaledDensity; textAlign = Paint.Align.CENTER
+        typeface = androidx.core.content.res.ResourcesCompat.getFont(context, R.font.inter_semibold)
+    }
+    private fun dpx(v: Float) = v * resources.displayMetrics.density
+
+    private fun scrubHandle(): RectF? {
+        if (pageCount() < 4) return null
+        val ch = contentHeight()
+        if (ch <= height) return null
+        val h = dpx(48f)
+        val y = (scrollYpx / (ch - height)).coerceIn(0f, 1f) * (height - h)
+        return RectF(width - dpx(20f), y, width - dpx(6f), y + h)
+    }
+
+    private fun showScrubber() {
+        scrubUntil = android.os.SystemClock.uptimeMillis() + 1500
+        postInvalidateDelayed(1600)
+    }
+
+    private fun drawScrubber(canvas: Canvas) {
+        val r = scrubHandle() ?: return
+        if (!scrubbing && android.os.SystemClock.uptimeMillis() > scrubUntil) return
+        canvas.drawRoundRect(r, dpx(7f), dpx(7f), scrubPaint)
+        if (scrubbing) {
+            val label = "${currentPage + 1} / ${pageCount()}"
+            val w = bubbleText.measureText(label) + dpx(28f)
+            val b = RectF(r.left - dpx(14f) - w, r.centerY() - dpx(19f), r.left - dpx(14f), r.centerY() + dpx(19f))
+            canvas.drawRoundRect(b, dpx(19f), dpx(19f), bubblePaint)
+            canvas.drawText(label, b.centerX(), b.centerY() - (bubbleText.ascent() + bubbleText.descent()) / 2, bubbleText)
+        }
+    }
     private val hitPaint = Paint().apply { color = ContextCompat.getColor(context, R.color.search_hit) }
     private val currentPaint = Paint().apply { color = ContextCompat.getColor(context, R.color.search_current) }
     private val selPaint = Paint().apply { color = ContextCompat.getColor(context, R.color.selection) }
@@ -384,6 +432,7 @@ class PdfView @JvmOverloads constructor(context: Context, attrs: AttributeSet? =
         if (first > 0) requestPage(first - 1)
         if (last + 1 < n) requestPage(last + 1)
         tool?.draw(canvas, this)
+        drawScrubber(canvas)
     }
 
     private fun drawTiles(canvas: Canvas, p: Int, left: Float, top: Float, pw: Float, ph: Float, ts: Float) {
@@ -399,7 +448,7 @@ class PdfView @JvmOverloads constructor(context: Context, attrs: AttributeSet? =
             val t = tileCache.get(key)
             if (t != null && t.version == s.pageVersion(p) && t.docVersion == s.version) {
                 val x = left + tx * TILE; val y = top + ty * TILE
-                canvas.drawBitmap(t.bitmap, x, y, null)
+                canvas.drawBitmap(t.bitmap, x, y, bmpPaint)
             } else {
                 requestTile(p, ts, tx, ty)
             }
@@ -424,6 +473,7 @@ class PdfView @JvmOverloads constructor(context: Context, attrs: AttributeSet? =
     private val gestures = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
         override fun onDown(e: MotionEvent): Boolean { scroller.forceFinished(true); return true }
         override fun onScroll(e1: MotionEvent?, e2: MotionEvent, dx: Float, dy: Float): Boolean {
+            showScrubber()
             scrollXpx += dx; scrollYpx += dy
             clampScroll(); updateCurrentPage(); invalidate()
             return true
@@ -481,6 +531,27 @@ class PdfView @JvmOverloads constructor(context: Context, attrs: AttributeSet? =
     }
 
     override fun onTouchEvent(e: MotionEvent): Boolean {
+        // The page scrubber takes the gesture when its handle is grabbed.
+        if (e.actionMasked == MotionEvent.ACTION_DOWN && e.pointerCount == 1) {
+            val h = scrubHandle()
+            if (h != null && android.os.SystemClock.uptimeMillis() <= scrubUntil && e.x >= h.left - dpx(24f) && e.y >= h.top - dpx(16f) && e.y <= h.bottom + dpx(16f)) {
+                scrubbing = true
+                parent?.requestDisallowInterceptTouchEvent(true)
+                performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
+            }
+        }
+        if (scrubbing) {
+            when (e.actionMasked) {
+                MotionEvent.ACTION_MOVE, MotionEvent.ACTION_DOWN -> {
+                    val hh = dpx(48f)
+                    val frac = ((e.y - hh / 2) / (height - hh)).coerceIn(0f, 1f)
+                    scrollYpx = frac * (contentHeight() - height)
+                    clampScroll(); updateCurrentPage(); invalidate()
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> { scrubbing = false; showScrubber(); invalidate() }
+            }
+            return true
+        }
         if (e.pointerCount > 1) {
             if (toolActive) { tool?.onCancel(); toolActive = false }
             multiTouch = true

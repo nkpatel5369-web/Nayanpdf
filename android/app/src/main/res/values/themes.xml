@@ -1,15 +1,107 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- One theme for light and dark. Layout follows clarity (legible type, generous space),
+         deference (content first, quiet translucent bars) and depth (layers, sheets, motion). -->
     <style name="Theme.Npdf" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/brand</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <item name="colorPrimaryContainer">@color/brand_container</item>
-        <item name="colorOnPrimaryContainer">@color/brand_dark</item>
-        <item name="colorSecondary">@color/brand</item>
-        <item name="colorSecondaryContainer">@color/brand_container</item>
-        <item name="colorOnSecondaryContainer">@color/brand_dark</item>
-        <item name="colorTertiary">@color/brand</item>
+        <item name="colorPrimary">@color/tint</item>
+        <item name="colorOnPrimary">@color/on_tint</item>
+        <item name="colorPrimaryContainer">@color/tint_soft</item>
+        <item name="colorOnPrimaryContainer">@color/tint</item>
+        <item name="colorSecondary">@color/tint</item>
+        <item name="colorOnSecondary">@color/on_tint</item>
+        <item name="colorSecondaryContainer">@color/tint_soft</item>
+        <item name="colorOnSecondaryContainer">@color/tint</item>
+        <item name="colorTertiary">@color/tint</item>
+        <item name="colorSurface">@color/bg_cell</item>
+        <item name="colorOnSurface">@color/label</item>
+        <item name="colorOnSurfaceVariant">@color/label2</item>
+        <item name="colorSurfaceContainerLowest">@color/bg_cell</item>
+        <item name="colorSurfaceContainerLow">@color/bg_cell</item>
+        <item name="colorSurfaceContainer">@color/bg_cell</item>
+        <item name="colorSurfaceContainerHigh">@color/bg_elevated</item>
+        <item name="colorSurfaceContainerHighest">@color/bg_elevated</item>
+        <item name="colorOutline">@color/separator_opaque</item>
+        <item name="colorOutlineVariant">@color/separator_opaque</item>
+        <item name="colorError">@color/red</item>
+        <item name="android:colorBackground">@color/bg</item>
+        <item name="android:windowBackground">@color/bg</item>
+        <item name="colorControlNormal">@color/label2</item>
+        <item name="colorControlActivated">@color/tint</item>
+        <item name="colorControlHighlight">@color/fill</item>
+        <item name="colorAccent">@color/tint</item>
+        <item name="android:textColorPrimary">@color/label</item>
+        <item name="android:textColorSecondary">@color/label2</item>
+        <item name="android:textColorHint">@color/label3</item>
+        <item name="android:textColorHighlight">@color/tint_soft</item>
+        <item name="android:fontFamily">@font/inter</item>
+        <item name="fontFamily">@font/inter</item>
         <item name="android:windowLightStatusBar">?attr/isLightTheme</item>
         <item name="android:windowLightNavigationBar">?attr/isLightTheme</item>
+        <item name="android:windowAnimationStyle">@style/Npdf.Push</item>
+
+        <item name="textAppearanceDisplaySmall">@style/Npdf.Text.LargeTitle</item>
+        <item name="textAppearanceHeadlineMedium">@style/Npdf.Text.Title1</item>
+        <item name="textAppearanceHeadlineSmall">@style/Npdf.Text.Title2</item>
+        <item name="textAppearanceTitleLarge">@style/Npdf.Text.Title3</item>
+        <item name="textAppearanceTitleMedium">@style/Npdf.Text.Headline</item>
+        <item name="textAppearanceTitleSmall">@style/Npdf.Text.SubheadStrong</item>
+        <item name="textAppearanceBodyLarge">@style/Npdf.Text.Body</item>
+        <item name="textAppearanceBodyMedium">@style/Npdf.Text.Subhead</item>
+        <item name="textAppearanceBodySmall">@style/Npdf.Text.Footnote</item>
+        <item name="textAppearanceLabelLarge">@style/Npdf.Text.Button</item>
+        <item name="textAppearanceLabelMedium">@style/Npdf.Text.Caption</item>
+        <item name="textAppearanceLabelSmall">@style/Npdf.Text.Caption2</item>
+
+        <item name="toolbarStyle">@style/Npdf.Toolbar</item>
+        <item name="materialButtonStyle">@style/Npdf.Button.Filled</item>
+        <item name="borderlessButtonStyle">@style/Npdf.Button.Plain</item>
+        <item name="editTextStyle">@style/Npdf.EditText</item>
+        <item name="switchStyle">@style/Npdf.Switch</item>
+        <item name="materialSwitchStyle">@style/Npdf.Switch.Material</item>
+        <item name="popupMenuStyle">@style/Npdf.PopupMenu</item>
+        <item name="actionOverflowMenuStyle">@style/Npdf.PopupMenu.Overflow</item>
+        <item name="android:popupMenuStyle">@style/Npdf.PopupMenu</item>
+        <item name="textAppearanceLargePopupMenu">@style/Npdf.Text.Body</item>
+        <item name="textAppearanceSmallPopupMenu">@style/Npdf.Text.Body</item>
+        <item name="android:itemTextAppearance">@style/Npdf.Text.Body</item>
+        <item name="actionOverflowButtonStyle">@style/Npdf.Overflow</item>
+        <item name="actionModeBackground">@color/bar</item>
+        <item name="windowActionModeOverlay">true</item>
+    </style>
+
+    <style name="Theme.Npdf.Camera" parent="Theme.Npdf">
+        <item name="android:windowBackground">@color/black</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
+
+    <!-- iOS-style push: the new screen slides over from the right while the previous one shifts left. -->
+    <style name="Npdf.Push" parent="@android:style/Animation.Activity">
+        <item name="android:activityOpenEnterAnimation">@anim/push_in</item>
+        <item name="android:activityOpenExitAnimation">@anim/push_out</item>
+        <item name="android:activityCloseEnterAnimation">@anim/pop_in</item>
+        <item name="android:activityCloseExitAnimation">@anim/pop_out</item>
+    </style>
+
+    <style name="Npdf.Dialog" parent="Theme.Npdf">
+        <item name="android:windowIsFloating">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:backgroundDimEnabled">true</item>
+        <item name="android:backgroundDimAmount">0.38</item>
+        <item name="android:windowAnimationStyle">@style/Npdf.AlertAnim</item>
+        <item name="android:windowSoftInputMode">adjustResize|stateVisible</item>
+    </style>
+    <style name="Npdf.AlertAnim" parent="">
+        <item name="android:windowEnterAnimation">@anim/alert_in</item>
+        <item name="android:windowExitAnimation">@anim/alert_out</item>
+    </style>
+    <style name="Npdf.Sheet" parent="Npdf.Dialog">
+        <item name="android:windowAnimationStyle">@style/Npdf.SheetAnim</item>
+        <item name="android:windowSoftInputMode">adjustResize|stateHidden</item>
+    </style>
+    <style name="Npdf.SheetAnim" parent="">
+        <item name="android:windowEnterAnimation">@anim/sheet_in</item>
+        <item name="android:windowExitAnimation">@anim/sheet_out</item>
     </style>
 </resources>

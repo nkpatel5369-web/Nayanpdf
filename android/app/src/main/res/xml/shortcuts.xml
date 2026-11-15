@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Quick actions shown when the app icon is long-pressed. -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut android:enabled="true" android:icon="@drawable/shortcut_scan" android:shortcutId="scan" android:shortcutShortLabel="@string/shortcut_scan">
+        <intent android:action="npdf.action.SCAN" android:targetClass="npdf.app.MainActivity" android:targetPackage="in.nayanpdf.npdf" />
+    </shortcut>
+    <shortcut android:enabled="true" android:icon="@drawable/shortcut_open" android:shortcutId="open" android:shortcutShortLabel="@string/shortcut_open">
+        <intent android:action="npdf.action.OPEN" android:targetClass="npdf.app.MainActivity" android:targetPackage="in.nayanpdf.npdf" />
+    </shortcut>
+    <shortcut android:enabled="true" android:icon="@drawable/shortcut_photos" android:shortcutId="photos" android:shortcutShortLabel="@string/shortcut_photos">
+        <intent android:action="npdf.action.PHOTOS" android:targetClass="npdf.app.MainActivity" android:targetPackage="in.nayanpdf.npdf" />
+    </shortcut>
+</shortcuts>

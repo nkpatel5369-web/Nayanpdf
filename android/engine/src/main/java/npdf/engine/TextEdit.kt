@@ -459,6 +459,32 @@ object TextEdit {
         return out
     }
 
+    /**
+     * For a line recognised by OCR: the run of words around [x] and its box.
+     * Words separated by a gap wider than about one text size are different
+     * runs (table cells, columns), so an edit touches only what was tapped.
+     */
+    fun ocrChunkAt(line: Line, x: Float): Pair<String, Rect>? {
+        val chars = line.spans.flatMap { sp -> sp.chars.map { sp to it } }
+        if (chars.isEmpty()) return null
+        val runs = ArrayList<MutableList<TextChar>>()
+        var cur = mutableListOf<TextChar>()
+        var lastRight = Float.NaN
+        for ((sp, c) in chars) {
+            if (!Character.isWhitespace(c.c)) {
+                if (!lastRight.isNaN() && c.bbox.x0 - lastRight > 1.1f * sp.size) { if (cur.isNotEmpty()) runs.add(cur); cur = mutableListOf() }
+                lastRight = c.bbox.x1
+            }
+            cur.add(c)
+        }
+        if (cur.isNotEmpty()) runs.add(cur)
+        val visible = runs.map { r -> r.filter { !Character.isWhitespace(it.c) } }.filter { it.isNotEmpty() }
+        val run = visible.firstOrNull { r -> x >= r.first().bbox.x0 - 2f && x <= r.last().bbox.x1 + 2f }
+            ?: visible.minByOrNull { r -> minOf(abs(x - r.first().bbox.x0), abs(x - r.last().bbox.x1)) } ?: return null
+        val text = buildString { for (c in runs.first { it.containsAll(run) }) appendCodePoint(c.c) }.trim()
+        return text to run.map { it.bbox }.reduce(Pdf::union)
+    }
+
     /** True for the invisible font of a text layer added by OCR. */
     fun isOcrFont(name: String) = Span.stripSubset(name).startsWith("GlyphLess")
 

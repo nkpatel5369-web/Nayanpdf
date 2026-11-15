@@ -1,6 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="brand">#F26D7D</color>
-    <color name="brand_container">#5C0A16</color>
-    <color name="viewer_bg">#0B0D11</color>
+    <color name="tint">#FF5468</color>
+    <color name="tint_soft">#33FF5468</color>
+
+    <color name="bg">#000000</color>
+    <color name="bg_cell">#1C1C1E</color>
+    <color name="bg_cell_pressed">#2C2C2E</color>
+    <color name="bg_elevated">#1C1C1E</color>
+    <color name="bg_alert">#2C2C2E</color>
+    <color name="bar">#F01C1C1E</color>
+    <color name="viewer_bg">#0E0E10</color>
+
+    <color name="label">#FFFFFF</color>
+    <color name="label2">#99EBEBF5</color>
+    <color name="label3">#4DEBEBF5</color>
+    <color name="separator">#99545458</color>
+    <color name="separator_opaque">#38383A</color>
+    <color name="fill">#3D767680</color>
+    <color name="fill_strong">#52767680</color>
+
+    <color name="green">#30D158</color>
+    <color name="red">#FF453A</color>
+    <color name="orange">#FF9F0A</color>
+    <color name="yellow">#FFD60A</color>
+    <color name="blue">#0A84FF</color>
+    <color name="indigo">#5E5CE6</color>
+    <color name="purple">#BF5AF2</color>
+    <color name="teal">#40C8E0</color>
+    <color name="pink">#FF375F</color>
+    <color name="gray">#8E8E93</color>
+
+    <color name="hud_bg">#E6F2F2F7</color>
+    <color name="hud_text">#000000</color>
+    <color name="page_outline">#33FFFFFF</color>
 </resources>

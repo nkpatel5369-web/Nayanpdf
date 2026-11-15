@@ -24,6 +24,7 @@ object Codes {
     const val NOT_SUPPORTED = "NOT_SUPPORTED"
     const val INVALID = "INVALID_INPUT"
     const val VERIFY_FAILED = "VALIDATION_FAILED"
+    const val IO = "IO_ERROR"
 }
 
 /** Opening and saving PDFs, and the page-level helpers every operation shares. */

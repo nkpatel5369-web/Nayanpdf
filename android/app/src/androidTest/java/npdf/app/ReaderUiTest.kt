@@ -166,7 +166,8 @@ class ReaderUiTest {
     fun homeScreenShowsOpenAndTools() {
         val sc = ActivityScenario.launch(MainActivity::class.java)
         onView(withId(R.id.openBtn)).check(matches(isDisplayed()))
-        onView(withText("Photos to PDF")).check(matches(isDisplayed()))
+        onView(withId(R.id.scanBtn)).check(matches(isDisplayed()))
+        onView(allOf(withText("Photos to PDF"), isDisplayed())).check(matches(isDisplayed()))
         sc.close()
     }
 

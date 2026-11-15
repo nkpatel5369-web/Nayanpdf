@@ -1,25 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="?attr/selectableItemBackground"
+    android:background="@drawable/bg_cell"
     android:gravity="center_vertical"
-    android:minHeight="64dp"
+    android:minHeight="72dp"
     android:orientation="horizontal"
-    android:paddingVertical="6dp">
+    android:paddingStart="14dp"
+    android:paddingTop="8dp"
+    android:paddingEnd="6dp"
+    android:paddingBottom="8dp">
 
     <ImageView
         android:id="@+id/thumb"
         android:layout_width="44dp"
-        android:layout_height="58dp"
-        android:background="@color/page_fold"
+        android:layout_height="56dp"
+        android:background="@drawable/bg_thumb"
+        android:clipToOutline="true"
         android:contentDescription="@null"
-        android:scaleType="fitCenter" />
+        android:scaleType="centerCrop" />
 
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="12dp"
+        android:layout_marginStart="14dp"
         android:layout_weight="1"
         android:orientation="vertical">
 
@@ -29,21 +34,22 @@
             android:layout_height="wrap_content"
             android:ellipsize="middle"
             android:singleLine="true"
-            android:textAppearance="?attr/textAppearanceBodyLarge" />
+            android:textAppearance="@style/Npdf.Text.Body" />
 
         <TextView
             android:id="@+id/subtitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:singleLine="true"
-            android:textAppearance="?attr/textAppearanceBodySmall" />
+            android:textAppearance="@style/Npdf.Text.Footnote" />
     </LinearLayout>
 
     <ImageButton
         android:id="@+id/remove"
-        style="?attr/borderlessButtonStyle"
         android:layout_width="44dp"
         android:layout_height="44dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
         android:contentDescription="Remove"
-        android:src="@drawable/ic_close" />
+        android:src="@drawable/ic_close"
+        app:tint="@color/label3" />
 </LinearLayout>

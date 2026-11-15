@@ -24,7 +24,6 @@ import com.artifex.mupdf.fitz.PDFAnnotation
 import com.artifex.mupdf.fitz.Point
 import com.artifex.mupdf.fitz.Quad
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import npdf.app.databinding.ActivityReaderBinding
@@ -73,6 +72,25 @@ class ReaderActivity : AppCompatActivity(), PdfView.Listener {
             try { act(Files.readBytes(this, uri)) } catch (e: Exception) { Ui.toast(this, Ui.describe(e)) }
         }
     }
+    /** Office export when no scan folder can be written (Android 8 and 9): the user picks where. */
+    var pendingOffice: Pair<File, npdf.engine.Export.Format>? = null
+    val officeLauncher = registerForActivityResult(CreateAny()) { uri ->
+        val p = pendingOffice
+        pendingOffice = null
+        if (uri != null && p != null) lifecycleScope.launch {
+            val ok = busy("Saving…") { Files.writeToUri(this@ReaderActivity, p.first, uri); true } ?: false
+            p.first.delete()
+            if (ok) ReaderActions.exported(this@ReaderActivity, uri, p.second, Files.displayName(this@ReaderActivity, uri))
+        } else p?.first?.delete()
+    }
+
+    /** CREATE_DOCUMENT for any type: input is (file name, MIME type). */
+    class CreateAny : androidx.activity.result.contract.ActivityResultContract<Pair<String, String>, Uri?>() {
+        override fun createIntent(context: android.content.Context, input: Pair<String, String>) =
+            Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType(input.second).putExtra(Intent.EXTRA_TITLE, input.first)
+        override fun parseResult(resultCode: Int, intent: Intent?): Uri? = if (resultCode == RESULT_OK) intent?.data else null
+    }
+
     val treeLauncher = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         val act = pendingSplit
         pendingSplit = null
@@ -88,6 +106,8 @@ class ReaderActivity : AppCompatActivity(), PdfView.Listener {
         const val ACTION_PROTECT = "protect"
         const val ACTION_UNPROTECT = "unprotect"
         const val ACTION_OCR = "ocr"
+        const val ACTION_EXPORT = "export"
+        const val EXTRA_FORMAT = "npdf.format"
         const val TAG = "NPDF"
     }
 
@@ -102,6 +122,8 @@ class ReaderActivity : AppCompatActivity(), PdfView.Listener {
         supportActionBar?.setDisplayShowTitleEnabled(true)
         b.toolbar.setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
         b.pdf.listener = this
+        b.pdf.darkPages = prefs.darkPages
+        if (prefs.keepScreenOn) window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         b.pageChip.setOnClickListener { lifecycleScope.launch { goToPageDialog() } }
         b.modes.setOnItemSelectedListener { switchMode(it.itemId); true }
         b.modes.setOnItemReselectedListener { }
@@ -144,8 +166,7 @@ class ReaderActivity : AppCompatActivity(), PdfView.Listener {
     }
 
     private fun fail(msg: String) {
-        com.google.android.material.dialog.MaterialAlertDialogBuilder(this).setTitle("Cannot open this file").setMessage(msg)
-            .setPositiveButton("OK") { _, _ -> finish() }.setOnCancelListener { finish() }.show()
+        Dialogs.alert(this, "Cannot open this file", msg, null, listOf(Dialogs.Btn("OK", bold = true) { finish() })) { finish() }
     }
 
     private fun attach(s: DocSession) {
@@ -166,8 +187,8 @@ class ReaderActivity : AppCompatActivity(), PdfView.Listener {
         onPageChanged(start - 1)
         refreshUndo()
         if (s.restoredJournal) {
-            Snackbar.make(b.pdf, "Your unsaved changes were restored.", Snackbar.LENGTH_LONG)
-                .setAction("Discard") { lifecycleScope.launch { discardAll() } }.show()
+            Dialogs.alert(this, "Unsaved changes restored", "Your changes from last time were kept. Keep working with them, or discard them?", null,
+                listOf(Dialogs.Btn("Discard", destructive = true) { lifecycleScope.launch { discardAll() } }, Dialogs.Btn("Keep", bold = true) {})) {}
         }
         rememberRecent()
         intent.getIntExtra(EXTRA_MODE, 0).takeIf { it != 0 }?.let { b.modes.selectedItemId = it }
@@ -187,6 +208,7 @@ class ReaderActivity : AppCompatActivity(), PdfView.Listener {
             ACTION_PROTECT -> ReaderActions.protect(this)
             ACTION_UNPROTECT -> ReaderActions.unprotect(this)
             ACTION_OCR -> ReaderActions.ocr(this)
+            ACTION_EXPORT -> intent.getStringExtra(EXTRA_FORMAT)?.let { f -> runCatching { npdf.engine.Export.Format.valueOf(f) }.getOrNull() }?.let { ReaderActions.export(this, it) }
         }
     }
 
@@ -281,6 +303,7 @@ class ReaderActivity : AppCompatActivity(), PdfView.Listener {
         menu.findItem(R.id.action_redo)?.isEnabled = canRedo
         menu.findItem(R.id.action_undo)?.icon?.alpha = if (canUndo) 255 else 90
         menu.findItem(R.id.action_redo)?.icon?.alpha = if (canRedo) 255 else 90
+        menu.findItem(R.id.action_dark)?.isChecked = b.pdf.darkPages
         return super.onPrepareOptionsMenu(menu)
     }
 
@@ -307,6 +330,11 @@ class ReaderActivity : AppCompatActivity(), PdfView.Listener {
                 R.id.action_split -> ReaderActions.split(this@ReaderActivity)
                 R.id.action_flatten -> ReaderActions.flatten(this@ReaderActivity)
                 R.id.action_properties -> ReaderActions.properties(this@ReaderActivity)
+                R.id.action_export_word -> ReaderActions.export(this@ReaderActivity, npdf.engine.Export.Format.WORD)
+                R.id.action_export_excel -> ReaderActions.export(this@ReaderActivity, npdf.engine.Export.Format.EXCEL)
+                R.id.action_export_ppt -> ReaderActions.export(this@ReaderActivity, npdf.engine.Export.Format.POWERPOINT)
+                R.id.action_export_rtf -> ReaderActions.export(this@ReaderActivity, npdf.engine.Export.Format.RTF)
+                R.id.action_dark -> { b.pdf.darkPages = !b.pdf.darkPages; prefs.darkPages = b.pdf.darkPages; invalidateOptionsMenu() }
             }
         }
         return true
@@ -348,11 +376,12 @@ class ReaderActivity : AppCompatActivity(), PdfView.Listener {
         val ok = busy("Saving…") { Files.writeToUri(this, file, uri); true } ?: false
         if (!ok) return
         Files.persist(this, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-        Snackbar.make(b.pdf, "$label saved as ${Files.displayName(this, uri)}", Snackbar.LENGTH_LONG)
-            .setAction("Open") {
+        Dialogs.alert(this, "$label saved", Files.displayName(this, uri), null, listOf(
+            Dialogs.Btn("Done") {},
+            Dialogs.Btn("Open", bold = true) {
                 startActivity(Intent(this, ReaderActivity::class.java).setData(uri)
                     .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION))
-            }.show()
+            })) {}
     }
 
     // -------------------------------------------------------------- navigation
@@ -404,8 +433,8 @@ class ReaderActivity : AppCompatActivity(), PdfView.Listener {
     private fun followLink(uri: String?, page: Int) {
         if (page >= 0) { b.pdf.goToPage(page); return }
         val target = uri ?: return
-        Snackbar.make(b.pdf, "N PDF works offline and does not open web links: $target", Snackbar.LENGTH_LONG)
-            .setAction("Copy") { copyText(target) }.show()
+        Dialogs.alert(this, "Web link", "N PDF works offline and does not open web links.\n$target", null, listOf(
+            Dialogs.Btn("Copy link") { copyText(target) }, Dialogs.Btn("OK", bold = true) {})) {}
     }
 
     fun copyText(t: String) {

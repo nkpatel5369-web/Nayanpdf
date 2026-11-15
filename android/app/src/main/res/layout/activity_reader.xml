@@ -1,23 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- The reader: a quiet translucent bar, the pages, a floating tool palette and a tab-style mode bar. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?attr/colorSurface"
+    android:background="@color/bar"
     android:orientation="vertical">
 
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
+        android:layout_height="52dp"
         app:navigationContentDescription="Back"
         app:navigationIcon="@drawable/ic_back" />
 
     <LinearLayout
         android:id="@+id/searchBar"
         android:layout_width="match_parent"
-        android:layout_height="56dp"
+        android:layout_height="52dp"
+        android:background="@color/bar"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:paddingStart="12dp"
@@ -27,12 +29,20 @@
         <EditText
             android:id="@+id/searchField"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="38dp"
             android:layout_weight="1"
+            android:background="@drawable/bg_field"
+            android:drawableStart="@drawable/ic_search"
+            android:drawablePadding="6dp"
+            android:drawableTint="@color/label2"
             android:hint="Find in document"
             android:imeOptions="actionSearch"
             android:importantForAutofill="no"
             android:inputType="text"
+            android:minHeight="38dp"
+            android:paddingStart="8dp"
+            android:paddingTop="0dp"
+            android:paddingBottom="0dp"
             android:singleLine="true" />
 
         <TextView
@@ -40,32 +50,42 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:paddingHorizontal="8dp"
-            android:textAppearance="?attr/textAppearanceBodySmall" />
+            android:textAppearance="@style/Npdf.Text.Footnote" />
 
         <ImageButton
             android:id="@+id/searchPrev"
-            style="?attr/borderlessButtonStyle"
-            android:layout_width="44dp"
+            android:layout_width="40dp"
             android:layout_height="44dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="Previous match"
-            android:src="@drawable/ic_up" />
+            android:src="@drawable/ic_up"
+            app:tint="@color/tint" />
 
         <ImageButton
             android:id="@+id/searchNext"
-            style="?attr/borderlessButtonStyle"
-            android:layout_width="44dp"
+            android:layout_width="40dp"
             android:layout_height="44dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="Next match"
-            android:src="@drawable/ic_down" />
+            android:src="@drawable/ic_down"
+            app:tint="@color/tint" />
 
-        <ImageButton
+        <TextView
             android:id="@+id/searchClose"
-            style="?attr/borderlessButtonStyle"
-            android:layout_width="44dp"
+            android:layout_width="wrap_content"
             android:layout_height="44dp"
+            android:gravity="center"
+            android:paddingHorizontal="8dp"
+            android:text="Done"
             android:contentDescription="Close search"
-            android:src="@drawable/ic_close" />
+            android:textAppearance="@style/Npdf.Text.Headline"
+            android:textColor="@color/tint" />
     </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0.5dp"
+        android:background="@color/separator" />
 
     <FrameLayout
         android:layout_width="match_parent"
@@ -84,17 +104,19 @@
             android:layout_height="wrap_content"
             android:layout_gravity="top"
             android:indeterminate="true"
-            android:visibility="gone" />
+            android:visibility="gone"
+            app:indicatorColor="@color/tint"
+            app:trackThickness="2dp" />
 
         <TextView
             android:id="@+id/status"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="top|center_horizontal"
-            android:layout_marginTop="12dp"
+            android:layout_gravity="center"
             android:background="@drawable/chip_bg"
-            android:paddingHorizontal="14dp"
-            android:paddingVertical="6dp"
+            android:paddingHorizontal="18dp"
+            android:paddingVertical="10dp"
+            android:textAppearance="@style/Npdf.Text.Subhead"
             android:textColor="@color/white"
             android:visibility="gone" />
 
@@ -102,12 +124,13 @@
             android:id="@+id/pageChip"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="bottom|center_horizontal"
-            android:layout_marginBottom="12dp"
+            android:layout_gravity="top|center_horizontal"
+            android:layout_marginTop="10dp"
             android:background="@drawable/chip_bg"
             android:contentDescription="Go to page"
-            android:paddingHorizontal="14dp"
-            android:paddingVertical="6dp"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="5dp"
+            android:textAppearance="@style/Npdf.Text.Caption"
             android:textColor="@color/white" />
 
         <LinearLayout
@@ -115,59 +138,75 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_gravity="bottom"
-            android:background="?attr/colorSurfaceContainer"
+            android:layout_margin="10dp"
+            android:background="@drawable/bg_palette"
+            android:elevation="10dp"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingHorizontal="12dp"
+            android:paddingHorizontal="8dp"
             android:visibility="gone">
 
             <ImageButton
                 android:id="@+id/ttsPlay"
-                style="?attr/borderlessButtonStyle"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="Pause or resume"
-                android:src="@drawable/ic_pause" />
+                android:src="@drawable/ic_pause"
+                app:tint="@color/tint" />
 
             <TextView
                 android:id="@+id/ttsText"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:textAppearance="?attr/textAppearanceBodyMedium" />
+                android:maxLines="2"
+                android:paddingHorizontal="6dp"
+                android:textAppearance="@style/Npdf.Text.Subhead" />
 
             <ImageButton
                 android:id="@+id/ttsStop"
-                style="?attr/borderlessButtonStyle"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="Stop reading"
-                android:src="@drawable/ic_stop" />
+                android:src="@drawable/ic_stop"
+                app:tint="@color/tint" />
         </LinearLayout>
-    </FrameLayout>
 
-    <HorizontalScrollView
-        android:id="@+id/toolScroll"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="?attr/colorSurfaceContainerLow"
-        android:fadingEdgeLength="24dp"
-        android:requiresFadingEdge="horizontal"
-        android:scrollbars="none"
-        android:visibility="gone">
-
-        <LinearLayout
-            android:id="@+id/toolRow"
+        <HorizontalScrollView
+            android:id="@+id/toolScroll"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:paddingHorizontal="4dp" />
-    </HorizontalScrollView>
+            android:layout_gravity="bottom|center_horizontal"
+            android:layout_marginStart="10dp"
+            android:layout_marginEnd="10dp"
+            android:layout_marginBottom="10dp"
+            android:background="@drawable/bg_palette"
+            android:elevation="10dp"
+            android:fadingEdgeLength="20dp"
+            android:requiresFadingEdge="horizontal"
+            android:scrollbars="none"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:id="@+id/toolRow"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="4dp" />
+        </HorizontalScrollView>
+    </FrameLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0.5dp"
+        android:background="@color/separator" />
 
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/modes"
+        style="@style/Npdf.ModeBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:labelVisibilityMode="labeled"
         app:menu="@menu/reader_modes" />
 </LinearLayout>

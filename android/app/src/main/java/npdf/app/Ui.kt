@@ -1,10 +1,13 @@
 package npdf.app
 
 import android.app.Activity
+import android.content.res.ColorStateList
+import android.graphics.Color
+import android.util.TypedValue
 import android.view.View
-import android.widget.Toast
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.google.android.material.button.MaterialButton
 import npdf.engine.PdfError
 import kotlin.math.max
 
@@ -19,29 +22,40 @@ object Ui {
         }
     }
 
-    /** A compact icon-over-label button for tool rows. */
-    fun toolButton(a: Activity, label: String, icon: Int, onClick: (com.google.android.material.button.MaterialButton) -> Unit) =
-        com.google.android.material.button.MaterialButton(a, null, androidx.appcompat.R.attr.borderlessButtonStyle).apply {
+    /** A compact icon-over-label button for tool palettes. */
+    fun toolButton(a: Activity, label: String, icon: Int, onClick: (MaterialButton) -> Unit) =
+        MaterialButton(a, null, androidx.appcompat.R.attr.borderlessButtonStyle).apply {
             text = label
             setIconResource(icon)
-            iconGravity = com.google.android.material.button.MaterialButton.ICON_GRAVITY_TOP
-            iconPadding = 0
-            textSize = 11f
+            iconGravity = MaterialButton.ICON_GRAVITY_TOP
+            iconPadding = Dialogs.dp(a, 2)
+            iconSize = Dialogs.dp(a, 24)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
+            typeface = Ios.font(a, 500)
             isAllCaps = false
-            minWidth = Dialogs.dp(a, 64)
-            setPadding(Dialogs.dp(a, 6), paddingTop, Dialogs.dp(a, 6), paddingBottom)
+            maxLines = 1
+            minWidth = Dialogs.dp(a, 62)
+            minHeight = Dialogs.dp(a, 56)
+            cornerRadius = Dialogs.dp(a, 10)
+            insetTop = 0; insetBottom = 0
+            setPadding(Dialogs.dp(a, 6), Dialogs.dp(a, 6), Dialogs.dp(a, 6), Dialogs.dp(a, 4))
             contentDescription = label
-            setOnClickListener { onClick(this) }
+            markSelected(this, false)
+            setOnClickListener { Ios.tick(it); onClick(this) }
         }
 
-    fun markSelected(btn: com.google.android.material.button.MaterialButton?, on: Boolean) {
+    /** The chosen tool: tinted glyph and label on a soft tinted background. */
+    fun markSelected(btn: MaterialButton?, on: Boolean) {
         btn ?: return
-        val color = if (on) com.google.android.material.color.MaterialColors.getColor(btn, com.google.android.material.R.attr.colorSecondaryContainer)
-        else android.graphics.Color.TRANSPARENT
-        btn.backgroundTintList = android.content.res.ColorStateList.valueOf(color)
+        val ctx = btn.context
+        val fg = Ios.color(ctx, if (on) R.color.tint else R.color.label)
+        btn.iconTint = ColorStateList.valueOf(fg)
+        btn.setTextColor(if (on) fg else Ios.color(ctx, R.color.label2))
+        btn.backgroundTintList = ColorStateList.valueOf(if (on) Ios.color(ctx, R.color.tint_soft) else Color.TRANSPARENT)
     }
 
-    fun toast(a: Activity, msg: String) = Toast.makeText(a, msg, Toast.LENGTH_LONG).show()
+    /** A short status message that disappears by itself. */
+    fun toast(a: Activity, msg: String) = Ios.banner(a, msg)
 
     /** A message for any failure: the engine's own wording, or a plain fallback. */
     fun describe(e: Throwable): String = when (e) {

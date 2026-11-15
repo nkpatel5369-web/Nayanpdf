@@ -2,14 +2,16 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:padding="6dp">
+    android:padding="8dp">
 
     <ImageView
         android:id="@+id/thumb"
         android:layout_width="match_parent"
         android:layout_height="170dp"
-        android:background="@color/white"
+        android:background="@drawable/bg_thumb"
+        android:clipToOutline="true"
         android:contentDescription="@null"
+        android:elevation="2dp"
         android:scaleType="fitCenter" />
 
     <View
@@ -17,6 +19,7 @@
         android:layout_width="match_parent"
         android:layout_height="170dp"
         android:background="@drawable/page_selected"
+        android:elevation="3dp"
         android:visibility="gone" />
 
     <TextView
@@ -26,7 +29,9 @@
         android:layout_gravity="bottom|center_horizontal"
         android:layout_marginBottom="6dp"
         android:background="@drawable/chip_bg"
+        android:elevation="4dp"
         android:paddingHorizontal="10dp"
         android:paddingVertical="2dp"
+        android:textAppearance="@style/Npdf.Text.Caption"
         android:textColor="@color/white" />
 </FrameLayout>

@@ -4,30 +4,43 @@
     android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?attr/colorSurface"
+    android:background="@color/bg"
     android:orientation="vertical">
 
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
+        android:layout_height="52dp"
         app:navigationContentDescription="Back"
         app:navigationIcon="@drawable/ic_back" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0.5dp"
+        android:background="@color/separator" />
 
     <TextView
         android:id="@+id/hint"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingHorizontal="16dp"
+        android:paddingHorizontal="32dp"
+        android:paddingTop="16dp"
         android:paddingBottom="8dp"
-        android:textAppearance="?attr/textAppearanceBodySmall" />
+        android:textAppearance="@style/Npdf.Text.Footnote" />
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/list"
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
-        android:paddingHorizontal="16dp" />
+        android:layout_marginHorizontal="16dp"
+        android:layout_weight="1">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/list"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_group"
+            android:clipToOutline="true" />
+    </FrameLayout>
 
     <LinearLayout
         android:id="@+id/options"
@@ -39,21 +52,22 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:background="@color/bar"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:padding="12dp">
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/add"
-            style="?attr/materialButtonOutlinedStyle"
+            style="@style/Npdf.Button.Tinted"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Add"
+            android:text="Add files"
             app:icon="@drawable/ic_add" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/camera"
-            style="?attr/materialButtonOutlinedStyle"
+            style="@style/Npdf.Button.Tinted"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"

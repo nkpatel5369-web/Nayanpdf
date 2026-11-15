@@ -18,6 +18,11 @@
     <item android:id="@+id/action_protect" android:title="Protect with password" app:showAsAction="never" />
     <item android:id="@+id/action_unprotect" android:title="Remove password" app:showAsAction="never" />
     <item android:id="@+id/action_split" android:title="Split" app:showAsAction="never" />
+    <item android:id="@+id/action_export_word" android:title="Export to Word" app:showAsAction="never" />
+    <item android:id="@+id/action_export_excel" android:title="Export to Excel" app:showAsAction="never" />
+    <item android:id="@+id/action_export_ppt" android:title="Export to PowerPoint" app:showAsAction="never" />
+    <item android:id="@+id/action_export_rtf" android:title="Export to Rich Text" app:showAsAction="never" />
+    <item android:id="@+id/action_dark" android:checkable="true" android:title="Dark pages" app:showAsAction="never" />
     <item android:id="@+id/action_flatten" android:title="Flatten comments and fields" app:showAsAction="never" />
     <item android:id="@+id/action_properties" android:title="Properties" app:showAsAction="never" />
 </menu>

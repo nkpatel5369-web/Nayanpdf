@@ -30,6 +30,51 @@ class Prefs(context: Context) {
         get() = sp.getInt("hlColor", 0xFFFFEB3B.toInt())
         set(v) = sp.edit().putInt("hlColor", v).apply()
 
+    // Scanner
+    var autoCapture: Boolean
+        get() = sp.getBoolean("scanAuto", true)
+        set(v) = sp.edit().putBoolean("scanAuto", v).apply()
+
+    /** Show the border adjustment after each automatic capture. */
+    var adjustAfterCapture: Boolean
+        get() = sp.getBoolean("scanAdjust", false)
+        set(v) = sp.edit().putBoolean("scanAdjust", v).apply()
+
+    var defaultFilter: String
+        get() = sp.getString("scanFilter", "AUTO") ?: "AUTO"
+        set(v) = sp.edit().putString("scanFilter", v).apply()
+
+    /** Recognise text (OCR) when a scan is saved as PDF. */
+    var ocrOnSave: Boolean
+        get() = sp.getBoolean("scanOcr", true)
+        set(v) = sp.edit().putBoolean("scanOcr", v).apply()
+
+    var ocrLanguages: List<String>
+        get() = (sp.getString("ocrLangs", "eng") ?: "eng").split(',').filter { it in Ocr.LANGUAGES }.ifEmpty { listOf("eng") }
+        set(v) = sp.edit().putString("ocrLangs", v.joinToString(",")).apply()
+
+    var flashMode: Int
+        get() = sp.getInt("scanFlash", 2) // 0 off, 1 on, 2 auto
+        set(v) = sp.edit().putInt("scanFlash", v).apply()
+
+    /** A folder the user chose for scans (document tree), or null for Documents/N PDF. */
+    var scanFolder: String?
+        get() = sp.getString("scanFolder", null)
+        set(v) = sp.edit().putString("scanFolder", v).apply()
+
+    // Reading
+    var keepScreenOn: Boolean
+        get() = sp.getBoolean("keepScreenOn", false)
+        set(v) = sp.edit().putBoolean("keepScreenOn", v).apply()
+
+    var darkPages: Boolean
+        get() = sp.getBoolean("darkPages", false)
+        set(v) = sp.edit().putBoolean("darkPages", v).apply()
+
+    var recentSort: String
+        get() = sp.getString("recentSort", "date") ?: "date"
+        set(v) = sp.edit().putString("recentSort", v).apply()
+
     class Recent(val uri: Uri, val name: String, val page: Int, val time: Long, val thumb: String?)
 
     fun recents(): List<Recent> {

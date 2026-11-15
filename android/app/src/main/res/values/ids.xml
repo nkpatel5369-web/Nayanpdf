@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="openBtn" type="id" />
+    <item name="scanBtn" type="id" />
+    <item name="photosBtn" type="id" />
+    <item name="tab_files" type="id" />
+    <item name="tab_tools" type="id" />
+    <item name="tab_settings" type="id" />
+    <item name="recentList" type="id" />
+</resources>

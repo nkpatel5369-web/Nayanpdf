@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <dimen name="gutter">16dp</dimen>
-    <dimen name="icon_button">48dp</dimen>
+    <dimen name="icon_button">44dp</dimen>
+    <dimen name="row_height">44dp</dimen>
+    <dimen name="group_radius">12dp</dimen>
+    <dimen name="bar_height">48dp</dimen>
+    <dimen name="tab_bar_height">52dp</dimen>
+    <!-- A tab-bar height for the reader's mode bar (Material's default is 80 dp). -->
+    <dimen name="m3_bottom_nav_min_height">58dp</dimen>
 </resources>

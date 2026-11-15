@@ -229,6 +229,55 @@ object ReaderActions {
         Dialogs.message(a, "Split into ${written.size} files", written.joinToString("\n"))
     }
 
+    /**
+     * Exports to Word, Excel, PowerPoint or RTF on the phone and saves the file in
+     * Documents/N PDF (or the folder chosen for scans). Pages without text are
+     * offered OCR first, since only text can be exported as text.
+     */
+    suspend fun export(a: ReaderActivity, f: npdf.engine.Export.Format) {
+        val s = a.session ?: return
+        if (f != npdf.engine.Export.Format.POWERPOINT) {
+            val missing = s.read { npdf.engine.Export.pagesWithoutText(it) }
+            if (missing.isNotEmpty()) {
+                when (Dialogs.ask3(a, "Scanned pages", "${missing.size} of ${s.sizes.size} page(s) have no text yet, so their text cannot be exported. Recognise their text first?",
+                    "Recognise text", "Export as is", "Cancel")) {
+                    0 -> { ocr(a); if (s.read { npdf.engine.Export.pagesWithoutText(it) }.size == missing.size) return }
+                    1 -> {}
+                    else -> return
+                }
+            }
+        }
+        val name = Files.stem(s.name)
+        val tmp = File(a.cacheDir, "export_${System.nanoTime()}.${f.ext}")
+        val t0 = System.currentTimeMillis()
+        a.busy("Exporting to ${f.label}…") { s.read { d -> tmp.outputStream().use { npdf.engine.Export.write(d, f, name, it) } } } ?: return
+        android.util.Log.i("NPDF-EXPORT", "${f.label}: ${tmp.length()} bytes in ${System.currentTimeMillis() - t0} ms")
+        val uri = try {
+            withContext(Dispatchers.IO) {
+                val u = ScanStore.create(a, name, f.mime, f.ext)
+                Files.writeToUri(a, tmp, u); ScanStore.publish(a, u); u
+            }
+        } catch (e: ScanStore.NeedFolder) {
+            a.pendingOffice = tmp to f
+            a.officeLauncher.launch("$name.${f.ext}" to f.mime)
+            return
+        } catch (e: Throwable) {
+            Dialogs.message(a, "Could not save", Ui.describe(e)); return
+        } finally {
+            if (a.pendingOffice?.first != tmp) tmp.delete()
+        }
+        exported(a, uri, f, "$name.${f.ext}")
+    }
+
+    suspend fun exported(a: ReaderActivity, uri: Uri, f: npdf.engine.Export.Format, name: String) {
+        Ios.banner(a, "Saved $name in ${ScanStore.folderLabel(a)}", R.drawable.ic_check)
+        when (Dialogs.choose(a, name, listOf("Open", "Share", "Done"))) {
+            0 -> runCatching { a.startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(uri, f.mime).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)) }
+                .onFailure { Dialogs.message(a, "No app to open it", "No app on this phone opens ${f.label} files. You can share the file instead.") }
+            1 -> a.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType(f.mime).putExtra(Intent.EXTRA_STREAM, uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), "Share $name"))
+        }
+    }
+
     suspend fun flatten(a: ReaderActivity) {
         val s = a.session ?: return
         if (!Dialogs.confirm(a, "Flatten?", "Comments and form fields become part of the page and can no longer be edited or filled. You can undo until you close the document.", "Flatten")) return

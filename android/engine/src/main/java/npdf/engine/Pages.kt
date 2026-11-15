@@ -134,10 +134,13 @@ object Pages {
         return files
     }
 
-    enum class PageSize(val w: Float, val h: Float) { FIT(0f, 0f), A4(595.28f, 841.89f), LETTER(612f, 792f) }
+    enum class PageSize(val w: Float, val h: Float) { FIT(0f, 0f), A4(595.28f, 841.89f), LETTER(612f, 792f), LEGAL(612f, 1008f) }
 
-    /** Adds one page showing a picture. JPEG data is kept as is; EXIF orientation is honoured. */
-    fun addImagePage(doc: PDFDocument, bytes: ByteArray, size: PageSize, margin: Float) {
+    /**
+     * Adds one page showing a picture. JPEG data is kept as is; EXIF orientation is honoured.
+     * Returns the picture's box on the new page (page space).
+     */
+    fun addImagePage(doc: PDFDocument, bytes: ByteArray, size: PageSize, margin: Float): Rect {
         val image = try { Image(bytes) } catch (e: RuntimeException) { throw PdfError(Codes.INVALID, "A picture could not be read.") }
         val (dw, dh) = ImageEdit.displaySize(image)
         // Page-sized: the picture's longer side spans the long side of an A4 page.
@@ -161,6 +164,7 @@ object Pages {
         val ops = "q ${Pdf.n(m.a)} ${Pdf.n(m.b)} ${Pdf.n(m.c)} ${Pdf.n(m.d)} ${Pdf.n(m.e)} ${Pdf.n(m.f)} cm /Im1 Do Q\n"
         val page = doc.addPage(Rect(0f, 0f, pw, ph), 0, res, ops)
         doc.insertPage(-1, page)
+        return box
     }
 
     /** A new PDF from pictures, one per page. */
@@ -179,8 +183,8 @@ object Pages {
     fun isImage(path: String) = path.substringAfterLast('.').lowercase() in setOf("jpg", "jpeg", "png", "gif", "bmp", "tif", "tiff", "webp")
 
     /** Re-opens a written file and checks its page count. */
-    fun verify(file: File, pages: Int) {
-        val d = try { Pdf.open(file.absolutePath, null) } catch (e: PdfError) {
+    fun verify(file: File, pages: Int, password: String? = null) {
+        val d = try { Pdf.open(file.absolutePath, password) } catch (e: PdfError) {
             if (e.code == Codes.PASSWORD_REQUIRED) return else throw PdfError(Codes.VERIFY_FAILED, "The new file could not be read back.")
         }
         try {

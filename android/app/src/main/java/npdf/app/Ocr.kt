@@ -56,6 +56,39 @@ class Ocr(private val ctx: Context) {
         return bmp to scale
     }
 
+    /** A recognised word or line in picture pixels. */
+    class Item(val text: String, val box: android.graphics.Rect, val confidence: Float)
+    class Result(val words: List<Item>, val lines: List<Item>, val meanConfidence: Int)
+
+    /** Recognises the text in a picture drawn at [dpi]. Called on a background thread. */
+    fun recognizeBitmap(bmp: Bitmap, dpi: Int, langs: List<String>): Result {
+        val api = TessBaseAPI()
+        try {
+            if (!api.init(dataPath(langs), langs.joinToString("+"))) throw PdfError(Codes.NOT_SUPPORTED, "The OCR language data could not be loaded.")
+            api.pageSegMode = TessBaseAPI.PageSegMode.PSM_AUTO
+            api.setVariable("user_defined_dpi", dpi.coerceIn(70, 600).toString())
+            api.setImage(bmp)
+            api.getUTF8Text()
+            val words = mutableListOf<Item>(); val lines = mutableListOf<Item>()
+            for ((level, out) in listOf(TessBaseAPI.PageIteratorLevel.RIL_WORD to words, TessBaseAPI.PageIteratorLevel.RIL_TEXTLINE to lines)) {
+                val it = api.resultIterator ?: continue
+                try {
+                    it.begin()
+                    do {
+                        val text = it.getUTF8Text(level) ?: continue
+                        if (text.isBlank()) continue
+                        out.add(Item(text.trim(), it.getBoundingRect(level), it.confidence(level)))
+                    } while (it.next(level))
+                } finally {
+                    it.delete()
+                }
+            }
+            return Result(words, lines, api.meanConfidence())
+        } finally {
+            api.recycle()
+        }
+    }
+
     /** Recognises one page. Called on a background thread. */
     fun recognize(session: DocSession, page: Int, langs: List<String>): PageResult {
         val (bmp, scale) = pageBitmap(session, page)

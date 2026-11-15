@@ -8,6 +8,10 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" tools:node="remove" />
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" tools:node="remove" />
+    <!-- The document scanner's camera. Used only while the scanner is open; pictures stay on the phone. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
     <!-- Files are opened through the system file picker; no storage permission is needed. -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" tools:node="remove" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" tools:node="remove" />
@@ -17,9 +21,10 @@
         <intent>
             <action android:name="android.intent.action.TTS_SERVICE" />
         </intent>
-        <!-- Photos to PDF uses the phone's own camera app. -->
+        <!-- A scanned business card can be added to the phone's Contacts app. -->
         <intent>
-            <action android:name="android.media.action.IMAGE_CAPTURE" />
+            <action android:name="android.intent.action.INSERT" />
+            <data android:mimeType="vnd.android.cursor.dir/raw_contact" />
         </intent>
     </queries>
 
@@ -46,6 +51,7 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
         </activity>
 
         <activity
@@ -68,9 +74,17 @@
         </activity>
 
         <activity
-            android:name=".ImagesActivity"
+            android:name=".ScanActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.Npdf.Camera" />
+
+        <activity
+            android:name=".ScanReviewActivity"
             android:exported="true"
-            android:label="Photos to PDF">
+            android:label="Scan to PDF"
+            android:windowSoftInputMode="adjustResize">
+            <!-- Photos shared from the gallery become a scan, with outline detection and filters. -->
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
                 <action android:name="android.intent.action.SEND_MULTIPLE" />
@@ -81,7 +95,6 @@
 
         <activity android:name=".OrganizeActivity" android:exported="false" />
         <activity android:name=".MergeActivity" android:exported="false" />
-        <activity android:name=".SettingsActivity" android:exported="false" />
 
         <provider
             android:name="androidx.core.content.FileProvider"
