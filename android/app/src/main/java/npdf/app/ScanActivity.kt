@@ -192,7 +192,8 @@ class ScanActivity : AppCompatActivity() {
 
         // Camera picture with the outline overlay.
         val stage = FrameLayout(this)
-        preview = PreviewView(this).apply { scaleType = PreviewView.ScaleType.FIT_CENTER; implementationMode = PreviewView.ImplementationMode.COMPATIBLE }
+        // PERFORMANCE draws camera frames on their own surface, off the main thread (it falls back to a TextureView only on old camera stacks).
+        preview = PreviewView(this).apply { scaleType = PreviewView.ScaleType.FIT_CENTER; implementationMode = PreviewView.ImplementationMode.PERFORMANCE }
         stage.addView(preview, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         overlay = ScanOverlay(this)
         stage.addView(overlay, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
@@ -400,6 +401,9 @@ class ScanActivity : AppCompatActivity() {
         }
     }
 
+    /** Sets the status line only when it changes: an unchanged setText still re-lays out the screen on every camera frame. */
+    private fun say(t: String) { if (status.text.toString() != t) status.text = t }
+
     private fun onFrame(q: Quad?, fw: Int, fh: Int, qr: String?) {
         if (isFinishing) return
         overlay.frameW = fw; overlay.frameH = fh
@@ -410,7 +414,7 @@ class ScanActivity : AppCompatActivity() {
         if (q == null) {
             lastQuad = null; steadySince = 0L; shutter.progress = 0f
             armed = true
-            if (!capturing) status.text = if (kind == ScanKind.IDCARD) (if (idFront == null) "Front of the card" else "Back of the card") else "Looking for document"
+            if (!capturing) say(if (kind == ScanKind.IDCARD) (if (idFront == null) "Front of the card" else "Back of the card") else "Looking for document")
             return
         }
         val prev = lastQuad
@@ -422,12 +426,12 @@ class ScanActivity : AppCompatActivity() {
         }
         lastQuad = q
         if (capturing) return
-        if (!auto) { status.text = "Document found: tap the shutter"; return }
-        if (!armed) { status.text = if (batch) "Turn to the next page" else "Captured"; shutter.progress = 0f; return }
+        if (!auto) { say("Document found: tap the shutter"); return }
+        if (!armed) { say(if (batch) "Turn to the next page" else "Captured"); shutter.progress = 0f; return }
         val need = if (batch) 600 else 900
         val held = if (steadySince > 0) now - steadySince else 0
         shutter.progress = held.toFloat() / need
-        status.text = if (held > 0) "Hold steady" else "Document found"
+        say(if (held > 0) "Hold steady" else "Document found")
         if (held >= need) capture()
     }
 

@@ -47,7 +47,10 @@ class ScanOverlay(ctx: Context) : View(ctx) {
 
     fun show(q: Quad?) {
         val next = q?.corners
-        if (next == null) { target = null; shown = null; anim?.cancel(); invalidate(); return }
+        if (next == null) { if (shown == null && target == null) return; target = null; shown = null; anim?.cancel(); invalidate(); return }
+        val t0 = target
+        // The same outline as last frame (within half a pixel): nothing to redraw.
+        if (t0 != null && shown != null && t0.zip(next).all { (a, b) -> kotlin.math.abs(a.x - b.x) < 0.5f && kotlin.math.abs(a.y - b.y) < 0.5f }) return
         val from = shown ?: next
         target = next
         anim?.cancel()
@@ -85,7 +88,7 @@ class ShutterButton(ctx: Context) : View(ctx) {
     private val inner = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE; style = Paint.Style.FILL }
     private val prog = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Ios.color(ctx, R.color.tint); style = Paint.Style.STROKE; strokeWidth = Ios.dp(ctx, 4f); strokeCap = Paint.Cap.ROUND }
     var progress = 0f
-        set(v) { field = v.coerceIn(0f, 1f); invalidate() }
+        set(v) { val c = v.coerceIn(0f, 1f); if (c != field) { field = c; invalidate() } }
 
     init {
         isClickable = true; isFocusable = true

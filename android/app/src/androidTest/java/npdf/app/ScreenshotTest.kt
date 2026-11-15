@@ -42,8 +42,8 @@ class ScreenshotTest {
 
     private val instr get() = InstrumentationRegistry.getInstrumentation()
 
-    private fun shot(name: String) {
-        instr.waitForIdleSync()
+    private fun shot(name: String, idle: Boolean = true) {
+        if (idle) instr.waitForIdleSync()
         SystemClock.sleep(700)
         instr.uiAutomation.executeShellCommand("mkdir -p /sdcard/Download/npdf-screens").close()
         instr.uiAutomation.executeShellCommand("screencap -p /sdcard/Download/npdf-screens/$name.png").close()
@@ -97,7 +97,7 @@ class ScreenshotTest {
         onView(withText("Signature")).perform(scrollTo(), click())
         shot("08_signature_$suffix")
         onView(withText("Cancel")).inRoot(isDialog()).perform(click())
-        TestKit.on(sc) { it.lifecycleScope.launch { ReaderActions.bookmarks(it) } }
+        TestKit.on(sc) { Dialogs.message(it, "Bookmarks", "This PDF has no bookmarks.") }
         shot("09_alert_$suffix")
         onView(withText("OK")).inRoot(isDialog()).perform(click())
         TestKit.on(sc) { it.lifecycleScope.launch { Dialogs.choose(it, "Page size", listOf("Fit to the scan", "A4", "Letter", "Legal"), 1) } }
@@ -106,11 +106,11 @@ class ScreenshotTest {
         sc.close()
         // Scanner: camera, review with filters, save sheet.
         Prefs(TestKit.ctx).autoCapture = true
-        val cam = ActivityScenario.launch(ScanActivity::class.java)
-        TestKit.waitFor("camera", 30_000) { var r = false; cam.onActivity { r = it.cameraReady }; r }
+        val camAct = TestKit.start(ScanActivity::class.java)
+        TestKit.waitFor("camera", 30_000) { TestKit.main { camAct.cameraReady } }
         SystemClock.sleep(1500)
-        shot("11_camera_$suffix")
-        cam.close()
+        shot("11_camera_$suffix", idle = false)
+        TestKit.finish(camAct)
         val rv = ActivityScenario.launch<ScanReviewActivity>(Intent(TestKit.ctx, ScanReviewActivity::class.java)
             .putParcelableArrayListExtra(ScanReviewActivity.EXTRA_IMPORT, arrayListOf(photoUri())))
         TestKit.waitFor("imported", 30_000) { var n = 0; rv.onActivity { n = it.pageCount }; n == 1 }

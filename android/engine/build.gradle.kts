@@ -14,6 +14,8 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Each test in its own process: a native crash fails one test, not the run.
         testInstrumentationRunnerArguments["clearPackageData"] = "true"
+        // A test that stalls fails after this long, with its stack trace, instead of holding up the whole run.
+        testInstrumentationRunnerArguments["timeout_msec"] = "300000"
         consumerProguardFiles("consumer-rules.pro")
     }
 

@@ -55,6 +55,8 @@ android {
         versionName = "1.2.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         testInstrumentationRunnerArguments["clearPackageData"] = "true"
+        // A test that stalls fails after this long, with its stack trace, instead of holding up the whole run.
+        testInstrumentationRunnerArguments["timeout_msec"] = "480000"
         // Phones and tablets (64- and 32-bit ARM) and 64-bit Intel (Chromebooks, emulators).
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
     }

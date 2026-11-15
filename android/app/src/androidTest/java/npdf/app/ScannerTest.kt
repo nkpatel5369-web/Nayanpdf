@@ -169,13 +169,14 @@ class ScannerTest {
     @Test
     fun cameraCapturesAPageAndOpensTheReview() {
         Prefs(ctx).autoCapture = false
-        val sc = ActivityScenario.launch(ScanActivity::class.java)
-        TestKit.waitFor("camera ready", 30_000) { var r = false; sc.onActivity { r = it.cameraReady }; r }
-        onView(withContentDescription("Capture")).perform(click())
-        TestKit.waitFor("page captured", 30_000) { var n = 0; sc.onActivity { n = it.pageCount }; n == 1 }
-        onView(allOf(withText("Done"), isDisplayed())).perform(click())
+        val cam = TestKit.start(ScanActivity::class.java)
+        TestKit.waitFor("camera ready", 30_000) { TestKit.main { cam.cameraReady } }
+        TestKit.tap(cam, "Capture")
+        TestKit.waitFor("page captured", 30_000) { TestKit.main { cam.pageCount } == 1 }
+        TestKit.tap(cam, "Done")
+        TestKit.waitFor("camera closed", 30_000) { TestKit.main { cam.isDestroyed } }
         TestKit.waitFor("review open") { runCatching { onView(allOf(withText("Save"), isDisplayed())).check(matches(isDisplayed())); true }.getOrDefault(false) }
-        sc.close()
+        TestKit.finish(TestKit.resumed(ScanReviewActivity::class.java))
     }
 
     @Test
