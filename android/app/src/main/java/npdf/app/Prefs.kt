@@ -45,6 +45,11 @@ class Prefs(context: Context) {
         get() = (sp.getString("scanName", "Scan") ?: "Scan").ifBlank { "Scan" }
         set(v) = sp.edit().putString("scanName", v.trim()).apply()
 
+    /** Book mode: the right-hand page comes first (books read right to left). */
+    var bookRightFirst: Boolean
+        get() = sp.getBoolean("bookRightFirst", false)
+        set(v) = sp.edit().putBoolean("bookRightFirst", v).apply()
+
     /** Also save the camera's original photos in Pictures/N PDF/Originals. */
     var saveOriginals: Boolean
         get() = sp.getBoolean("scanOriginals", false)

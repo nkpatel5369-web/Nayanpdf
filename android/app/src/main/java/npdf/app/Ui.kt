@@ -33,35 +33,35 @@ object Ui {
         }
     }
 
-    /** A compact icon-over-label button for tool palettes. */
+    /** A Material toolbar item: icon over a short label; the active tool sits in a tonal pill. */
     fun toolButton(a: Activity, label: String, icon: Int, onClick: (MaterialButton) -> Unit) =
         MaterialButton(a, null, androidx.appcompat.R.attr.borderlessButtonStyle).apply {
             text = label
             setIconResource(icon)
             iconGravity = MaterialButton.ICON_GRAVITY_TOP
-            iconPadding = Dialogs.dp(a, 2)
+            iconPadding = Dialogs.dp(a, 4)
             iconSize = Dialogs.dp(a, 24)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             typeface = Kit.font(a, 500)
             isAllCaps = false
             maxLines = 1
-            minWidth = Dialogs.dp(a, 62)
-            minHeight = Dialogs.dp(a, 56)
-            cornerRadius = Dialogs.dp(a, 10)
+            minWidth = Dialogs.dp(a, 64)
+            minHeight = Dialogs.dp(a, 64)
+            cornerRadius = Dialogs.dp(a, 16)
             insetTop = 0; insetBottom = 0
-            setPadding(Dialogs.dp(a, 6), Dialogs.dp(a, 6), Dialogs.dp(a, 6), Dialogs.dp(a, 4))
+            setPadding(Dialogs.dp(a, 8), Dialogs.dp(a, 8), Dialogs.dp(a, 8), Dialogs.dp(a, 6))
             contentDescription = label
             markSelected(this, false)
             setOnClickListener { Kit.tick(it); onClick(this) }
         }
 
-    /** The chosen tool: tinted glyph and label on a soft tinted background. */
+    /** The chosen tool: on-secondary-container glyph and label on the secondary container. */
     fun markSelected(btn: MaterialButton?, on: Boolean) {
         btn ?: return
         val ctx = btn.context
-        val fg = Kit.color(ctx, if (on) R.color.tint else R.color.label)
+        val fg = Kit.color(ctx, if (on) R.color.on_tint_soft else R.color.label2)
         btn.iconTint = ColorStateList.valueOf(fg)
-        btn.setTextColor(if (on) fg else Kit.color(ctx, R.color.label2))
+        btn.setTextColor(fg)
         btn.backgroundTintList = ColorStateList.valueOf(if (on) Kit.color(ctx, R.color.tint_soft) else Color.TRANSPARENT)
     }
 

@@ -134,7 +134,15 @@ object Pages {
         return files
     }
 
-    enum class PageSize(val w: Float, val h: Float) { FIT(0f, 0f), A4(595.28f, 841.89f), LETTER(612f, 792f), LEGAL(612f, 1008f) }
+    /** Page sizes in points (1/72 inch), portrait; a landscape picture gets the landscape page. */
+    enum class PageSize(val w: Float, val h: Float, val label: String) {
+        FIT(0f, 0f, "Fit to the scan"),
+        A3(841.89f, 1190.55f, "A3 (297 × 420 mm)"), A4(595.28f, 841.89f, "A4 (210 × 297 mm)"),
+        A5(419.53f, 595.28f, "A5 (148 × 210 mm)"), A6(297.64f, 419.53f, "A6 (105 × 148 mm)"),
+        B4(708.66f, 1000.63f, "B4 (250 × 353 mm)"), B5(498.90f, 708.66f, "B5 (176 × 250 mm)"),
+        LETTER(612f, 792f, "Letter (8.5 × 11 in)"), LEGAL(612f, 1008f, "Legal (8.5 × 14 in)"),
+        EXECUTIVE(522f, 756f, "Executive (7.25 × 10.5 in)"), TABLOID(792f, 1224f, "Tabloid (11 × 17 in)"),
+    }
 
     /**
      * Adds one page showing a picture. JPEG data is kept as is; EXIF orientation is honoured.

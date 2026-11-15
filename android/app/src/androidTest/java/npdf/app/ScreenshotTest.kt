@@ -107,6 +107,7 @@ class ScreenshotTest {
         sc.close()
         // Scanner: camera, review with filters, save sheet.
         Prefs(TestKit.ctx).autoCapture = true
+        Prefs(TestKit.ctx).adjustAfterCapture = false
         val camAct = TestKit.start(ScanActivity::class.java)
         TestKit.waitFor("camera", 30_000) { TestKit.main { camAct.cameraReady } }
         SystemClock.sleep(1500)
@@ -116,11 +117,12 @@ class ScreenshotTest {
             .putParcelableArrayListExtra(ScanReviewActivity.EXTRA_IMPORT, arrayListOf(photoUri())))
         TestKit.waitFor("imported", 30_000) { var n = 0; rv.onActivity { n = it.pageCount }; n == 1 }
         SystemClock.sleep(2500)
-        shot("12_review_$suffix")
-        onView(withText("Filters")).perform(scrollTo(), click())
-        SystemClock.sleep(3000)
-        shot("13_review_filters_$suffix")
-        onView(allOf(withText("Save"), isDisplayed())).perform(click())
+        shot("12_review_filters_$suffix")
+        onView(withText("Arrange")).perform(scrollTo(), click())
+        SystemClock.sleep(1500)
+        shot("13_review_arrange_$suffix")
+        onView(allOf(withText("Done"), isDisplayed())).perform(click())
+        onView(allOf(withText("Save PDF"), isDisplayed())).perform(click())
         SystemClock.sleep(2500)
         shot("14_save_sheet_$suffix")
         onView(withText("Cancel")).inRoot(isDialog()).perform(click())

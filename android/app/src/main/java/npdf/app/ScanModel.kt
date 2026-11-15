@@ -39,7 +39,8 @@ enum class ScanKind(val label: String, val baseName: String) {
 sealed class Edit {
     class Erase(val pts: List<Pt>, val radius: Float, val color: Int?) : Edit()
     class Ink(val pts: List<Pt>, val color: Int, val width: Float) : Edit()
-    class Shape(val type: Int, val a: Pt, val b: Pt, val color: Int, val width: Float) : Edit()
+    /** A box, oval, line or arrow; boxes and ovals may be filled ([fill], with its own transparency). */
+    class Shape(val type: Int, val a: Pt, val b: Pt, val color: Int, val width: Float, val fill: Int? = null) : Edit()
     object Fingers : Edit()
 
     companion object {
@@ -163,7 +164,7 @@ class ScanSession(val dir: File) {
                     put(when (e) {
                         is Edit.Erase -> JSONObject().put("t", "erase").put("pts", JSONArray().apply { e.pts.forEach { put(ptJson(it)) } }).put("r", e.radius.toDouble()).put("c", e.color ?: JSONObject.NULL)
                         is Edit.Ink -> JSONObject().put("t", "ink").put("pts", JSONArray().apply { e.pts.forEach { put(ptJson(it)) } }).put("c", e.color).put("w", e.width.toDouble())
-                        is Edit.Shape -> JSONObject().put("t", "shape").put("s", e.type).put("a", ptJson(e.a)).put("b", ptJson(e.b)).put("c", e.color).put("w", e.width.toDouble())
+                        is Edit.Shape -> JSONObject().put("t", "shape").put("s", e.type).put("a", ptJson(e.a)).put("b", ptJson(e.b)).put("c", e.color).put("w", e.width.toDouble()).put("f", e.fill ?: JSONObject.NULL)
                         Edit.Fingers -> JSONObject().put("t", "fingers")
                     })
                 }
@@ -190,7 +191,8 @@ class ScanSession(val dir: File) {
                 edits.add(when (e.getString("t")) {
                     "erase" -> Edit.Erase(pts(), e.getDouble("r").toFloat(), if (e.isNull("c")) null else e.getInt("c"))
                     "ink" -> Edit.Ink(pts(), e.getInt("c"), e.getDouble("w").toFloat())
-                    "shape" -> Edit.Shape(e.getInt("s"), ptFrom(e.getJSONArray("a")), ptFrom(e.getJSONArray("b")), e.getInt("c"), e.getDouble("w").toFloat())
+                    "shape" -> Edit.Shape(e.getInt("s"), ptFrom(e.getJSONArray("a")), ptFrom(e.getJSONArray("b")), e.getInt("c"), e.getDouble("w").toFloat(),
+                        if (e.isNull("f") || !e.has("f")) null else e.getInt("f"))
                     else -> Edit.Fingers
                 })
             }
@@ -316,6 +318,10 @@ object ScanProcessor {
                 p.color = e.color; p.strokeWidth = e.width * w
                 val a = Pt(e.a.x * w, e.a.y * h); val b = Pt(e.b.x * w, e.b.y * h)
                 val rect = RectF(minOf(a.x, b.x), minOf(a.y, b.y), maxOf(a.x, b.x), maxOf(a.y, b.y))
+                e.fill?.let { f ->
+                    val fp = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL; color = f }
+                    if (e.type == Edit.RECT) c.drawRect(rect, fp) else if (e.type == Edit.ELLIPSE) c.drawOval(rect, fp)
+                }
                 when (e.type) {
                     Edit.RECT -> c.drawRect(rect, p)
                     Edit.ELLIPSE -> c.drawOval(rect, p)

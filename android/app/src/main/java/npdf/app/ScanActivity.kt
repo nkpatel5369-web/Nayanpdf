@@ -100,6 +100,9 @@ class ScanActivity : AppCompatActivity() {
     private var frames = 0
     private var lastQr: String? = null
     private var analysing = true
+    /** When a document was last seen in the picture (for the "No document found" hint). */
+    private var lastDocAt = SystemClock.uptimeMillis()
+    private lateinit var orderBtn: TextView
 
     /** For tests: pages captured so far, and whether the camera is ready to take a picture. */
     val pageCount: Int get() = if (::session.isInitialized) session.pages.size else 0
@@ -155,10 +158,11 @@ class ScanActivity : AppCompatActivity() {
 
     // ------------------------------------------------------------------ layout
 
-    private fun pill(text: String, onClick: (TextView) -> Unit) = Kit.text(this, text, 13f, 600).apply {
+    private fun pill(text: String, onClick: (TextView) -> Unit) = Kit.text(this, text, 14f, 500).apply {
         setTextColor(Color.WHITE)
-        background = Kit.rounded(this@ScanActivity, 0x66000000, 14f)
-        setPadding(Kit.dpi(context, 12), Kit.dpi(context, 6), Kit.dpi(context, 12), Kit.dpi(context, 6))
+        background = Kit.rounded(this@ScanActivity, 0x33FFFFFF, 18f)
+        minHeight = Kit.dpi(context, 36); gravity = Gravity.CENTER
+        setPadding(Kit.dpi(context, 14), Kit.dpi(context, 6), Kit.dpi(context, 14), Kit.dpi(context, 6))
         isClickable = true
         contentDescription = text
         setOnClickListener { Kit.tick(it); onClick(this) }
@@ -187,6 +191,12 @@ class ScanActivity : AppCompatActivity() {
         top.addView(flashBtn, LinearLayout.LayoutParams(Kit.dpi(ctx, 48), Kit.dpi(ctx, 48)))
         batchBtn = pill("Batch") { batch = !batch; updatePills(); Kit.banner(this, if (batch) "Batch scanning: turn the pages, N PDF captures each one." else "Batch scanning off") }
         top.addView(batchBtn, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginStart = Kit.dpi(ctx, 6) })
+        orderBtn = pill(if (prefs.bookRightFirst) "Right page first" else "Left page first") {
+            prefs.bookRightFirst = !prefs.bookRightFirst
+            it.text = if (prefs.bookRightFirst) "Right page first" else "Left page first"
+            it.contentDescription = "Page order: " + it.text
+        }.apply { visibility = View.GONE; contentDescription = "Page order: $text" }
+        top.addView(orderBtn, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginEnd = Kit.dpi(ctx, 6) })
         autoBtn = pill("Auto") { auto = !auto; prefs.autoCapture = auto; steadySince = 0; updatePills() }
         top.addView(autoBtn, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginStart = Kit.dpi(ctx, 8) })
         column.addView(top, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Kit.dpi(ctx, 56)))
@@ -214,11 +224,11 @@ class ScanActivity : AppCompatActivity() {
         val modes = HorizontalScrollView(this).apply { isHorizontalScrollBarEnabled = false }
         modeRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER; setPadding(Kit.dpi(ctx, 24), 0, Kit.dpi(ctx, 24), 0) }
         for (k in ScanKind.values()) {
-            modeRow.addView(Kit.text(this, k.label.uppercase(), 13f, 600).apply {
+            modeRow.addView(Kit.text(this, k.label, 14f, 500).apply {
                 tag = k
                 setTextColor(0xB3FFFFFF.toInt())
-                letterSpacing = 0.06f
-                setPadding(Kit.dpi(ctx, 12), Kit.dpi(ctx, 12), Kit.dpi(ctx, 12), Kit.dpi(ctx, 12))
+                gravity = Gravity.CENTER; minHeight = Kit.dpi(ctx, 36)
+                setPadding(Kit.dpi(ctx, 14), Kit.dpi(ctx, 6), Kit.dpi(ctx, 14), Kit.dpi(ctx, 6))
                 contentDescription = k.label
                 isClickable = true
                 setOnClickListener { Kit.tick(it); selectMode(k) }
@@ -229,7 +239,10 @@ class ScanActivity : AppCompatActivity() {
 
         // Bottom: last page, shutter, import / done.
         val bottom = FrameLayout(this).apply { setPadding(Kit.dpi(ctx, 24), Kit.dpi(ctx, 8), Kit.dpi(ctx, 24), Kit.dpi(ctx, 18)) }
-        val thumbBox = FrameLayout(this).apply { isClickable = true; contentDescription = "Review pages"; setOnClickListener { finishToReview() } }
+        val thumbBox = FrameLayout(this).apply {
+            isClickable = true; contentDescription = "Review pages"; setOnClickListener { finishToReview() }
+            setOnLongClickListener { Kit.tick(it); deleteLast(); true }
+        }
         thumb = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP; background = Kit.rounded(ctx, 0xFF2C2C2E.toInt(), 6f, Color.WHITE, 1.5f); clipToOutline = true }
         thumbBox.addView(thumb, FrameLayout.LayoutParams(Kit.dpi(ctx, 52), Kit.dpi(ctx, 52), Gravity.CENTER))
         count = Kit.text(this, "", 12f, 700).apply {
@@ -249,9 +262,10 @@ class ScanActivity : AppCompatActivity() {
             contentDescription = "Import photos"; isClickable = true
             setOnClickListener { importPhotos.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
         }, LinearLayout.LayoutParams(Kit.dpi(ctx, 46), Kit.dpi(ctx, 46)))
-        done = Kit.text(this, "Done", 17f, 600).apply {
-            setTextColor(Kit.color(ctx, R.color.yellow)); contentDescription = "Done"; isClickable = true
-            setPadding(Kit.dpi(ctx, 8), Kit.dpi(ctx, 4), Kit.dpi(ctx, 8), Kit.dpi(ctx, 4))
+        done = Kit.text(this, "Done", 14f, 500).apply {
+            setTextColor(Color.BLACK); contentDescription = "Done"; isClickable = true
+            background = Kit.rounded(ctx, Color.WHITE, 18f); gravity = Gravity.CENTER; minHeight = Kit.dpi(ctx, 36)
+            setPadding(Kit.dpi(ctx, 16), Kit.dpi(ctx, 6), Kit.dpi(ctx, 16), Kit.dpi(ctx, 6))
             setOnClickListener { finishToReview() }
         }
         right.addView(done)
@@ -269,7 +283,7 @@ class ScanActivity : AppCompatActivity() {
     private fun updatePills() {
         autoBtn.text = if (auto) "Auto" else "Manual"
         autoBtn.contentDescription = if (auto) "Auto-capture on" else "Auto-capture off"
-        batchBtn.background = Kit.rounded(this, if (batch) Kit.color(this, R.color.yellow) else 0x66000000, 14f)
+        batchBtn.background = Kit.rounded(this, if (batch) Color.WHITE else 0x33FFFFFF, 18f)
         batchBtn.setTextColor(if (batch) Color.BLACK else Color.WHITE)
         if (!auto) shutter.progress = 0f
     }
@@ -285,12 +299,14 @@ class ScanActivity : AppCompatActivity() {
         kind = k
         for (i in 0 until modeRow.childCount) {
             val v = modeRow.getChildAt(i) as TextView
-            v.setTextColor(if (v.tag == k) Kit.color(this, R.color.yellow) else 0xB3FFFFFF.toInt())
+            v.setTextColor(if (v.tag == k) Color.BLACK else 0xB3FFFFFF.toInt())
+            v.background = if (v.tag == k) Kit.rounded(this, Color.WHITE, 18f) else null
         }
         overlay.bookDivider = k == ScanKind.BOOK
         overlay.cardGuide = k == ScanKind.IDCARD
         overlay.invalidate()
-        lastQuad = null; steadySince = 0; armed = true
+        orderBtn.visibility = if (k == ScanKind.BOOK) View.VISIBLE else View.GONE
+        lastQuad = null; steadySince = 0; armed = true; lastDocAt = SystemClock.uptimeMillis()
         status.text = when (k) {
             ScanKind.WHITEBOARD -> "The whole picture is captured"
             ScanKind.BOOK -> "Line up the middle of the book with the dotted line"
@@ -418,9 +434,14 @@ class ScanActivity : AppCompatActivity() {
         if (q == null) {
             lastQuad = null; steadySince = 0L; shutter.progress = 0f
             armed = true
-            if (!capturing) say(if (kind == ScanKind.IDCARD) (if (idFront == null) "Front of the card" else "Back of the card") else "Looking for document")
+            if (!capturing) say(when {
+                kind == ScanKind.IDCARD -> if (idFront == null) "Front of the card" else "Back of the card"
+                now - lastDocAt > 8000 -> "No document found. Tap the shutter to capture."
+                else -> "Looking for document"
+            })
             return
         }
+        lastDocAt = now
         val prev = lastQuad
         val tol = DocDetector.stabilityTolerance(fw, fh)
         if (prev != null && q.maxCornerDistance(prev) < tol) { if (steadySince == 0L) steadySince = now }
@@ -464,6 +485,11 @@ class ScanActivity : AppCompatActivity() {
                     try {
                         val part = withContext(Dispatchers.Default) {
                             val bmp = decodeJpeg(bytes, rot)
+                            if (prefs.saveOriginals) {
+                                val jpeg = java.io.ByteArrayOutputStream().also { bmp.compress(Bitmap.CompressFormat.JPEG, 95, it) }.toByteArray()
+                                val stamp = npdf.scan.TextInfo.defaultName(prefs.scanName, java.time.LocalDateTime.now())
+                                launch(Dispatchers.IO) { runCatching { ScanStore.saveOriginal(this@ScanActivity, jpeg, stamp) } }
+                            }
                             val p = ScanProcessor.addPhoto(session, bmp, kind)
                             if (p.quad == null && previewQuad != null && kind != ScanKind.WHITEBOARD && fw > 0) p.quad = previewQuad.scaled(bmp.width.toFloat() / fw)
                             bmp.recycle()
@@ -508,7 +534,7 @@ class ScanActivity : AppCompatActivity() {
             ScanKind.BOOK -> {
                 val left = ScanProcessor.newPage(kind, part, filter, half = 1)
                 val right = ScanProcessor.newPage(kind, Part(part.file, part.quad, part.w, part.h), filter, half = 2)
-                session.pages.add(left); session.pages.add(right)
+                if (prefs.bookRightFirst) { session.pages.add(right); session.pages.add(left) } else { session.pages.add(left); session.pages.add(right) }
                 newPage = left
             }
             ScanKind.IDCARD -> {
@@ -528,11 +554,18 @@ class ScanActivity : AppCompatActivity() {
         session.kind = kind
         session.save()
         refreshThumb()
-        val p = newPage
-        if (p != null && prefs.adjustAfterCapture && !batch) {
-            startActivity(Intent(this, ScanReviewActivity::class.java).putExtra(ScanReviewActivity.EXTRA_SESSION, session.dir.absolutePath)
-                .putExtra(ScanReviewActivity.EXTRA_CROP, p.id).putExtra(ScanReviewActivity.EXTRA_RETURN, true))
-        }
+        // As in Adobe Scan: each page opens for review (crop, filters, page order), with Keep scanning to
+        // come back for the next one. Batch scanning keeps capturing instead.
+        if (newPage != null && prefs.adjustAfterCapture && !batch) finishToReview()
+    }
+
+    /** Long press on the pages thumbnail: remove the last capture. */
+    private fun deleteLast() = lifecycleScope.launch {
+        if (session.pages.isEmpty() && idFront == null) { Kit.banner(this@ScanActivity, "No pages captured yet."); return@launch }
+        if (!Dialogs.confirm(this@ScanActivity, "Delete the last page?", "${session.pages.size + (if (idFront != null) 1 else 0)} page(s) captured so far.", "Delete")) return@launch
+        if (idFront != null) idFront = null else session.pages.removeAt(session.pages.lastIndex)
+        session.save(); refreshThumb()
+        Kit.banner(this@ScanActivity, "Last page deleted")
     }
 
     private fun importUris(uris: List<Uri>) {

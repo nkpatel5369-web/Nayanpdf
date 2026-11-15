@@ -174,7 +174,7 @@ class CropView(ctx: Context, private val photo: Bitmap, photoW: Int, photoH: Int
  */
 @SuppressLint("ViewConstructor")
 class PaintView(ctx: Context, private val page: Bitmap) : View(ctx) {
-    enum class Tool { ERASE, INK, RECT, ELLIPSE, LINE, ARROW, PICK }
+    enum class Tool { ERASE, INK, HIGHLIGHT, RECT, ELLIPSE, LINE, ARROW, PICK }
 
     var tool = Tool.ERASE
     var color = Color.RED
@@ -225,6 +225,10 @@ class PaintView(ctx: Context, private val page: Bitmap) : View(ctx) {
                     stroke.color = e.color; stroke.strokeWidth = e.width * w
                     val a = view(e.a); val b = view(e.b)
                     val r = RectF(min(a.x, b.x), min(a.y, b.y), max(a.x, b.x), max(a.y, b.y))
+                    e.fill?.let { f ->
+                        fillPaint.color = f
+                        if (e.type == Edit.RECT) canvas.drawRect(r, fillPaint) else if (e.type == Edit.ELLIPSE) canvas.drawOval(r, fillPaint)
+                    }
                     when (e.type) {
                         Edit.RECT -> canvas.drawRect(r, stroke)
                         Edit.ELLIPSE -> canvas.drawOval(r, stroke)
@@ -244,13 +248,26 @@ class PaintView(ctx: Context, private val page: Bitmap) : View(ctx) {
         pending()?.let(::drawEdit)
     }
 
+    /** Pen and shape opacity (0.1 to 1); a highlighter is a wide pen at 40 %. */
+    var opacity = 1f
+    /** Boxes and ovals are filled with the colour at a third of the opacity. */
+    var filled = false
+    private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+
+    private fun withAlpha(c: Int, a: Float) = (c and 0x00FFFFFF) or ((a.coerceIn(0.05f, 1f) * 255).toInt() shl 24)
+
     private fun pending(): Edit? = when (tool) {
         Tool.ERASE -> if (current.isEmpty()) null else Edit.Erase(current.toList(), size, eraseColor)
-        Tool.INK -> if (current.isEmpty()) null else Edit.Ink(current.toList(), color, size * 0.4f)
+        Tool.INK -> if (current.isEmpty()) null else Edit.Ink(current.toList(), withAlpha(color, opacity), size * 0.4f)
+        Tool.HIGHLIGHT -> if (current.isEmpty()) null else Edit.Ink(current.toList(), withAlpha(color, 0.4f * opacity), size * 1.2f)
         Tool.RECT, Tool.ELLIPSE, Tool.LINE, Tool.ARROW -> {
             val a = start; val b = end
             if (a == null || b == null) null
-            else Edit.Shape(when (tool) { Tool.RECT -> Edit.RECT; Tool.ELLIPSE -> Edit.ELLIPSE; Tool.LINE -> Edit.LINE; else -> Edit.ARROW }, a, b, color, size * 0.3f)
+            else {
+                val type = when (tool) { Tool.RECT -> Edit.RECT; Tool.ELLIPSE -> Edit.ELLIPSE; Tool.LINE -> Edit.LINE; else -> Edit.ARROW }
+                Edit.Shape(type, a, b, withAlpha(color, opacity), size * 0.3f,
+                    if (filled && (type == Edit.RECT || type == Edit.ELLIPSE)) withAlpha(color, opacity / 3f) else null)
+            }
         }
         Tool.PICK -> null
     }

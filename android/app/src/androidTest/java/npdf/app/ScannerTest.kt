@@ -16,6 +16,7 @@ import android.util.Log
 import androidx.test.core.app.ActivityScenario
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.action.ViewActions.click
+import androidx.test.espresso.action.ViewActions.scrollTo
 import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.RootMatchers.isDialog
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
@@ -180,17 +181,95 @@ class ScannerTest {
         assertTrue(again.pages[0].parts[0].quad!!.maxCornerDistance(part.quad!!) < 0.01f)
     }
 
+    /** Adobe Scan's flow: each picture opens for review (crop, filters, page order), with Keep scanning to go on. */
     @Test
     fun cameraCapturesAPageAndOpensTheReview() {
         Prefs(ctx).autoCapture = false
+        assertTrue("review after each capture is the default", Prefs(ctx).adjustAfterCapture)
+        val cam = TestKit.start(ScanActivity::class.java)
+        TestKit.waitFor("camera ready", 30_000) { TestKit.main { cam.cameraReady } }
+        TestKit.tap(cam, "Capture")
+        TestKit.waitFor("camera closed for the review", 30_000) { TestKit.main { cam.isDestroyed } }
+        TestKit.waitFor("review open") { runCatching { onView(allOf(withText("Save PDF"), isDisplayed())).check(matches(isDisplayed())); true }.getOrDefault(false) }
+        val rv = TestKit.resumed(ScanReviewActivity::class.java)
+        assertEquals(1, TestKit.main { rv.pageCount })
+        // Filters are shown under the page straight away, and the tools include Keep scanning and Arrange.
+        onView(allOf(withContentDescription("Auto colour, chosen"), isDisplayed())).check(matches(isDisplayed()))
+        onView(withContentDescription("Keep scanning")).check(matches(isDisplayed()))
+        TestKit.finish(rv)
+    }
+
+    /** With review after each capture turned off, the camera keeps going and Done opens the review. */
+    @Test
+    fun cameraKeepsCapturingWhenReviewIsOff() {
+        Prefs(ctx).autoCapture = false
+        Prefs(ctx).adjustAfterCapture = false
         val cam = TestKit.start(ScanActivity::class.java)
         TestKit.waitFor("camera ready", 30_000) { TestKit.main { cam.cameraReady } }
         TestKit.tap(cam, "Capture")
         TestKit.waitFor("page captured", 30_000) { TestKit.main { cam.pageCount } == 1 }
+        assertFalse("camera still open", TestKit.main { cam.isDestroyed })
         TestKit.tap(cam, "Done")
         TestKit.waitFor("camera closed", 30_000) { TestKit.main { cam.isDestroyed } }
-        TestKit.waitFor("review open") { runCatching { onView(allOf(withText("Save"), isDisplayed())).check(matches(isDisplayed())); true }.getOrDefault(false) }
+        TestKit.waitFor("review open") { runCatching { onView(allOf(withText("Save PDF"), isDisplayed())).check(matches(isDisplayed())); true }.getOrDefault(false) }
         TestKit.finish(TestKit.resumed(ScanReviewActivity::class.java))
+    }
+
+    /** Arrange pages: select several and change them together; the page strip shows every page. */
+    @Test
+    fun reviewArrangesSeveralPagesTogether() {
+        val files = (0 until 3).map { k ->
+            File(ctx.cacheDir, "arrange_${k}_${System.nanoTime()}.jpg").also { f -> f.outputStream().use { photo(document(), truth).compress(Bitmap.CompressFormat.JPEG, 85, it) } }
+        }
+        val i = Intent(ctx, ScanReviewActivity::class.java).putParcelableArrayListExtra(ScanReviewActivity.EXTRA_IMPORT, ArrayList(files.map { Uri.fromFile(it) }))
+        val sc = ActivityScenario.launch<ScanReviewActivity>(i)
+        TestKit.waitFor("photos imported", 60_000) { var n = 0; sc.onActivity { n = it.pageCount }; n == 3 }
+        onView(withContentDescription("Page 3")).check(matches(isDisplayed()))
+        onView(withText("Arrange")).perform(scrollTo(), click())
+        onView(withText("Arrange pages")).check(matches(isDisplayed()))
+        onView(withText("Select all")).perform(click())
+        onView(allOf(withText("Rotate"), isDisplayed())).perform(click())
+        onView(allOf(withText("Done"), isDisplayed())).perform(click())
+        var dir: File? = null
+        sc.onActivity { a -> dir = a.sessionDir }
+        val again = ScanSession.load(dir!!)!!
+        assertTrue("all three pages turned: ${again.pages.map { it.rot }}", again.pages.all { it.rot == 1 })
+        sc.close()
+    }
+
+    /** Pages resized to A3, A4 and A5 come out at exactly those sizes; the scan keeps its proportions on them. */
+    @Test
+    fun scanPagesResizeToStandardSizes() {
+        val session = ScanSession.create(ctx)
+        val part = ScanProcessor.addPhoto(session, photo(document(), truth), ScanKind.DOCUMENT)
+        val want = mapOf("A3" to (841.89f to 1190.55f), "A4" to (595.28f to 841.89f), "A5" to (419.53f to 595.28f), "LETTER" to (612f to 792f))
+        for (k in want.keys) session.pages.add(ScanProcessor.newPage(ScanKind.DOCUMENT, Part(part.file, part.quad, part.w, part.h), Filter.AUTO).apply { size = k })
+        val uri = ScanStore.savePdf(ctx, session, "NPDF sizes ${System.nanoTime()}", ScanStore.Options(ocr = false, languages = listOf("eng"))) { _, _ -> }
+        created.add(uri)
+        val d = Pdf.open(copyToFile(uri, "pdf").absolutePath)
+        want.values.forEachIndexed { i, (w, h) ->
+            val b = d.loadPage(i).bounds
+            assertEquals("page ${i + 1} width", w, b.x1 - b.x0, 0.5f)
+            assertEquals("page ${i + 1} height", h, b.y1 - b.y0, 0.5f)
+        }
+    }
+
+    /** Modify scan: a saved scan is found again from its PDF and saved over it. */
+    @Test
+    fun modifyScanSavesOverTheSamePdf() {
+        val session = ScanSession.create(ctx)
+        val part = ScanProcessor.addPhoto(session, photo(document(), truth), ScanKind.DOCUMENT)
+        session.pages.add(ScanProcessor.newPage(ScanKind.DOCUMENT, part, Filter.AUTO))
+        val uri = ScanStore.savePdf(ctx, session, "NPDF modify ${System.nanoTime()}", ScanStore.Options(ocr = false, languages = listOf("eng"))) { _, _ -> }
+        created.add(uri)
+        session.savedUri = uri.toString(); session.save()
+        val found = ScanSession.forUri(ctx, uri)
+        assertNotNull("the scan behind the PDF is found", found)
+        assertEquals("a saved scan is not offered as unfinished", null, ScanSession.latest(ctx)?.takeIf { it.dir == session.dir })
+        found!!.pages.add(ScanProcessor.newPage(ScanKind.DOCUMENT, Part(part.file, part.quad, part.w, part.h), Filter.GRAY))
+        val again = ScanStore.savePdf(ctx, found, "ignored", ScanStore.Options(ocr = false, languages = listOf("eng")), uri) { _, _ -> }
+        assertEquals("written over the same file", uri, again)
+        assertEquals(2, Pdf.open(copyToFile(uri, "pdf").absolutePath).countPages())
     }
 
     @Test
@@ -201,7 +280,7 @@ class ScannerTest {
         val sc = ActivityScenario.launch<ScanReviewActivity>(i)
         TestKit.waitFor("photo imported", 30_000) { var n = 0; sc.onActivity { n = it.pageCount }; n == 1 }
         val started = System.currentTimeMillis() / 1000 - 5
-        onView(allOf(withText("Save"), isDisplayed())).perform(click())
+        onView(allOf(withText("Save PDF"), isDisplayed())).perform(click())
         onView(withText("Save")).inRoot(isDialog()).perform(click())
         TestKit.waitFor("saved", 60_000) { runCatching { onView(withText("Done")).inRoot(isDialog()).check(matches(isDisplayed())); true }.getOrDefault(false) }
         // The new PDF is in Documents/N PDF.

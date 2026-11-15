@@ -49,7 +49,7 @@ object ScanStore {
     }
 
     /** Creates an empty file for [displayName] (without extension) and returns where to write it. */
-    fun create(ctx: Context, displayName: String, mime: String, ext: String, picture: Boolean = false): Uri {
+    fun create(ctx: Context, displayName: String, mime: String, ext: String, picture: Boolean = false, sub: String? = null): Uri {
         val name = TextInfo.safeName(displayName).ifEmpty { "Scan" }
         Prefs(ctx).scanFolder?.let { tree ->
             val dir = DocumentFile.fromTreeUri(ctx, Uri.parse(tree))
@@ -61,7 +61,7 @@ object ScanStore {
         val values = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, "$name.$ext")
             put(MediaStore.MediaColumns.MIME_TYPE, mime)
-            put(MediaStore.MediaColumns.RELATIVE_PATH, (if (picture) Environment.DIRECTORY_PICTURES else Environment.DIRECTORY_DOCUMENTS) + "/N PDF")
+            put(MediaStore.MediaColumns.RELATIVE_PATH, (if (picture) Environment.DIRECTORY_PICTURES else Environment.DIRECTORY_DOCUMENTS) + "/N PDF" + (sub?.let { "/$it" } ?: ""))
             put(MediaStore.MediaColumns.IS_PENDING, 1)
         }
         val collection = if (picture) MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
@@ -78,9 +78,8 @@ object ScanStore {
 
     private fun discard(ctx: Context, uri: Uri) { runCatching { ctx.contentResolver.delete(uri, null, null) } }
 
-    private fun pageSize(s: String) = when (s) {
-        "A4" -> Pages.PageSize.A4; "LETTER" -> Pages.PageSize.LETTER; "LEGAL" -> Pages.PageSize.LEGAL; else -> Pages.PageSize.FIT
-    }
+    /** A scan page's size setting ("AUTO" or a Pages.PageSize name) as the engine's page size. */
+    fun pageSize(s: String): Pages.PageSize = if (s == "AUTO") Pages.PageSize.FIT else runCatching { Pages.PageSize.valueOf(s) }.getOrDefault(Pages.PageSize.FIT)
 
     private fun scaled(b: Bitmap, maxSide: Int): Bitmap {
         val s = maxSide.toFloat() / max(b.width, b.height)
@@ -91,7 +90,7 @@ object ScanStore {
      * Writes the scan as one PDF, recognising text when asked, and returns the
      * saved file. [progress] receives a message and the fraction done.
      */
-    fun savePdf(ctx: Context, session: ScanSession, name: String, opt: Options, progress: (String, Float) -> Unit): Uri {
+    fun savePdf(ctx: Context, session: ScanSession, name: String, opt: Options, target: Uri? = null, progress: (String, Float) -> Unit): Uri {
         val (maxSide, quality) = QUALITY[opt.quality.coerceIn(0, 2)]
         val tmp = File(ctx.cacheDir, "scan_${System.nanoTime()}.pdf")
         val doc = PDFDocument()
@@ -124,6 +123,11 @@ object ScanStore {
             doc.destroy()
         }
         Pages.verify(tmp, session.pages.size, opt.password)
+        // Modify scan: write over the PDF this scan was saved as. Only a verified file is written.
+        if (target != null) {
+            try { Files.writeToUri(ctx, tmp, target) } finally { tmp.delete() }
+            return target
+        }
         val uri = create(ctx, name, "application/pdf", "pdf")
         try {
             Files.writeToUri(ctx, tmp, uri)
@@ -134,6 +138,16 @@ object ScanStore {
             tmp.delete()
         }
         return uri
+    }
+
+    /** Saves a camera photo as it was taken, in Pictures/N PDF/Originals (Android 10 and later). */
+    fun saveOriginal(ctx: Context, jpeg: ByteArray, name: String) {
+        if (Build.VERSION.SDK_INT < 29) return
+        val uri = create(ctx, name, "image/jpeg", "jpg", picture = true, sub = "Originals")
+        try {
+            ctx.contentResolver.openOutputStream(uri)?.use { it.write(jpeg) }
+            publish(ctx, uri)
+        } catch (e: Exception) { discard(ctx, uri) }
     }
 
     /** Saves every page as a JPEG picture; returns the saved files. */
