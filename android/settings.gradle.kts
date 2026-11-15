@@ -19,4 +19,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "npdf"
-include(":engine", ":app")
+include(":scankit", ":engine", ":app")
