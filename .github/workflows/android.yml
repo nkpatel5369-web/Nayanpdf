@@ -41,6 +41,10 @@ jobs:
           echo "NPDF_KEYSTORE=$RUNNER_TEMP/npdf-test.p12" >> "$GITHUB_ENV"
           echo "NPDF_KEYSTORE_PASSWORD=$pw" >> "$GITHUB_ENV"
 
+      - name: Unit tests (scanner engine and Office export, on the JVM)
+        working-directory: android
+        run: ./gradlew --no-daemon :scankit:test
+
       - name: Build the APK and the test APKs
         working-directory: android
         run: ./gradlew --no-daemon :app:assembleRelease :app:assembleReleaseAndroidTest :engine:assembleDebugAndroidTest
@@ -77,7 +81,7 @@ jobs:
             ./gradlew --no-daemon :engine:connectedDebugAndroidTest || touch failed
             ./gradlew --no-daemon :app:connectedReleaseAndroidTest || touch failed
             adb logcat -d > logcat-api34.txt || true
-            adb logcat -d -s NPDF-PERF:I NPDF-COMPRESS:I NPDF-NET:I NPDF-OCR:I > npdf-log-api34.txt || true
+            adb logcat -d -s NPDF-PERF:I NPDF-COMPRESS:I NPDF-NET:I NPDF-OCR:I NPDF-EXPORT:I NPDF-SCANEDIT:I NPDF-SCAN:I > npdf-log-api34.txt || true
             mkdir -p results/api34/engine results/api34/app
             cp -r engine/build/outputs/androidTest-results/. results/api34/engine/ || true
             cp -r app/build/outputs/androidTest-results/. results/api34/app/ || true
@@ -98,7 +102,7 @@ jobs:
             adb logcat -c || true
             ./gradlew --no-daemon :app:connectedReleaseAndroidTest || touch failed30
             adb logcat -d > logcat-api30.txt || true
-            adb logcat -d -s NPDF-PERF:I NPDF-NET:I NPDF-OCR:I > npdf-log-api30.txt || true
+            adb logcat -d -s NPDF-PERF:I NPDF-NET:I NPDF-OCR:I NPDF-SCAN:I > npdf-log-api30.txt || true
             mkdir -p results/api30/app
             cp -r app/build/outputs/androidTest-results/. results/api30/app/ || true
             test ! -f failed30
@@ -110,6 +114,12 @@ jobs:
           import glob, xml.etree.ElementTree as ET
           print("| Android | Suite | Tests | Failed |")
           print("|---|---|---|---|")
+          tests = failed = 0
+          for path in glob.glob("android/scankit/build/test-results/test/TEST-*.xml"):
+              t = ET.parse(path).getroot()
+              tests += int(t.get("tests", 0)); failed += int(t.get("failures", 0)) + int(t.get("errors", 0))
+          if tests:
+              print(f"| JVM | scanner and export | {tests} | {failed} |")
           for api in ("api34", "api30"):
               for suite in ("engine", "app"):
                   tests = failed = 0
@@ -119,6 +129,7 @@ jobs:
                   if tests:
                       print(f"| {api[3:]} | {suite} | {tests} | {failed} |")
           EOF
+          cat android/scankit/build/test-results/test/*.xml 2>/dev/null | grep -oE 'NPDF-SCAN [^<]*' | grep -E 'overall|refined|time|filter Auto' | tee -a android/summary.md || true
           cat android/npdf-log-api34.txt android/npdf-log-api30.txt 2>/dev/null | grep -E 'NPDF' | sed 's/^.*\(NPDF-[A-Z]*\)/\1/' | tee -a android/summary.md || true
 
       - name: Upload APK and test evidence
@@ -129,6 +140,7 @@ jobs:
           path: |
             android/app/build/outputs/apk/release/app-release.apk
             android/results/
+            android/scankit/build/test-results/
             android/summary.md
             android/logcat-api34.txt
             android/logcat-api30.txt
@@ -137,7 +149,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Publish pre-release with the APK
-        if: success() && github.event_name == 'push'
+        if: success() && github.event_name == 'push' && !contains(github.event.head_commit.message, '[no release]')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

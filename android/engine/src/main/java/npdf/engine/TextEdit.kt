@@ -248,7 +248,7 @@ object TextEdit {
      * marks the user has drawn but not applied are kept (MuPDF would otherwise
      * apply them at the same time).
      */
-    fun removeText(page: PDFPage, rects: List<Rect>) {
+    fun removeText(page: PDFPage, rects: List<Rect>, pixels: Boolean = false) {
         class Pending(val rect: Rect, val quads: Array<Quad>?, val color: FloatArray?, val contents: String?, val author: String?)
         val pending = mutableListOf<Pending>()
         for (a in page.annotations ?: emptyArray()) {
@@ -260,14 +260,15 @@ object TextEdit {
         for (r in rects) {
             val h = r.y1 - r.y0
             val w = r.x1 - r.x0
-            // Shrink to the line's core so neighbouring lines and cells are not touched.
-            var core = Rect(r.x0 + minOf(0.4f, w * 0.02f), r.y0 + h * 0.3f, r.x1 - minOf(0.4f, w * 0.02f), r.y1 - h * 0.3f)
+            // Shrink to the line's core so neighbouring lines and cells are not touched
+            // (scans: the whole area, because its pixels are removed too).
+            var core = if (pixels) Rect(r) else Rect(r.x0 + minOf(0.4f, w * 0.02f), r.y0 + h * 0.3f, r.x1 - minOf(0.4f, w * 0.02f), r.y1 - h * 0.3f)
             if (core.isEmpty) core = Rect(r)
             val a = page.createAnnotation(PDFAnnotation.TYPE_REDACT)
             a.rect = core
             a.update()
         }
-        page.applyRedactions(false, PDFPage.REDACT_IMAGE_NONE, PDFPage.REDACT_LINE_ART_NONE, PDFPage.REDACT_TEXT_REMOVE)
+        page.applyRedactions(false, if (pixels) PDFPage.REDACT_IMAGE_PIXELS else PDFPage.REDACT_IMAGE_NONE, PDFPage.REDACT_LINE_ART_NONE, PDFPage.REDACT_TEXT_REMOVE)
         for (p in pending) {
             val a = page.createAnnotation(PDFAnnotation.TYPE_REDACT)
             a.rect = p.rect
@@ -343,7 +344,14 @@ object TextEdit {
         Pdf.require(doc, com.artifex.mupdf.fitz.Document.PERMISSION_EDIT, "editing")
         val page = Pdf.page(doc, pageNumber)
         val text = PageText.of(page)
-        val lines = text.linesIn(Pdf.grow(rect, 1f))
+        // Scanned pages: edit just the recognised words inside the area (an OCR row can span table columns).
+        val grown = Pdf.grow(rect, 1f)
+        val ocrParts = text.lines.mapNotNull { clip(it, grown) }.filter { l -> l.spans.all { isOcrFont(it.fontName) } }
+        val printed = text.linesIn(grown).filter { l -> l.spans.any { !isOcrFont(it.fontName) } }
+        if (ocrParts.isNotEmpty() && printed.isEmpty()) {
+            return editScanned(doc, page, pageNumber, ocrParts, newText, mode, fontSize, argb, bold, italic, family, moveBy)
+        }
+        val lines = text.linesIn(grown)
         if (lines.isEmpty()) {
             throw PdfError(Codes.NOT_SUPPORTED, "No editable text was found in the selected area. If this is a scanned page, run OCR first or use Add Text.")
         }
@@ -428,6 +436,122 @@ object TextEdit {
             throw PdfError(Codes.VERIFY_FAILED, "The edit could not be verified: the new text was not found where it was written. The document was not changed.")
         }
         return Result(writer.label, writer.kind, warnings, newArea)
+    }
+
+    /** The part of [line] whose characters lie inside [r] (null when none do), spaces at the ends dropped. */
+    private fun clip(line: Line, r: Rect): Line? {
+        val keep = ArrayList<Pair<Span, TextChar>>()
+        for (sp in line.spans) for (c in sp.chars) {
+            val b = c.bbox
+            if (Pdf.contains(r, (b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2)) keep.add(sp to c)
+        }
+        while (keep.isNotEmpty() && Character.isWhitespace(keep.first().second.c)) keep.removeAt(0)
+        while (keep.isNotEmpty() && Character.isWhitespace(keep.last().second.c)) keep.removeAt(keep.size - 1)
+        if (keep.isEmpty()) return null
+        val out = Line(keep.map { it.second.bbox }.reduce(Pdf::union), line.dir)
+        var cur: Span? = null
+        for ((sp, c) in keep) {
+            if (cur == null || cur.fontName != sp.fontName || cur.size != sp.size) {
+                cur = Span(sp.fontName, sp.size, sp.argb, sp.bold, sp.italic, sp.serif, sp.mono).also { out.spans.add(it) }
+            }
+            cur.chars.add(c)
+        }
+        return out
+    }
+
+    /** True for the invisible font of a text layer added by OCR. */
+    fun isOcrFont(name: String) = Span.stripSubset(name).startsWith("GlyphLess")
+
+    /**
+     * Edits text recognised by OCR on a scanned page. The scan's pixels under the
+     * line are removed from the image (so the old text cannot be recovered), the
+     * area is painted in the paper colour sampled around it, and the new text is
+     * written visibly in a similar font, size and ink colour. The page stays searchable.
+     */
+    private fun editScanned(
+        doc: PDFDocument, page: PDFPage, pageNumber: Int, lines: List<Line>, newText: String, mode: String,
+        fontSize: Float?, argb: Int?, bold: Boolean?, italic: Boolean?, family: String?, moveBy: Point?,
+    ): Result {
+        val box = lines.map { it.bbox }.reduce(Pdf::union)
+        val (paper, ink) = sampleColours(page, box)
+        val textAll = lines.joinToString(" ") { it.text }
+        // OCR word boxes are ink boxes: with descenders the ink spans about 0.93 em, without about 0.72 em.
+        val lineH = lines.map { it.bbox.y1 - it.bbox.y0 }.sorted()[lines.size / 2]
+        val descenders = textAll.any { it in "gjpqy,;()" }
+        val size = fontSize ?: (lineH / if (descenders) 0.93f else 0.72f).coerceIn(4f, 96f)
+        val text = if (mode == "line") newText.replace("\n", " ") else newText
+        val sub = chooseSubstitute(null, bold == true, italic == true, text.replace("\n", " "), family?.takeIf { it != "original" })
+        val writer = SubstituteFontWriter(doc, page, sub, size, argb ?: ink)
+        if (!writer.canWrite(text.replace("\n", " "))) throw PdfError(Codes.NOT_SUPPORTED, "The new text contains characters that none of the available fonts can display.")
+        val pad = maxOf(1.5f, size * 0.12f)
+        val area = Rect(box.x0 - pad, box.y0 - pad, box.x1 + pad, box.y1 + pad)
+        removeText(page, lines.map { Rect(it.bbox.x0 - pad, it.bbox.y0 - pad, it.bbox.x1 + pad, it.bbox.y1 + pad) }, pixels = true)
+        val ops = StringBuilder(fillRect(page, area, paper))
+        val dx = moveBy?.x ?: 0f; val dy = moveBy?.y ?: 0f
+        val newArea: Rect
+        if (mode == "block") {
+            val wrapped = wrap(writer, text, box.x1 - box.x0)
+            val leading = if (lines.size > 1) (lines.last().bbox.y1 - lines.first().bbox.y1) / (lines.size - 1) else size * 1.2f
+            val firstBase = lines.first().bbox.y1 - if (descenders) size * 0.21f else 0f
+            wrapped.forEachIndexed { k, ln -> if (ln.isNotEmpty()) ops.append(writer.ops(Point(box.x0 + dx, firstBase + dy + k * leading), ln)) }
+            newArea = Rect(box.x0 + dx, box.y0 + dy - 2, box.x1 + dx, firstBase + dy + (wrapped.size - 1) * leading + size * 0.4f)
+        } else {
+            var w = writer.width(text)
+            val target = box.x1 - box.x0
+            // Keep the new text inside the scanned line's width so it does not run over the neighbouring text.
+            if (w > target * 1.05f && target > 0) { writer.hscale = max(60f, 100f * target / w); w = writer.width(text) }
+            val base = lines.first().bbox.y1 - if (descenders) size * 0.21f else 0f
+            val origin = Point(box.x0 + dx, base + dy)
+            if (text.isNotEmpty()) ops.append(writer.ops(origin, text))
+            newArea = Rect(origin.x, origin.y - size * 1.05f, origin.x + w, origin.y + size * 0.35f)
+        }
+        Pdf.appendContent(doc, page, ops.toString())
+        val got = norm(PageText.of(Pdf.page(doc, pageNumber)).textIn(Pdf.grow(newArea, 2f)))
+        val want = norm(text)
+        if (want.isNotEmpty() && !got.replace(" ", "").contains(want.replace(" ", ""))) {
+            throw PdfError(Codes.VERIFY_FAILED, "The edit could not be verified: the new text was not found where it was written. The document was not changed.")
+        }
+        return Result(writer.label, "scan", listOf("Scanned text: the line was replaced with ${writer.label}, matched to the scan's size and colour. The scan's original pixels under it were removed."), newArea)
+    }
+
+    /** Paper colour (around the area) and ink colour (darkest pixels inside it), sampled from the page as drawn. */
+    fun sampleColours(page: PDFPage, r: Rect): Pair<Int, Int> {
+        val scale = 2f
+        val m = 4f
+        val x0 = ((r.x0 - m) * scale).toInt(); val y0 = ((r.y0 - m) * scale).toInt()
+        val w = max(4, ((r.x1 - r.x0 + 2 * m) * scale).toInt()); val h = max(4, ((r.y1 - r.y0 + 2 * m) * scale).toInt())
+        val pix = com.artifex.mupdf.fitz.Pixmap(com.artifex.mupdf.fitz.ColorSpace.DeviceRGB, x0, y0, w, h, false)
+        try {
+            pix.clear(255)
+            val dev = com.artifex.mupdf.fitz.DrawDevice(pix)
+            try { page.run(dev, Matrix.Scale(scale), null); dev.close() } finally { dev.destroy() }
+            val s = pix.samples; val n = pix.numberOfComponents; val stride = pix.stride
+            val ring = ArrayList<Int>(); val inside = ArrayList<Int>()
+            val ix0 = (m * scale).toInt(); val iy0 = (m * scale).toInt(); val ix1 = w - ix0; val iy1 = h - iy0
+            for (y in 0 until h) for (x in 0 until w) {
+                val o = y * stride + x * n
+                val c = ((s[o].toInt() and 0xFF) shl 16) or ((s[o + 1].toInt() and 0xFF) shl 8) or (s[o + 2].toInt() and 0xFF)
+                if (x < ix0 || y < iy0 || x >= ix1 || y >= iy1) ring.add(c) else inside.add(c)
+            }
+            fun lum(c: Int) = 0.299f * ((c shr 16) and 0xFF) + 0.587f * ((c shr 8) and 0xFF) + 0.114f * (c and 0xFF)
+            val paper = ring.sortedBy(::lum).let { it[(it.size * 0.6f).toInt().coerceAtMost(it.size - 1)] }
+            val dark = inside.sortedBy(::lum).take(max(1, inside.size / 12))
+            val ink = (dark.sumOf { (it shr 16) and 0xFF } / dark.size shl 16) or (dark.sumOf { (it shr 8) and 0xFF } / dark.size shl 8) or (dark.sumOf { it and 0xFF } / dark.size)
+            // A line with almost no contrast (faint scan): fall back to black ink.
+            val inkFinal = if (lum(paper) - lum(ink) < 40f) 0x000000 else ink
+            return paper to inkFinal
+        } finally {
+            pix.destroy()
+        }
+    }
+
+    /** Content that fills [r] (page space) with [rgb], correct on rotated pages. */
+    private fun fillRect(page: PDFPage, r: Rect, rgb: Int): String {
+        val inv = Matrix.Inverted(page.getTransform())
+        val pts = listOf(Point(r.x0, r.y0), Point(r.x1, r.y0), Point(r.x1, r.y1), Point(r.x0, r.y1)).map { Point(it).transform(inv) }
+        val c = Pdf.rgb(rgb)
+        return "q ${Pdf.n(c[0])} ${Pdf.n(c[1])} ${Pdf.n(c[2])} rg ${Pdf.n(pts[0].x)} ${Pdf.n(pts[0].y)} m " +
+            pts.drop(1).joinToString(" ") { "${Pdf.n(it.x)} ${Pdf.n(it.y)} l" } + " h f Q\n"
     }
 
     /** Find and replace across pages, span by span, in the original font where possible. */

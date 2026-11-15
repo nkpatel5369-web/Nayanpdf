@@ -23,5 +23,7 @@ dependencies {
 
 tasks.test {
     maxHeapSize = "2g"
+    systemProperty("java.awt.headless", "true")
+    System.getProperty("npdf.officeOut")?.let { systemProperty("npdf.officeOut", it) }
     testLogging { events("failed"); exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL; showStandardStreams = true }
 }

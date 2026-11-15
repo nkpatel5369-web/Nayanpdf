@@ -40,6 +40,8 @@ dependencies {
     // follows a removed run of characters (redaction and text editing): the rest of the
     // line slides left by the width of the first removed character.
     api("com.artifex.mupdf:fitz:1.28.2")
+    // Scanning algorithms and Office writers (plain Kotlin, unit-tested on the JVM).
+    api(project(":scankit"))
 
     androidTestImplementation("androidx.test:runner:1.7.0")
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
