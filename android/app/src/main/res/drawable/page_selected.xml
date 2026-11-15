@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- A selected page: a light wash of the primary colour and an outline, with the page still visible. -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-    <solid android:color="@color/tint_soft" />
+    <solid android:color="@color/tint_overlay" />
     <stroke android:width="3dp" android:color="@color/tint" />
     <corners android:radius="12dp" />
 </shape>

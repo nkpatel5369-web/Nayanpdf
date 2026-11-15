@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Page number badge over the pages: inverse surface, full pill. -->
+<!-- Page number badge over the pages: a dark pill in both themes. -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
     <solid android:color="@color/hud_bg" />
     <corners android:radius="16dp" />

@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Follows the theme's colorSurfaceInverse (Material You on Android 12 and later). -->
-<selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:color="?attr/colorSurfaceInverse" />
-</selector>

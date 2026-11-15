@@ -63,12 +63,30 @@ object TestKit {
     }
 
     /** Taps page point (x, y) of [page] in the PdfView. */
-    fun tapPage(page: Int, x: Float, y: Float): ViewAction = GeneralClickAction(Tap.SINGLE, CoordinatesProvider { view: View ->
-        val v = view as PdfView
-        val loc = IntArray(2)
-        v.getLocationOnScreen(loc)
-        floatArrayOf(loc[0] + v.pageToViewX(page, x), loc[1] + v.pageToViewY(page, y))
-    }, Press.FINGER, 0, 0)
+    /**
+     * Taps a point on a page, as a person would: after any message (snackbar) lying over the
+     * page has gone. A tool's hint sits above the tool palette, over the bottom of the page.
+     */
+    fun tapPage(page: Int, x: Float, y: Float): ViewAction {
+        val tap = GeneralClickAction(Tap.SINGLE, CoordinatesProvider { view: View ->
+            val v = view as PdfView
+            val loc = IntArray(2)
+            v.getLocationOnScreen(loc)
+            floatArrayOf(loc[0] + v.pageToViewX(page, x), loc[1] + v.pageToViewY(page, y))
+        }, Press.FINGER, 0, 0)
+        return object : ViewAction {
+            override fun getConstraints(): Matcher<View> = tap.constraints
+            override fun getDescription() = "tap page ${page + 1} at ($x, $y) once no message covers it"
+            override fun perform(uiController: UiController, view: View) {
+                val until = android.os.SystemClock.uptimeMillis() + 10_000
+                while (messageShown(view.rootView) && android.os.SystemClock.uptimeMillis() < until) uiController.loopMainThreadForAtLeast(100)
+                tap.perform(uiController, view)
+            }
+        }
+    }
+
+    private fun messageShown(v: View): Boolean = v.isShown &&
+        (v.javaClass.simpleName == "SnackbarLayout" || (v is android.view.ViewGroup && (0 until v.childCount).any { messageShown(v.getChildAt(it)) }))
 
     fun <T> engine(s: DocSession, f: (com.artifex.mupdf.fitz.PDFDocument) -> T): T = kotlinx.coroutines.runBlocking { s.read(f) }
 

@@ -38,6 +38,9 @@
     <color name="white">#FFFFFF</color>
     <color name="black">#000000</color>
     <color name="scrim">#66000000</color>
+    <!-- Chips over page content (page number, scrubber bubble, status): dark in both themes, since pages are white. -->
+    <color name="hud_bg">#D9202124</color>
+    <color name="hud_text">#FFFFFFFF</color>
     <color name="camera_accent">#FFFFFF</color>
     <color name="scan_outline">#FF4285F4</color>
     <color name="scan_fill">#334285F4</color>

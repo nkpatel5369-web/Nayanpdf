@@ -667,7 +667,7 @@ class ScanReviewActivity : AppCompatActivity() {
             setBackgroundColor(Kit.color(ctx, R.color.bar)); minimumHeight = Kit.dpi(ctx, 64); setPadding(Kit.dpi(ctx, 4), 0, Kit.dpi(ctx, 12), 0)
         }
         head.addView(Kit.iconButton(this, R.drawable.ic_back, "Back", Kit.color(ctx, R.color.label)) { session.save(); closeOverlay(); refresh() })
-        head.addView(Kit.text(this, "Arrange pages", 20f, 400).apply { setPadding(Kit.dpi(ctx, 4), 0, 0, 0) }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        head.addView(Kit.text(this, "Arrange", 22f, 400).apply { setPadding(Kit.dpi(ctx, 4), 0, 0, 0); maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         head.addView(Kit.textButton(this, "Select all") {
             if (selected.size == session.pages.size) selected.clear() else session.pages.forEach { selected.add(it.id) }
             adapter.notifyDataSetChanged()

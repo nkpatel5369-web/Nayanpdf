@@ -110,6 +110,7 @@ jobs:
           ps -eo pid,etime,cmd | grep -E "netsimd|qemu-system|emulator/emulator" | grep -v grep || echo "nothing left"
           pkill -f netsimd || true
           pkill -f qemu-system || true
+          pkill -f "emulator -kill" || true
           for i in $(seq 1 30); do pgrep -f "netsimd|qemu-system" > /dev/null || break; sleep 1; done
           pgrep -fa "netsimd|qemu-system" || echo "all stopped"
           adb kill-server || true
@@ -148,6 +149,7 @@ jobs:
         run: |
           pkill -f netsimd || true
           pkill -f qemu-system || true
+          pkill -f "emulator -kill" || true
           for i in $(seq 1 30); do pgrep -f "netsimd|qemu-system" > /dev/null || break; sleep 1; done
           adb kill-server || true
 

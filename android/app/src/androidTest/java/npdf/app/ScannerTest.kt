@@ -227,7 +227,7 @@ class ScannerTest {
         TestKit.waitFor("photos imported", 60_000) { var n = 0; sc.onActivity { n = it.pageCount }; n == 3 }
         onView(withContentDescription("Page 3")).check(matches(isDisplayed()))
         onView(withText("Arrange")).perform(scrollTo(), click())
-        onView(withText("Arrange pages")).check(matches(isDisplayed()))
+        onView(withText(org.hamcrest.Matchers.startsWith("Hold and drag a page to move it"))).check(matches(isDisplayed()))
         onView(withText("Select all")).perform(click())
         onView(allOf(withText("Rotate"), isDisplayed())).perform(click())
         onView(allOf(withText("Done"), isDisplayed())).perform(click())
