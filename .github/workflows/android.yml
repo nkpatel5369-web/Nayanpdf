@@ -92,9 +92,9 @@ jobs:
             adb logcat -c || true
             ./gradlew --no-daemon :engine:connectedDebugAndroidTest || touch failed
             ./gradlew --no-daemon :app:connectedReleaseAndroidTest || touch failed
-            mkdir -p results/api34/screens && adb pull /sdcard/Download/npdf-screens/. results/api34/screens/ || true
-            adb logcat -d > logcat-api34.txt || true
-            adb logcat -d -s NPDF-PERF:I NPDF-COMPRESS:I NPDF-NET:I NPDF-OCR:I NPDF-EXPORT:I NPDF-SCANEDIT:I NPDF-SCAN:I > npdf-log-api34.txt || true
+            mkdir -p results/api34/screens && timeout 60 adb pull /sdcard/Download/npdf-screens/. results/api34/screens/ || true
+            timeout 60 adb logcat -d > logcat-api34.txt || true
+            timeout 60 adb logcat -d -s NPDF-PERF:I NPDF-COMPRESS:I NPDF-NET:I NPDF-OCR:I NPDF-EXPORT:I NPDF-SCANEDIT:I NPDF-SCAN:I > npdf-log-api34.txt || true
             mkdir -p results/api34/engine results/api34/app
             cp -r engine/build/outputs/androidTest-results/. results/api34/engine/ || true
             cp -r app/build/outputs/androidTest-results/. results/api34/app/ || true
@@ -115,9 +115,9 @@ jobs:
             adb logcat -G 16M || true
             adb logcat -c || true
             ./gradlew --no-daemon :app:connectedReleaseAndroidTest || touch failed30
-            mkdir -p results/api30/screens && adb pull /sdcard/Download/npdf-screens/. results/api30/screens/ || true
-            adb logcat -d > logcat-api30.txt || true
-            adb logcat -d -s NPDF-PERF:I NPDF-NET:I NPDF-OCR:I NPDF-SCAN:I > npdf-log-api30.txt || true
+            mkdir -p results/api30/screens && timeout 60 adb pull /sdcard/Download/npdf-screens/. results/api30/screens/ || true
+            timeout 60 adb logcat -d > logcat-api30.txt || true
+            timeout 60 adb logcat -d -s NPDF-PERF:I NPDF-NET:I NPDF-OCR:I NPDF-SCAN:I > npdf-log-api30.txt || true
             mkdir -p results/api30/app
             cp -r app/build/outputs/androidTest-results/. results/api30/app/ || true
             test ! -f failed30
