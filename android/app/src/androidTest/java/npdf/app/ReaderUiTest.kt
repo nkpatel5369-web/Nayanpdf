@@ -7,7 +7,6 @@ import android.widget.EditText
 import androidx.core.content.ContextCompat
 import androidx.test.core.app.ActivityScenario
 import androidx.test.espresso.Espresso.onView
-import androidx.test.espresso.Espresso.openActionBarOverflowOrOptionsMenu
 import androidx.test.espresso.action.ViewActions.click
 import androidx.test.espresso.action.ViewActions.replaceText
 import androidx.test.espresso.action.ViewActions.scrollTo
@@ -152,8 +151,7 @@ class ReaderUiTest {
     fun readOutLoudSpeaksOrSaysWhyNot() {
         val sc = TestKit.openReader(TestKit.asset("a.pdf"))
         TestKit.waitOpen(sc)
-        openActionBarOverflowOrOptionsMenu(TestKit.ctx)
-        onView(withText("Read Out Loud")).perform(click())
+        TestKit.menu("Read Out Loud")
         // Either the reading bar appears, or a dialog explains that no voice is installed.
         TestKit.waitFor("read aloud outcome") {
             TestKit.on(sc) { it.b.ttsBar.visibility == android.view.View.VISIBLE } ||

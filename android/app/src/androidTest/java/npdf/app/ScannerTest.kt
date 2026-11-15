@@ -15,7 +15,6 @@ import android.provider.MediaStore
 import android.util.Log
 import androidx.test.core.app.ActivityScenario
 import androidx.test.espresso.Espresso.onView
-import androidx.test.espresso.Espresso.openActionBarOverflowOrOptionsMenu
 import androidx.test.espresso.action.ViewActions.click
 import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.RootMatchers.isDialog
@@ -88,7 +87,8 @@ class ScannerTest {
         return out
     }
 
-    private val truth = Quad(Pt(330f, 140f), Pt(1240f, 190f), Pt(1190f, 1090f), Pt(270f, 1040f))
+    /** The invoice as a phone camera sees it: tilted 18 degrees away at the top and 10 sideways, turned 4 degrees. */
+    private val truth = TestKit.cameraQuad(850.0, 1100.0, 18.0, 10.0, 4.0)
 
     private fun mediaPath(uri: Uri): String? = ctx.contentResolver.query(uri, arrayOf(MediaStore.MediaColumns.RELATIVE_PATH), null, null, null)?.use { c ->
         if (c.moveToFirst()) c.getString(0) else null
@@ -208,8 +208,7 @@ class ScannerTest {
     fun readerExportsWordToDocuments() {
         val sc = TestKit.openReader(TestKit.asset("financial.pdf"))
         TestKit.waitOpen(sc)
-        openActionBarOverflowOrOptionsMenu(TestKit.ctx)
-        onView(withText("Export to Word")).perform(click())
+        TestKit.menu("Export", "Word (.docx)")
         TestKit.waitFor("exported", 60_000) { runCatching { onView(withText("Done")).inRoot(isDialog()).check(matches(isDisplayed())); true }.getOrDefault(false) }
         val docx = ctx.contentResolver.query(MediaStore.Files.getContentUri("external"), arrayOf(MediaStore.MediaColumns._ID, MediaStore.MediaColumns.DISPLAY_NAME),
             "${MediaStore.MediaColumns.RELATIVE_PATH} = ? AND ${MediaStore.MediaColumns.DISPLAY_NAME} LIKE ?", arrayOf("Documents/N PDF/", "%.docx"), "${MediaStore.MediaColumns.DATE_ADDED} DESC")?.use { c ->
@@ -230,9 +229,9 @@ class ScannerTest {
     fun homeTabsShowToolsAndSettings() {
         val sc = ActivityScenario.launch(MainActivity::class.java)
         onView(withContentDescription("Tools")).perform(click())
-        onView(allOf(withText("Export to Word"), isDisplayed())).check(matches(isDisplayed()))
+        onView(withText("Export to Word")).perform(TestKit.reveal()).check(matches(isDisplayed()))
         onView(withContentDescription("Settings")).perform(click())
-        onView(allOf(withText("Auto-capture"), isDisplayed())).check(matches(isDisplayed()))
+        onView(withText("Auto-capture")).perform(TestKit.reveal()).check(matches(isDisplayed()))
         onView(withContentDescription("Files")).perform(click())
         onView(allOf(withText("Scan"), isDisplayed())).check(matches(isDisplayed()))
         sc.close()
@@ -242,12 +241,10 @@ class ScannerTest {
     fun darkPagesAreAReadingOption() {
         val sc = TestKit.openReader(TestKit.asset("a.pdf"))
         TestKit.waitOpen(sc)
-        openActionBarOverflowOrOptionsMenu(TestKit.ctx)
-        onView(withText("Dark pages")).perform(click())
+        TestKit.menu("Dark pages")
         TestKit.waitFor("dark pages on") { TestKit.on(sc) { it.b.pdf.darkPages } }
         assertTrue(Prefs(ctx).darkPages)
-        openActionBarOverflowOrOptionsMenu(TestKit.ctx)
-        onView(withText("Dark pages")).perform(click())
+        TestKit.menu("Dark pages")
         TestKit.waitFor("dark pages off") { !TestKit.on(sc) { it.b.pdf.darkPages } }
         assertFalse(Prefs(ctx).darkPages)
         sc.close()

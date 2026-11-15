@@ -64,11 +64,68 @@ data class Quad(
     /** Largest corner movement compared with [o]. */
     fun maxCornerDistance(o: Quad): Float = corners.zip(o.corners).maxOf { (a, b) -> a.dist(b) }
 
-    /** Output size (width, height) that keeps the document's proportions, before any scaling. */
+    /** Output size (width, height) from the outline's longest edges, before any scaling. */
     fun naturalSize(): Pair<Float, Float> {
         val w = max(tl.dist(tr), bl.dist(br))
         val h = max(tl.dist(bl), tr.dist(br))
         return w to h
+    }
+
+    /**
+     * Width / height of the real page, recovered from the perspective of this outline in a
+     * photo of [imgW] x [imgH] (Zhang and He, "Whiteboard scanning and image enhancement",
+     * Digital Signal Processing 17, 2007). The camera's principal point is taken as the
+     * picture's centre; the focal length is estimated from the outline, or a typical phone
+     * lens is assumed when the outline is too close to a parallelogram to tell (the aspect
+     * then hardly depends on it). Null when the estimate cannot be trusted.
+     */
+    fun pageAspect(imgW: Int, imgH: Int): Float? {
+        if (imgW <= 0 || imgH <= 0) return null
+        val u0 = imgW / 2.0; val v0 = imgH / 2.0
+        fun h(p: Pt) = doubleArrayOf(p.x - u0, p.y - v0, 1.0)
+        fun cross(a: DoubleArray, b: DoubleArray) = doubleArrayOf(a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0])
+        fun dot(a: DoubleArray, b: DoubleArray) = a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+        val m1 = h(tl); val m2 = h(tr); val m3 = h(bl); val m4 = h(br)
+        val c14 = cross(m1, m4)
+        val k2 = dot(c14, m3) / dot(cross(m2, m4), m3)
+        val k3 = dot(c14, m2) / dot(cross(m3, m4), m2)
+        if (!k2.isFinite() || !k3.isFinite() || k2 <= 0 || k3 <= 0) return null
+        val n2 = DoubleArray(3) { k2 * m2[it] - m1[it] }
+        val n3 = DoubleArray(3) { k3 * m3[it] - m1[it] }
+        val diag = hypot(imgW.toDouble(), imgH.toDouble())
+        // The focal length can be read only when both pairs of opposite edges converge: with a pair
+        // (nearly) parallel, as when the page is tilted one way only, the estimate is noise. Then a
+        // phone's main lens is assumed: about 0.6 x the diagonal (26 mm equivalent).
+        val converging = minOf(edgeAngle(tl, tr, bl, br), edgeAngle(tl, bl, tr, br)) >= 1.0
+        val f2 = -(n2[0] * n3[0] + n2[1] * n3[1]) / (n2[2] * n3[2])
+        val ff = if (converging && f2.isFinite() && f2 > 0 && sqrt(f2) in 0.35 * diag..2.0 * diag) f2 else (0.6 * diag) * (0.6 * diag)
+        val r2 = (n2[0] * n2[0] + n2[1] * n2[1] + ff * n2[2] * n2[2]) / (n3[0] * n3[0] + n3[1] * n3[1] + ff * n3[2] * n3[2])
+        if (!r2.isFinite() || r2 <= 0) return null
+        val r = sqrt(r2).toFloat()
+        // A result far from the outline's own proportions means the assumptions do not hold
+        // (for example a photo cropped before import): keep the edge lengths then.
+        val (w0, h0) = naturalSize()
+        val ratio = r / (w0 / h0.coerceAtLeast(1f))
+        return if (ratio in 0.6f..1.6f) r else null
+    }
+
+    /** Angle in degrees between the lines a1-a2 and b1-b2 (0 when parallel). */
+    private fun edgeAngle(a1: Pt, a2: Pt, b1: Pt, b2: Pt): Double {
+        val a = Math.atan2((a2.y - a1.y).toDouble(), (a2.x - a1.x).toDouble())
+        val b = Math.atan2((b2.y - b1.y).toDouble(), (b2.x - b1.x).toDouble())
+        val d = abs(a - b) % Math.PI
+        return Math.toDegrees(minOf(d, Math.PI - d))
+    }
+
+    /**
+     * Output size (width, height) of the corrected page in a photo of [imgW] x [imgH]: the
+     * real page's proportions where the perspective tells them, at the resolution of the
+     * outline's longest edges (the shortened direction is stretched, never the other shrunk).
+     */
+    fun pageSize(imgW: Int, imgH: Int): Pair<Float, Float> {
+        val (w0, h0) = naturalSize()
+        val r = pageAspect(imgW, imgH) ?: return w0 to h0
+        return if (w0 / h0 > r) w0 to w0 / r else h0 * r to h0
     }
 
     override fun equals(other: Any?): Boolean =

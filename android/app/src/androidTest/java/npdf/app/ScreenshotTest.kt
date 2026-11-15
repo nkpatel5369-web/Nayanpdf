@@ -60,7 +60,8 @@ class ScreenshotTest {
         val photo = Bitmap.createBitmap(1600, 1200, Bitmap.Config.ARGB_8888)
         val pc = Canvas(photo); pc.drawColor(Color.rgb(70, 52, 40))
         val m = android.graphics.Matrix()
-        m.setPolyToPoly(floatArrayOf(0f, 0f, 850f, 0f, 850f, 1100f, 0f, 1100f), 0, floatArrayOf(330f, 140f, 1240f, 190f, 1190f, 1090f, 270f, 1040f), 0, 4)
+        val q = TestKit.cameraQuad(850.0, 1100.0, 18.0, 10.0, 4.0)
+        m.setPolyToPoly(floatArrayOf(0f, 0f, 850f, 0f, 850f, 1100f, 0f, 1100f), 0, q.corners.flatMap { listOf(it.x, it.y) }.toFloatArray(), 0, 4)
         pc.drawBitmap(doc, m, Paint(Paint.FILTER_BITMAP_FLAG))
         val f = File(TestKit.ctx.cacheDir, "screens_photo.jpg")
         f.outputStream().use { photo.compress(Bitmap.CompressFormat.JPEG, 90, it) }

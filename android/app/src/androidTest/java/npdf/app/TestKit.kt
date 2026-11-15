@@ -5,7 +5,15 @@ import android.content.Intent
 import android.net.Uri
 import android.view.View
 import androidx.test.core.app.ActivityScenario
+import androidx.test.espresso.Espresso.onData
+import androidx.test.espresso.Espresso.openActionBarOverflowOrOptionsMenu
+import androidx.test.espresso.UiController
 import androidx.test.espresso.ViewAction
+import androidx.test.espresso.action.ViewActions.click
+import androidx.test.espresso.matcher.RootMatchers.isPlatformPopup
+import androidx.test.espresso.matcher.ViewMatchers.isAssignableFrom
+import org.hamcrest.Matcher
+import org.hamcrest.Matchers.hasToString
 import androidx.test.espresso.action.CoordinatesProvider
 import androidx.test.espresso.action.GeneralClickAction
 import androidx.test.espresso.action.Press
@@ -103,5 +111,43 @@ object TestKit {
     fun finish(a: Activity) {
         main { a.finish() }
         waitFor("${a.javaClass.simpleName} closed", 30_000) { main { a.isDestroyed } }
+    }
+
+    /**
+     * Picks a command from the reader's overflow menu, through submenus: menu("Export", "Word (.docx)").
+     * Items are found in the menu's list whether or not they are scrolled into view.
+     */
+    fun menu(vararg path: String) {
+        openActionBarOverflowOrOptionsMenu(ctx)
+        for (label in path) onData(hasToString(label)).inRoot(isPlatformPopup()).perform(click())
+    }
+
+    /** Scrolls a view inside any scrolling container (including NestedScrollView) into view. */
+    fun reveal(): ViewAction = object : ViewAction {
+        override fun getConstraints(): Matcher<View> = isAssignableFrom(View::class.java)
+        override fun getDescription() = "scroll into view"
+        override fun perform(uiController: UiController, view: View) {
+            view.requestRectangleOnScreen(android.graphics.Rect(0, 0, view.width, view.height), true)
+            uiController.loopMainThreadUntilIdle()
+        }
+    }
+
+    /**
+     * The corners of a [pw] x [ph] page as a phone camera sees it (pinhole camera, principal point at the
+     * picture's centre, focal length 0.6 x the diagonal), tilted [tiltX] degrees about its horizontal axis
+     * (top away), [tiltY] about its vertical axis and turned [roll] degrees, filling about 62 % of the height.
+     */
+    fun cameraQuad(pw: Double, ph: Double, tiltX: Double, tiltY: Double, roll: Double, w: Int = 1600, h: Int = 1200): npdf.scan.Quad {
+        val f = 0.6 * Math.hypot(w.toDouble(), h.toDouble())
+        val z0 = f * ph / (0.62 * h)
+        val a = Math.toRadians(tiltX); val b = Math.toRadians(tiltY); val c = Math.toRadians(roll)
+        fun p(x: Double, y: Double): npdf.scan.Pt {
+            val y1 = y * Math.cos(a); val z1 = -y * Math.sin(a)
+            val x2 = x * Math.cos(b) + z1 * Math.sin(b); val z2 = -x * Math.sin(b) + z1 * Math.cos(b)
+            val x3 = x2 * Math.cos(c) - y1 * Math.sin(c); val y3 = x2 * Math.sin(c) + y1 * Math.cos(c)
+            val z = z0 + z2
+            return npdf.scan.Pt((w / 2 + f * x3 / z).toFloat(), (h / 2 + f * y3 / z).toFloat())
+        }
+        return npdf.scan.Quad(p(-pw / 2, -ph / 2), p(pw / 2, -ph / 2), p(pw / 2, ph / 2), p(-pw / 2, ph / 2))
     }
 }

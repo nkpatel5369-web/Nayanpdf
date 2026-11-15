@@ -308,6 +308,8 @@ class ReaderActivity : AppCompatActivity(), PdfView.Listener {
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        // Export and Document tools only open their submenus.
+        if (item.hasSubMenu()) return super.onOptionsItemSelected(item)
         val s = session ?: return super.onOptionsItemSelected(item)
         lifecycleScope.launch {
             when (item.itemId) {

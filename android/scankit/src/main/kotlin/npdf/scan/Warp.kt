@@ -13,9 +13,13 @@ object Warp {
     /** Longest side of a corrected page (A4 at 300 dpi). */
     const val MAX_SIDE = 3508
 
-    /** Size of the corrected image: the outline's own proportions, capped at [maxSide]. */
-    fun outputSize(q: Quad, maxSide: Int = MAX_SIDE): Pair<Int, Int> {
-        val (w, h) = q.naturalSize()
+    /**
+     * Size of the corrected image, capped at [maxSide]: the real page's proportions recovered
+     * from the perspective when the photo's size ([imgW] x [imgH]) is known, otherwise the
+     * outline's own proportions.
+     */
+    fun outputSize(q: Quad, maxSide: Int = MAX_SIDE, imgW: Int = 0, imgH: Int = 0): Pair<Int, Int> {
+        val (w, h) = if (imgW > 0 && imgH > 0) q.pageSize(imgW, imgH) else q.naturalSize()
         val s = minOf(1f, maxSide / max(w, h).coerceAtLeast(1f))
         return max(16, (w * s).roundToInt()) to max(16, (h * s).roundToInt())
     }
@@ -46,9 +50,9 @@ object Warp {
         return out
     }
 
-    /** Corrects with the outline's natural size (capped). */
+    /** Corrects to the page's own proportions (capped at [maxSide]). */
     fun warp(src: Raster, q: Quad, maxSide: Int = MAX_SIDE): Raster {
-        val (w, h) = outputSize(q, maxSide)
+        val (w, h) = outputSize(q, maxSide, src.width, src.height)
         return warp(src, q, w, h)
     }
 

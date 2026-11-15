@@ -86,6 +86,70 @@ class DetectAndWarpTest {
         assertTrue("similarity $s", s > 0.95)
     }
 
+    /**
+     * The corners of a [pw] x [ph] page photographed by a pinhole camera with its principal point at
+     * the picture's centre and a focal length of [fDiag] x the diagonal: the page is tilted [tiltX]
+     * degrees about its horizontal axis (top away for positive values), [tiltY] about its vertical axis,
+     * and turned [roll] degrees in the picture. Null when a corner falls outside the frame.
+     */
+    private fun cameraShot(pw: Double, ph: Double, tiltX: Double, tiltY: Double, roll: Double, fDiag: Double = 0.6, w: Int = 1600, h: Int = 1200): Quad? {
+        val f = fDiag * hypot(w.toDouble(), h.toDouble())
+        val z0 = f * ph / (0.62 * h)
+        val a = Math.toRadians(tiltX); val b = Math.toRadians(tiltY); val c = Math.toRadians(roll)
+        fun project(x: Double, y: Double): Pt {
+            val y1 = y * kotlin.math.cos(a); val z1 = -y * kotlin.math.sin(a)
+            val x2 = x * kotlin.math.cos(b) + z1 * kotlin.math.sin(b); val z2 = -x * kotlin.math.sin(b) + z1 * kotlin.math.cos(b)
+            val x3 = x2 * kotlin.math.cos(c) - y1 * kotlin.math.sin(c); val y3 = x2 * kotlin.math.sin(c) + y1 * kotlin.math.cos(c)
+            val z = z0 + z2
+            return Pt((w / 2 + f * x3 / z).toFloat(), (h / 2 + f * y3 / z).toFloat())
+        }
+        val q = Quad(project(-pw / 2, -ph / 2), project(pw / 2, -ph / 2), project(pw / 2, ph / 2), project(-pw / 2, ph / 2))
+        return if (q.corners.all { it.x in 0f..w.toFloat() && it.y in 0f..h.toFloat() }) q else null
+    }
+
+    /** A tilted page keeps its real proportions: the perspective, not the edge lengths, decides them. */
+    @Test
+    fun tiltedPagesKeepTheirRealProportions() {
+        val pages = listOf(850.0 to 1100.0, 2100.0 to 2970.0, 856.0 to 540.0)   // invoice, A4, ID card
+        var n = 0; var worstNew = 0.0; var worstOld = 0.0; var sumNew = 0.0; var sumOld = 0.0
+        val noise = Random(5)
+        val failures = mutableListOf<String>()
+        // Lenses: ultra-wide, main lenses (24 to 28 mm equivalent), 2x telephoto.
+        for ((pw, ph) in pages) for (fd in listOf(0.45, 0.55, 0.6, 0.65, 1.0)) for (tx in listOf(-30.0, -15.0, 0.0, 15.0, 30.0)) for (ty in listOf(-20.0, -10.0, 0.0, 10.0, 20.0)) for (rl in listOf(-10.0, 0.0, 12.0)) {
+            val exact = cameraShot(pw, ph, tx, ty, rl, fd) ?: continue
+            // Corners as found in a photo: within a pixel.
+            val q = Quad(exact.tl + Pt(noise.nextFloat() - 0.5f, noise.nextFloat() - 0.5f), exact.tr + Pt(noise.nextFloat() - 0.5f, noise.nextFloat() - 0.5f),
+                exact.br + Pt(noise.nextFloat() - 0.5f, noise.nextFloat() - 0.5f), exact.bl + Pt(noise.nextFloat() - 0.5f, noise.nextFloat() - 0.5f))
+            val truth = pw / ph
+            val (w, h) = Warp.outputSize(q, 100_000, 1600, 1200)
+            val eNew = kotlin.math.abs(w.toDouble() / h - truth) / truth
+            val (w0, h0) = q.naturalSize()
+            val eOld = kotlin.math.abs(w0.toDouble() / h0 - truth) / truth
+            // The focal length is read from the outline when the page is tilted both ways; tilted one way
+            // only, a main lens is assumed, so other lenses are only required to beat the edge lengths.
+            val readable = tx != 0.0 && ty != 0.0
+            val ok = if (readable || fd in 0.55..0.65) eNew < 0.04 else eNew < 0.11 && eNew <= eOld + 0.005
+            if (!ok) failures.add("page ${pw}x$ph f $fd tilt $tx/$ty roll $rl: aspect ${"%.3f".format(w.toDouble() / h)} vs ${"%.3f".format(truth)} (edges ${"%.3f".format(w0 / h0)})")
+            n++; sumNew += eNew; sumOld += eOld; worstNew = maxOf(worstNew, eNew); worstOld = maxOf(worstOld, eOld)
+        }
+        println("NPDF-SCAN page proportions over $n camera shots: error mean %.1f %% (worst %.1f %%); edge lengths alone: mean %.1f %% (worst %.1f %%)"
+            .format(100 * sumNew / n, 100 * worstNew, 100 * sumOld / n, 100 * worstOld))
+        assertTrue("outside tolerance: $failures", failures.isEmpty())
+        assertTrue("enough shots inside the frame: $n", n > 800)
+        assertTrue("better than the edge lengths on average", sumNew < sumOld / 5)
+    }
+
+    /** A page photographed straight on, or a photo with no perspective to read, keeps the edge lengths. */
+    @Test
+    fun frontalOutlinesKeepTheirEdgeLengths() {
+        val q = Quad(Pt(300f, 100f), Pt(1150f, 100f), Pt(1150f, 1200f), Pt(300f, 1200f))
+        val (w, h) = Warp.outputSize(q, 100_000, 1600, 1300)
+        assertEquals(850f / 1100f, w.toFloat() / h, 0.002f)
+        assertEquals(1100, h)
+        val full = Quad.full(1200, 1600)
+        assertEquals(1200 to 1600, Warp.outputSize(full, 100_000, 1200, 1600))
+    }
+
     @Test
     fun outputSizeKeepsProportionsAndCap() {
         val q = Quad(Pt(0f, 0f), Pt(2000f, 0f), Pt(2000f, 2828f), Pt(0f, 2828f))
