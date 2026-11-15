@@ -100,27 +100,60 @@ jobs:
             cp -r app/build/outputs/androidTest-results/. results/api34/app/ || true
             test ! -f failed
 
+      # The Android 11 emulator process has twice exited mid-run (runs 17 and 20: the device went
+      # offline, then "not found", and the emulator console refused connections) while every test
+      # that had run had passed. A lost emulator is not a test result, so that one case, and only
+      # that case, gets one re-run on a fresh emulator. Any failed test fails the job, re-run or not.
       - name: App tests on an Android 11 emulator
+        id: api30
         if: ${{ !cancelled() }}
+        continue-on-error: true
         timeout-minutes: 35
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 30
           arch: x86_64
           target: google_apis
+          ram-size: 3072M
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back emulated -camera-front none
           working-directory: android
           script: |
             adb logcat -G 16M || true
             adb logcat -c || true
-            ./gradlew --no-daemon :app:connectedReleaseAndroidTest || touch failed30
+            ./gradlew --no-daemon :app:connectedReleaseAndroidTest > api30-run1.log 2>&1 && touch ok30 || touch failed30
+            cat api30-run1.log
             mkdir -p results/api30/screens && timeout 60 adb pull /sdcard/Download/npdf-screens/. results/api30/screens/ || true
             timeout 60 adb logcat -d > logcat-api30.txt || true
             timeout 60 adb logcat -d -s NPDF-PERF:I NPDF-NET:I NPDF-OCR:I NPDF-SCAN:I > npdf-log-api30.txt || true
             mkdir -p results/api30/app
             cp -r app/build/outputs/androidTest-results/. results/api30/app/ || true
-            test ! -f failed30
+            if [ -f failed30 ] && grep -qE "Test run failed to complete|device offline" api30-run1.log && ! grep -rqE 'failures="[1-9]|errors="[1-9]' results/api30/app; then touch lost30; echo "::warning::The Android 11 emulator stopped responding with no failed test; re-running on a fresh emulator"; fi
+            test -f ok30
+
+      - name: App tests on a fresh Android 11 emulator (only after the first one was lost)
+        if: ${{ !cancelled() && hashFiles('android/lost30') != '' }}
+        timeout-minutes: 35
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          arch: x86_64
+          target: google_apis
+          ram-size: 3072M
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back emulated -camera-front none
+          working-directory: android
+          script: |
+            adb logcat -G 16M || true
+            adb logcat -c || true
+            rm -rf results/api30 app/build/outputs/androidTest-results
+            ./gradlew --no-daemon :app:connectedReleaseAndroidTest && touch ok30b || touch failed30b
+            mkdir -p results/api30/screens && timeout 60 adb pull /sdcard/Download/npdf-screens/. results/api30/screens/ || true
+            timeout 60 adb logcat -d > logcat-api30.txt || true
+            timeout 60 adb logcat -d -s NPDF-PERF:I NPDF-NET:I NPDF-OCR:I NPDF-SCAN:I > npdf-log-api30.txt || true
+            mkdir -p results/api30/app
+            cp -r app/build/outputs/androidTest-results/. results/api30/app/ || true
+            test -f ok30b
 
       - name: Test summary
         if: ${{ !cancelled() }}
@@ -146,6 +179,17 @@ jobs:
           EOF
           cat android/scankit/build/test-results/test/*.xml 2>/dev/null | grep -oE 'NPDF-SCAN [^<]*' | grep -E 'overall|refined|time|filter Auto' | tee -a android/summary.md || true
           cat android/npdf-log-api34.txt android/npdf-log-api30.txt 2>/dev/null | grep -E 'NPDF' | sed 's/^.*\(NPDF-[A-Z]*\)/\1/' | tee -a android/summary.md || true
+
+      - name: Android 11 result
+        if: ${{ !cancelled() }}
+        working-directory: android
+        run: |
+          if [ -f lost30 ]; then
+            echo "Android 11: the first emulator exited mid-run with no failed test; the Android 11 row is from a re-run on a fresh emulator." | tee -a summary.md
+            test -f ok30b
+          else
+            test -f ok30
+          fi
 
       - name: Upload APK and test evidence
         if: ${{ !cancelled() }}
@@ -179,6 +223,7 @@ jobs:
             echo
             echo "N-PDF-Android.apk  ${size} MB  SHA-256 $sha"
             echo
+            if [ -f android/lost30 ]; then echo "The first Android 11 emulator exited mid-run with no failed test; the Android 11 tests were re-run in full on a fresh emulator and passed."; echo; fi
             echo "Signed with a key made for this build only: uninstall an earlier N PDF test build before installing this one. Your PDFs are not affected."
           } > notes.txt
           cp android/summary.md android-summary.md

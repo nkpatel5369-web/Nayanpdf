@@ -21,6 +21,7 @@ import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.RootMatchers.isDialog
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
 import androidx.test.espresso.matcher.ViewMatchers.withContentDescription
+import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.rule.GrantPermissionRule
@@ -321,11 +322,11 @@ class ScannerTest {
     @Test
     fun homeTabsShowToolsAndSettings() {
         val sc = ActivityScenario.launch(MainActivity::class.java)
-        onView(withContentDescription("Tools")).perform(click())
+        onView(withId(R.id.tab_tools)).perform(click())
         onView(withText("Export to Word")).perform(TestKit.reveal()).check(matches(isDisplayed()))
-        onView(withContentDescription("Settings")).perform(click())
+        onView(withId(R.id.tab_settings)).perform(click())
         onView(withText("Auto-capture")).perform(TestKit.reveal()).check(matches(isDisplayed()))
-        onView(withContentDescription("Files")).perform(click())
+        onView(withId(R.id.tab_files)).perform(click())
         onView(allOf(withText("Scan"), isDisplayed())).check(matches(isDisplayed()))
         sc.close()
     }

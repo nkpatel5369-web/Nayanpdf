@@ -33,5 +33,5 @@
         android:paddingHorizontal="10dp"
         android:paddingVertical="2dp"
         android:textAppearance="@style/Npdf.Text.Caption"
-        android:textColor="@color/white" />
+        android:textColor="@color/hud_text" />
 </FrameLayout>

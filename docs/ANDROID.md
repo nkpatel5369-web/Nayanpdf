@@ -44,41 +44,45 @@ Open it with **Scan** on the Files tab, from Tools, or by long-pressing the app 
 
 | Step | What you get |
 |---|---|
-| Capture | Live outline of the page with auto-capture once it holds steady (switch to Manual at the top), batch scanning for stacks of pages or a book (capture follows each page turn), flash off / on / automatic, tap to focus, QR codes read on the spot (copy, share, or hand a link to your browser app), import from your photos or from another app's share sheet |
-| Modes | Document; Whiteboard (the whole picture, whiteboard filter); Book (both pages in one shot, split into two pages, curved page edges straightened); ID card (front and back on one A4 page at the card's true size, ready to print as a photocopy); Business card (contact details read from the card and handed to your Contacts app, where you confirm them) |
-| Review | Pages arrive corrected for perspective, at the page's real proportions even when photographed at an angle; swipe through pages; crop with a magnifier and edge handles, Auto-detect or No crop; Straighten bends an edge to flatten curved pages; rotate; six filters with live previews (Original, Auto colour, Light text, Greyscale, Black & white, Whiteboard) for one page or all; brightness and contrast; clean-up eraser that fills from the surroundings or with a colour you pick; remove fingers holding the page; markup with pen, box, oval, line and arrow; page size (fit, A4, Letter, Legal); reorder by dragging and edit several pages at once; retake; add pages; delete |
-| Save | PDF (searchable through OCR in English, Hindi and Gujarati, on every page) or JPEG pictures; password protection; Best, Balanced or Small picture quality; a file name suggested from the page itself (for example "Tax Invoice 2026-03-31") or the default "Scan 2026-11-15 10.32"; saved in Documents/N PDF (pictures in Pictures/N PDF) or a folder you choose; then open it in N PDF, share it, or save the business card's contact |
+| Capture | Live outline of the page with auto-capture once it holds steady (switch to Manual at the top); "No document found" after a few seconds without a page; batch scanning for stacks of pages or a book (capture follows each page turn); flash off / on / automatic; tap to focus; QR codes read on the spot (copy, share, or hand a link to your browser app); import from your photos or from another app's share sheet; long press on the pages thumbnail deletes the last capture |
+| After each capture | As in Adobe Scan, the page opens for review straight away (setting "Review each page after capture", on by default), with Keep scanning to go back to the camera for the next page. With batch scanning, or the setting off, the camera keeps capturing until Done |
+| Modes | Document; Whiteboard (the whole picture, whiteboard filter); Book (both pages in one shot, split into two pages in left-first or right-first order, curved page edges straightened); ID card (front and back on one A4 page at the card's true size, ready to print as a photocopy); Business card (contact details read from the card and handed to your Contacts app, where you confirm them) |
+| Review | Pages arrive corrected for perspective, at the page's real proportions even when photographed at an angle. Filters are shown under the page from the start, with live previews: Original, Auto colour, Light text, Greyscale, Black & white, Whiteboard, and Apply to all pages. A strip of page thumbnails: tap to go to a page, hold and drag to move it, + to scan more. Tools: Keep scanning, Retake, Filters, Crop (magnifier, edge handles, Auto-detect, No crop, Straighten for curved pages), Rotate, Adjust (brightness and contrast, one page or all), Clean up (eraser filling from the surroundings or with a colour you pick, remove fingers holding the page), Markup (pen, highlighter, box, oval, line, arrow; six colours, width, opacity, filled shapes; undo and redo), Resize, Arrange (select all or several pages, then rotate, filter, adjust or delete them together), Delete |
+| Page sizes | Resize any page, or all pages, to A3, A4, A5, A6, B4, B5, Letter, Legal, Executive or Tabloid, or keep the scan's own size; also chosen in the save sheet. The scan keeps its proportions, centred on the page, so text is never stretched |
+| Save | PDF (searchable through OCR in English, Hindi and Gujarati, on every page) or JPEG pictures; password protection; Best, Balanced or Small picture quality; a file name suggested from the page itself (for example "Tax Invoice 2026-03-31") or your default name with the date ("Scan 2026-11-15 10.32"); saved in Documents/N PDF (pictures in Pictures/N PDF) or a folder you choose; optional copies of the original photos in Pictures/N PDF/Originals; then open it, edit its text, share it, or save the business card's contact |
+| Modify scan | A saved scan's pages stay on the phone (setting "Keep scans editable after saving", on by default). From the file's menu on the Files tab, Modify scan reopens them with every tool; saving again replaces that PDF or saves a new one. Settings shows the space these copies take and removes them |
 
-A scan you have not saved is kept on the phone, so closing the app does not lose it; the scanner offers to continue it next time. Scanner defaults (auto-capture, border adjustment after each capture, default filter, OCR on save, OCR languages, save folder) are in Settings.
+A scan you have not saved is kept on the phone, so closing the app does not lose it; the scanner offers to continue it next time. Scanner settings: auto-capture, review after each capture, default filter, default file name, OCR on save and its languages, save folder, copies of original photos, keeping scans editable.
 
-### Compared with Adobe Scan's paid tier
+Each recent file on the Files tab has a menu with the actions of Adobe Scan's file card: Open, Modify scan (for scans kept editable), Share, Rename, Save as pictures (JPEG), Print, Export to Word, Excel, PowerPoint or RTF, Compress, Set password, Remove password, Combine with other files, Remove from Recent, and Delete for files N PDF itself saved.
 
-Adobe's own help pages list the paid tier's features. This is where each stands in N PDF, which has no internet access by design.
+### Compared with Adobe Scan
+
+Adobe's own help pages for Adobe Scan on Android (scanning, file management and the paid tier) list these features. The free ones are all in N PDF: capture types, auto-capture, flash, QR codes, import, book page order, ID cards, business cards to Contacts, review after each capture, Keep scanning, Retake, Crop with Auto-detect and Straighten, Rotate, Filters with Apply to all pages, Adjust, Cleanup with surrounding or picked colour, Markup with colour, opacity and width, Resize, Reorder, Delete, editing several pages at once, rename, OCR on save, Save as JPEG, Modify scan, share, print, and the default file name and save-originals settings. The paid features stand as follows; N PDF has no internet access by design.
 
 | Adobe Scan paid feature | N PDF |
 |---|---|
 | Combine files (up to 20) | Combine files, no fixed limit |
 | Export PDF to Word, Excel, PowerPoint, rich text (online at Adobe) | Export on the phone to Word, Excel, PowerPoint and RTF. Text and tables are rebuilt (amounts become numbers in Excel); slides show each page as a picture. Complex layouts need checking |
-| High-speed scan | Batch scanning |
-| Edit text in scanned documents, and while saving | Edit text in a saved scan: the recognised words you tap are replaced in a matching size and colour; the scan's pixels under them are removed |
+| High-speed scan | Batch scanning (capture follows each page turn) |
+| Magic eraser: erase marks and text, remove fingers | Clean up (fills from the surroundings or a picked colour) and Remove fingers |
+| Edit text in scanned documents, and while saving | Edit text, offered right after saving and for any saved scan: the recognised words you tap are replaced in a matching size and colour; the scan's pixels under them are removed |
 | Password-protect scans | Password on save, and Protect with password for any PDF |
 | Compress files | Picture quality on save, and Compress for any PDF |
 | OCR for up to 100 pages (5 free) | OCR on every page, no limit |
 | More Adobe cloud storage | Not applicable: files stay on the phone |
 | AI Assistant, generative summary | Not included: they need Adobe's online AI service, which contradicts the no-internet rule |
 
-Adobe Scan recognises about 20 languages; N PDF includes English, Hindi and Gujarati.
+Adobe Scan recognises 21 languages, downloading their data as needed; N PDF cannot download anything, so every language ships inside the app. It includes English, Hindi and Gujarati; Adobe's other 18 would add 59 MB (39 MB to about 98 MB), and were left out by choice.
 
 ## Design
 
-The interface follows Apple's Human Interface Guidelines in its structure and behaviour, built with N PDF's own artwork:
+The interface is stock Android: Material 3, as Google's own apps on current Android versions draw it.
 
-- three tabs at the bottom (Files, Tools, Settings) with large titles that give way to a small centred title as you scroll;
-- inset grouped lists with coloured icon tiles, switches and values on the right, as in a settings app;
-- forms open as sheets from the bottom, choices as action sheets with a separate Cancel, confirmations as centred alerts with the preferred choice in bold and destructive choices in red;
-- segmented controls for small sets of options, short confirmation banners instead of pop-up messages, light haptic ticks on taps;
-- full light and dark appearances (Automatic, Light or Dark in Settings), with dark pages available separately for reading;
-- the Inter typeface (SIL Open Font License) and line icons drawn for N PDF. Apple's own fonts and SF Symbols are licensed for Apple platforms only and are not used.
+- **Material You:** on Android 12 and later every screen takes its colours from the phone's wallpaper, as the system does; on Android 8 to 11 a Material 3 colour scheme generated from N PDF's red is used. Light and dark follow the system, or are chosen in Settings.
+- **Components:** a large top app bar that collapses as you scroll, the navigation bar (Files, Tools, Settings) with its active-indicator pill, an extended Scan button that shrinks while the list scrolls, list items with supporting text, Material switches, segmented buttons, chips, sliders, outlined text fields with floating labels, Material dialogs, modal bottom sheets for forms and lists of actions, and snackbars for short messages.
+- **Type and icons:** the system font in Material's type scale, and Google's Material Symbols icons (Apache License 2.0).
+- **System integration:** drawn edge to edge behind transparent system bars, predictive back (Android 14 and later), and a themed app icon on Android 13 and later.
 
 ## No internet access: how it is enforced and verified
 
@@ -139,7 +143,7 @@ Opening time does not grow with page count: the 300-page document opens as fast 
 | Glyphless font from Tesseract | 4.1.0 | Invisible text layer after OCR | Apache-2.0 |
 | CameraX (core, camera2, lifecycle, view) | 1.6.2 | Scanner camera | Apache-2.0 |
 | ZXing core | 3.5.4 | QR codes in the scanner | Apache-2.0 |
-| Inter typeface | 4.001 | Interface font | SIL Open Font License 1.1 |
+| Material Symbols (Google) | fetched by `android/tools/material_symbols.py` | Interface icons (vector drawables) | Apache-2.0 |
 | AndroidX (core, appcompat, activity, lifecycle, recyclerview, exifinterface, documentfile), Material Components | see `android/app/build.gradle.kts` | User interface | Apache-2.0 |
 | Kotlin standard library and coroutines | 2.2.21 / 1.10.2 | Language runtime | Apache-2.0 |
 

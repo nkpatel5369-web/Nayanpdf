@@ -79,8 +79,8 @@ class ScreenshotTest {
         val reader0 = TestKit.openReader(TestKit.asset("financial.pdf")); TestKit.waitOpen(reader0); reader0.close()
         val home = ActivityScenario.launch(MainActivity::class.java)
         shot("01_home_$suffix")
-        onView(withContentDescription("Tools")).perform(click()); shot("02_tools_$suffix")
-        onView(withContentDescription("Settings")).perform(click()); shot("03_settings_$suffix")
+        onView(withId(R.id.tab_tools)).perform(click()); shot("02_tools_$suffix")
+        onView(withId(R.id.tab_settings)).perform(click()); shot("03_settings_$suffix")
         home.close()
         // Reader with the comment palette, the menu, an action sheet and an alert.
         val sc = TestKit.openReader(TestKit.asset("financial.pdf"))
