@@ -357,7 +357,10 @@ class ScanActivity : AppCompatActivity() {
                     .build()
                 analysis.setAnalyzer(analysisExec) { analyze(it) }
                 val cap = ImageCapture.Builder()
-                    .setResolutionSelector(ResolutionSelector.Builder().setAspectRatioStrategy(ratio).setResolutionStrategy(ResolutionStrategy.HIGHEST_AVAILABLE_STRATEGY).build())
+                    // About 12 MP: scans are worked at ScanProcessor.PHOTO_MAX (3200 px), so a 50 or 200 MP
+                    // capture would only slow the shutter and use memory.
+                    .setResolutionSelector(ResolutionSelector.Builder().setAspectRatioStrategy(ratio)
+                        .setResolutionStrategy(ResolutionStrategy(Size(4032, 3024), ResolutionStrategy.FALLBACK_RULE_CLOSEST_LOWER_THEN_HIGHER)).build())
                     .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
                     .build()
                 imageCapture = cap
