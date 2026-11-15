@@ -189,11 +189,11 @@ Full details, including what each suite covers and the defects found, are in `do
 
 | Test set | Where executed | Result |
 |---|---|---|
-| Permission audit of the APK (`aapt2 dump permissions`) | GitHub Actions, build 18; repeated on the published file after download | Pass: `CAMERA` and the app-internal `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` only |
-| JVM tests, scanner and Office export | GitHub Actions, build 18 | **34 / 34 passed** |
-| Engine instrumented tests | Android 14 emulator (x86_64), build 18 | **40 / 40 passed** |
-| App instrumented tests, release build | Android 14 emulator, build 18 | **22 / 22 passed** |
-| App instrumented tests, release build | Android 11 emulator, build 18 | **22 / 22 passed** |
+| Permission audit of the APK (`aapt2 dump permissions`) | GitHub Actions, build 25; repeated on the published file after download | Pass: `CAMERA` and the app-internal `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` only |
+| JVM tests, scanner and Office export | GitHub Actions, build 25 | **34 / 34 passed** |
+| Engine instrumented tests | Android 14 emulator (x86_64), build 25 | **40 / 40 passed** |
+| App instrumented tests, release build | Android 14 emulator, build 25 | **26 / 26 passed** |
+| App instrumented tests, release build | Android 11 emulator, build 25 | **26 / 26 passed** |
 | Published APK checksum | Downloaded from the release and hashed | Matches the published SHA-256 |
 
-Runs between build 5 and build 18 failed and led to the fixes listed in `docs/ANDROID.md`, among them two reference-counting faults in MuPDF 1.28.2's Java bindings that could corrupt saved files. One run (17) was not published because the Android 11 emulator went offline after 9 of 22 tests (all passing); the next run passed in full. Not run: physical phones and their cameras (the emulator camera shows a synthetic scene; scanning is tested on synthetic photographs), Android versions other than 11 and 14, audible speech, printing to a printer, OCR accuracy for Hindi and Gujarati on real documents.
+Runs between build 5 and build 18 failed and led to the fixes listed in `docs/ANDROID.md`, among them two reference-counting faults in MuPDF 1.28.2's Java bindings that could corrupt saved files. One run (17) was not published because the Android 11 emulator went offline after 9 of 22 tests (all passing); the next run passed in full. Build 25 (Material 3 design, Adobe Scan's review flow, page sizes, Modify scan) followed runs 20 to 24, which failed on test faults (two tabs matched by a name the collapsing title also carried; a test tapping where a hint now sits), on two real defects (a hint covering the reader's mode bar; a clipped subtitle), and on the Android 11 emulator being lost three times, traced to processes the Android 14 emulator left running. Not run: physical phones and their cameras (the emulator camera shows a synthetic scene; scanning is tested on synthetic photographs), Android versions other than 11 and 14, audible speech, printing to a printer, OCR accuracy for Hindi and Gujarati on real documents.
