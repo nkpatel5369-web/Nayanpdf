@@ -220,7 +220,8 @@ class ScanReviewActivity : AppCompatActivity() {
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): H {
             val ctx = parent.context
-            val box = FrameLayout(ctx).apply { layoutParams = RecyclerView.LayoutParams(parent.width.coerceAtLeast(1), ViewGroup.LayoutParams.MATCH_PARENT) }
+            // Full width of the pager (a horizontal list measures MATCH_PARENT children at its own width).
+            val box = FrameLayout(ctx).apply { layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT) }
             val img = ImageView(ctx).apply { scaleType = ImageView.ScaleType.FIT_CENTER; setPadding(Ios.dpi(ctx, 18), Ios.dpi(ctx, 18), Ios.dpi(ctx, 18), Ios.dpi(ctx, 18)); elevation = Ios.dp(ctx, 4f) }
             box.addView(img, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
             val spin = ProgressBar(ctx)
@@ -229,7 +230,6 @@ class ScanReviewActivity : AppCompatActivity() {
         }
 
         override fun onBindViewHolder(h: H, position: Int) {
-            h.box.layoutParams = h.box.layoutParams.apply { width = pager.width.coerceAtLeast(1) }
             val p = session.pages[position]
             h.img.contentDescription = "Page ${position + 1}"
             val key = p.id + p.key()
@@ -672,7 +672,7 @@ class ScanReviewActivity : AppCompatActivity() {
             }
             hud.first.dismiss()
             val card = session.kind == ScanKind.BUSINESSCARD
-            val firstThumb = runCatching { ScanProcessor.thumb(session, session.pages.first()) }.getOrNull()
+            val firstThumb = withContext(Dispatchers.Default) { runCatching { ScanProcessor.thumb(session, session.pages.first()) }.getOrNull() }
             if (asPdf) {
                 val thumbFile = File(cacheDir, "thumbs").apply { mkdirs() }.resolve("${System.nanoTime()}.jpg")
                 firstThumb?.let { b -> thumbFile.outputStream().use { b.compress(Bitmap.CompressFormat.JPEG, 85, it) } }

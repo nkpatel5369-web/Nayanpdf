@@ -314,9 +314,12 @@ object ScanProcessor {
     }
 
     /** The rendered page, cached on disk until a setting changes. */
-    private val keys = HashMap<String, String>()
+    private val keys = java.util.concurrent.ConcurrentHashMap<String, String>()
 
-    fun cached(session: ScanSession, page: ScanPage): Bitmap {
+    /** Full-size renders run one at a time (each can need over 100 MB on a 12-megapixel photo). */
+    private val renderLock = Any()
+
+    fun cached(session: ScanSession, page: ScanPage): Bitmap = synchronized(renderLock) {
         val f = session.outFile(page)
         val key = page.key()
         if (f.exists() && keys[f.absolutePath] == key) BitmapFactory.decodeFile(f.absolutePath)?.let { return it }
@@ -327,7 +330,7 @@ object ScanProcessor {
         val s = 360f / max(bmp.width, bmp.height)
         Bitmap.createScaledBitmap(bmp, (bmp.width * s).roundToInt().coerceAtLeast(1), (bmp.height * s).roundToInt().coerceAtLeast(1), true)
             .let { th -> t.outputStream().use { th.compress(Bitmap.CompressFormat.JPEG, 85, it) } }
-        return bmp
+        bmp
     }
 
     fun thumb(session: ScanSession, page: ScanPage): Bitmap {
@@ -341,6 +344,10 @@ object ScanProcessor {
     fun display(session: ScanSession, page: ScanPage, maxSide: Int = 1600): Bitmap {
         val f = session.outFile(page)
         if (!(f.exists() && keys[f.absolutePath] == page.key())) cached(session, page).recycle()
+        synchronized(renderLock) { return decodeOut(f, maxSide) }
+    }
+
+    private fun decodeOut(f: File, maxSide: Int): Bitmap {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeFile(f.absolutePath, bounds)
         var sample = 1

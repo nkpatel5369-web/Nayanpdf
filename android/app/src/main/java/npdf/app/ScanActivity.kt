@@ -331,6 +331,8 @@ class ScanActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        // The border editor (opened after a capture) saves the scan itself: take its version.
+        if (::session.isInitialized && !capturing) ScanSession.load(session.dir)?.let { if (it.pages.size >= session.pages.size) { session = it; refreshThumb() } }
         if (blocked != null && ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
             (blocked?.parent as? ViewGroup)?.removeView(blocked); blocked = null
             startCamera()
