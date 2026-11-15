@@ -106,7 +106,8 @@ object TextInfo {
         if (kw != null) out.add(listOfNotNull(kw, date).joinToString(" "))
         val heading = lines.filter { l -> l.text.trim().length in 4..48 && l.text.count { it.isLetter() } >= 4 }
             .let { ls -> val top = ls.take(8); top.maxByOrNull { it.height } }?.text?.trim()
-        if (heading != null) out.add(safeName(heading))
+        // The page's heading, unless a suggestion already starts with it ("TAX INVOICE" next to "Tax Invoice 2026-03-31").
+        if (heading != null && out.none { it.lowercase().startsWith(safeName(heading).lowercase()) }) out.add(safeName(heading))
         out.add(fallback)
         return out.map(::safeName).filter { it.isNotBlank() }.distinctBy { it.lowercase() }.take(4)
     }

@@ -47,6 +47,9 @@ class TextInfoQrTest {
         assertEquals("Tax Invoice 2026-03-31", s[0])
         assertTrue(s.contains("ACME Traders Private Limited"))
         assertEquals("Scan 2026-11-15 10.32", s.last())
+        // A heading that the dated suggestion already starts with is not offered again.
+        val dated = TextInfo.nameSuggestions(listOf(TextLine("TAX INVOICE", 30f), TextLine("Invoice No 123 Date 31/03/2026", 14f)), "Scan")
+        assertEquals(listOf("Tax Invoice 2026-03-31", "Scan"), dated)
         // The same words in another case are offered once.
         val undated = TextInfo.nameSuggestions(listOf(TextLine("TAX INVOICE", 30f), TextLine("Item 1 Consulting services 1,000.00", 14f)), "Scan")
         assertEquals(listOf("Tax Invoice", "Scan"), undated)
