@@ -109,14 +109,32 @@ class SecurityCompressOcrTest {
         val words = listOf(TextLayer.Word("TAX", Rect(box.x0 + 50f, box.y0 + 50f, box.x0 + 90f, box.y0 + 64f), 95f),
             TextLayer.Word("INVOICE", Rect(box.x0 + 95f, box.y0 + 50f, box.x0 + 180f, box.y0 + 64f), 95f))
         assertEquals(2, TextLayer.addWords(doc, 1, words, font))
-        val page = doc.loadPage(0) as com.artifex.mupdf.fitz.PDFPage
-        android.util.Log.i("NPDF-OCR", "new scan page: ${page.getObject().toString(false, true).take(400)}")
+        // Java's collector runs at times the app does not control; make it run now, as it may on a phone
+        // before the file is saved. Objects whose references were miscounted are then freed and show up.
+        repeat(3) { Runtime.getRuntime().gc(); System.runFinalization() }
         val f = Fixtures.out("newscan.pdf")
         Pdf.save(doc, f)
         val back = Pdf.open(f.absolutePath)
         val text = Fixtures.text(back, 1)
         android.util.Log.i("NPDF-OCR", "new scan page text: ${text.map { "%04x".format(it.code) }.take(40)}")
         assertTrue("searchable: $text", text.contains("TAX") && text.contains("INVOICE"))
+    }
+
+    /** Content added to a page survives Java's collector running before the save (MuPDF 1.28.2 binding bug). */
+    @Test
+    fun appendedContentSurvivesGarbageCollection() {
+        val d = Fixtures.open("financial.pdf")
+        val page = d.loadPage(0) as com.artifex.mupdf.fitz.PDFPage
+        Pdf.appendContent(d, page, "q 1 0 0 RG 10 10 m 20 20 l S Q % NPDF-MARK-1\n")
+        Pdf.appendContent(d, page, "q 0 0 1 RG 30 30 m 40 40 l S Q % NPDF-MARK-2\n")
+        val font = TextLayer.newFont(d)
+        assertEquals(1, TextLayer.addWords(d, 1, listOf(TextLayer.Word("Zebra", Rect(400f, 700f, 450f, 714f), 90f)), font))
+        repeat(3) { Runtime.getRuntime().gc(); System.runFinalization() }
+        val back = Fixtures.roundTrip(d)
+        val content = String(Pdf.pageContent(back.loadPage(0) as com.artifex.mupdf.fitz.PDFPage), Charsets.ISO_8859_1)
+        assertTrue("both additions kept", content.contains("NPDF-MARK-1") && content.contains("NPDF-MARK-2"))
+        val text = Fixtures.text(back, 1)
+        assertTrue("original text and the new word: $text", text.contains("Revenue from operations") && text.contains("Zebra"))
     }
 
     @Test

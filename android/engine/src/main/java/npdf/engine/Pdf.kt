@@ -117,6 +117,26 @@ object Pdf {
         return out.toList()
     }
 
+    // ---------------------------------------------------------------- object references
+
+    // MuPDF 1.28.2's Java bindings release a reference they do not own in two calls:
+    // PDFObject.push(PDFObject) drops the item after the array has kept it, and
+    // PDFDocument.addObject consumes the caller's reference and returns the caller's own
+    // (direct) object. When Java later collects the wrapper it releases again, MuPDF frees an
+    // object the document still uses, and the saved file holds garbage in its place (found
+    // when a new scan's text layer lost its font). Neither call is used anywhere: these
+    // helpers do the same through calls that count references correctly.
+
+    /** Appends [item] to the PDF array [arr]. */
+    fun append(arr: PDFObject, item: PDFObject) = arr.put(arr.size(), item)
+
+    /** Stores [obj] as a new indirect object of [doc] and returns a reference to it. */
+    fun indirect(doc: PDFDocument, obj: PDFObject): PDFObject {
+        val ref = doc.createObject()
+        ref.writeObject(obj)
+        return ref
+    }
+
     // ---------------------------------------------------------------- content
 
     /**
@@ -135,13 +155,13 @@ object Pdf {
             existing.add(contents)
         }
         if (existing.isNotEmpty() && !isWrapped(existing)) {
-            arr.push(doc.addStream("q\n"))
-            existing.forEach { arr.push(it) }
-            arr.push(doc.addStream("\nQ\n"))
+            append(arr, doc.addStream("q\n"))
+            existing.forEach { append(arr, it) }
+            append(arr, doc.addStream("\nQ\n"))
         } else {
-            existing.forEach { arr.push(it) }
+            existing.forEach { append(arr, it) }
         }
-        arr.push(doc.addStream(ops))
+        append(arr, doc.addStream(ops))
         pageObj.put("Contents", arr)
     }
 
@@ -181,7 +201,7 @@ object Pdf {
         if (inherited.isDictionary) {
             for (key in dictKeys(inherited)) res.put(key, inherited.get(key))
         }
-        pageObj.put("Resources", doc.addObject(res))
+        pageObj.put("Resources", indirect(doc, res))
         return pageObj.get("Resources")
     }
 

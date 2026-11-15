@@ -53,7 +53,7 @@ object TextLayer {
                 put("Ordering", doc.newString("Identity"))
                 put("Supplement", 0)
             })
-            put("FontDescriptor", doc.addObject(descriptor))
+            put("FontDescriptor", Pdf.indirect(doc, descriptor))
             put("DW", 500)
         }
         val toUnicode = doc.addStream(
@@ -69,10 +69,10 @@ object TextLayer {
             put("Subtype", doc.newName("Type0"))
             put("BaseFont", doc.newName("GlyphLessFont"))
             put("Encoding", doc.newName("Identity-H"))
-            put("DescendantFonts", doc.newArray().apply { push(doc.addObject(cid)) })
+            put("DescendantFonts", doc.newArray().also { Pdf.append(it, Pdf.indirect(doc, cid)) })
             put("ToUnicode", toUnicode)
         }
-        return doc.addObject(type0)
+        return Pdf.indirect(doc, type0)
     }
 
     private fun utf16Hex(s: String): String = buildString {

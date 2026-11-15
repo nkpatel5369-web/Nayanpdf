@@ -63,6 +63,14 @@ jobs:
           if [ -n "$others" ]; then echo "::error::Unexpected permissions: $others"; exit 1; fi
           ls -l "$apk"
 
+      - name: Guard against two MuPDF 1.28.2 Java binding calls that corrupt documents
+        working-directory: android
+        run: |
+          # PDFObject.push(PDFObject) and PDFDocument.addObject over-release references; use Pdf.append / Pdf.indirect.
+          if grep -rnE "\.addObject\(|(^|[^A-Za-z_.])push\(|\.push\(" --include=*.kt engine/src/main app/src/main | grep -v "^\S*:[0-9]*:\s*//"; then
+            echo "::error::Use Pdf.append / Pdf.indirect instead of push / addObject"; exit 1
+          fi
+
       - name: Enable KVM for the Android emulator
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
