@@ -225,7 +225,7 @@ class MainActivity : AppCompatActivity() {
             }
             row.addView(thumb, LinearLayout.LayoutParams(Kit.dpi(ctx, 40), Kit.dpi(ctx, 52)).apply { marginEnd = Kit.dpi(ctx, 16) })
             val texts = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-            texts.addView(Kit.text(this, r.name, 16f, 400).apply { maxLines = 2; ellipsize = android.text.TextUtils.TruncateAt.MIDDLE })
+            texts.addView(Kit.text(this, r.name, 16f, 400).apply { maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.MIDDLE })
             texts.addView(Kit.text(this, "Page ${r.page} · " + DateUtils.getRelativeTimeSpanString(r.time, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS), 14f, 400, R.color.label2))
             row.addView(texts, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
             row.addView(Kit.iconButton(this, R.drawable.ic_more, "More options for ${r.name}") { recentMenu(r) })
