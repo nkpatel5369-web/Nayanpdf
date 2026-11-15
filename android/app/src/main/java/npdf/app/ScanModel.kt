@@ -78,6 +78,8 @@ class ScanSession(val dir: File) {
     val pages = mutableListOf<ScanPage>()
     var name: String? = null
     var kind: ScanKind = ScanKind.DOCUMENT
+    /** The PDF this scan was last saved as, when it is kept editable (Modify scan); null until saved. */
+    var savedUri: String? = null
 
     fun newPhoto(): File = File(dir, "photo_${UUID.randomUUID()}.jpg")
     fun file(name: String) = File(dir, name)
@@ -88,6 +90,7 @@ class ScanSession(val dir: File) {
         val o = JSONObject()
         o.put("name", name ?: JSONObject.NULL)
         o.put("kind", kind.name)
+        o.put("saved", savedUri ?: JSONObject.NULL)
         o.put("pages", JSONArray().apply { pages.forEach { put(pageJson(it)) } })
         val tmp = File(dir, "session.tmp")
         tmp.writeText(o.toString())
@@ -109,14 +112,32 @@ class ScanSession(val dir: File) {
 
         fun create(ctx: Context): ScanSession = ScanSession(File(root(ctx), UUID.randomUUID().toString()).apply { mkdirs() })
 
-        /** The most recent unfinished scan, if any. */
+        /** The most recent unfinished (never saved) scan, if any. */
         fun latest(ctx: Context): ScanSession? = root(ctx).listFiles()?.filter { File(it, "session.json").exists() }
-            ?.maxByOrNull { File(it, "session.json").lastModified() }?.let { load(it) }
+            ?.sortedByDescending { File(it, "session.json").lastModified() }
+            ?.asSequence()?.mapNotNull { load(it) }?.firstOrNull { it.savedUri == null && it.pages.isNotEmpty() }
+
+        /** The editable scan behind a saved PDF, if it was kept (Modify scan). */
+        fun forUri(ctx: Context, uri: android.net.Uri): ScanSession? = root(ctx).listFiles()
+            ?.filter { File(it, "session.json").exists() }?.asSequence()?.mapNotNull { load(it) }
+            ?.firstOrNull { it.savedUri == uri.toString() }
+
+        /** Saved scans kept editable: how many, and the space their pages take. */
+        fun editableCopies(ctx: Context): Pair<Int, Long> {
+            val dirs = root(ctx).listFiles()?.filter { d -> load(d)?.savedUri != null } ?: emptyList()
+            return dirs.size to dirs.sumOf { d -> d.walkTopDown().filter { it.isFile }.sumOf { it.length() } }
+        }
+
+        /** Removes the editable pages of saved scans (their PDFs are not touched). */
+        fun removeEditableCopies(ctx: Context) {
+            root(ctx).listFiles()?.forEach { d -> if (load(d)?.savedUri != null) d.deleteRecursively() }
+        }
 
         fun load(dir: File): ScanSession? = try {
             val o = JSONObject(File(dir, "session.json").readText())
             ScanSession(dir).apply {
                 name = if (o.isNull("name")) null else o.optString("name")
+                savedUri = if (o.isNull("saved")) null else o.optString("saved").ifEmpty { null }
                 kind = runCatching { ScanKind.valueOf(o.optString("kind")) }.getOrDefault(ScanKind.DOCUMENT)
                 val arr = o.getJSONArray("pages")
                 for (i in 0 until arr.length()) pages.add(pageFrom(arr.getJSONObject(i)))

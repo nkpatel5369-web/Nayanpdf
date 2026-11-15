@@ -1,32 +1,11 @@
-<?xml version="1.0" encoding="utf-8"?>
+<!-- Material Symbols "grid_view" (Outlined, 400, 24 px), Apache License 2.0, Google. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:tint="?attr/colorControlNormal"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
-    <path
-        android:pathData="M5.2,4 L9.3,4 A1.2,1.2 0 0 1 10.5,5.2 L10.5,9.3 A1.2,1.2 0 0 1 9.3,10.5 L5.2,10.5 A1.2,1.2 0 0 1 4,9.3 L4,5.2 A1.2,1.2 0 0 1 5.2,4 Z"
-        android:strokeColor="@android:color/white"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:strokeWidth="1.6" />
-    <path
-        android:pathData="M14.7,4 L18.8,4 A1.2,1.2 0 0 1 20,5.2 L20,9.3 A1.2,1.2 0 0 1 18.8,10.5 L14.7,10.5 A1.2,1.2 0 0 1 13.5,9.3 L13.5,5.2 A1.2,1.2 0 0 1 14.7,4 Z"
-        android:strokeColor="@android:color/white"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:strokeWidth="1.6" />
-    <path
-        android:pathData="M5.2,13.5 L9.3,13.5 A1.2,1.2 0 0 1 10.5,14.7 L10.5,18.8 A1.2,1.2 0 0 1 9.3,20 L5.2,20 A1.2,1.2 0 0 1 4,18.8 L4,14.7 A1.2,1.2 0 0 1 5.2,13.5 Z"
-        android:strokeColor="@android:color/white"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:strokeWidth="1.6" />
-    <path
-        android:pathData="M14.7,13.5 L18.8,13.5 A1.2,1.2 0 0 1 20,14.7 L20,18.8 A1.2,1.2 0 0 1 18.8,20 L14.7,20 A1.2,1.2 0 0 1 13.5,18.8 L13.5,14.7 A1.2,1.2 0 0 1 14.7,13.5 Z"
-        android:strokeColor="@android:color/white"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:strokeWidth="1.6" />
+    android:viewportWidth="960"
+    android:viewportHeight="960"
+    android:tint="?attr/colorControlNormal">
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M120,440L120,120L440,120L440,440L120,440ZM120,840L120,520L440,520L440,840L120,840ZM520,440L520,120L840,120L840,440L520,440ZM520,840L520,520L840,520L840,840L520,840ZM200,360L360,360L360,200L200,200L200,360ZM600,360L760,360L760,200L600,200L600,360ZM600,760L760,760L760,600L600,600L600,760ZM200,760L360,760L360,600L200,600L200,760ZM600,360L600,360L600,360L600,360L600,360ZM600,600L600,600L600,600L600,600L600,600ZM360,600L360,600L360,600L360,600L360,600ZM360,360L360,360L360,360L360,360L360,360Z"/>
 </vector>

@@ -9,6 +9,9 @@ class NpdfApp : Application() {
     override fun onCreate() {
         super.onCreate()
         AppCompatDelegate.setDefaultNightMode(Prefs(this).nightMode)
+        // Material You: on Android 12 and later every screen takes the wallpaper's colours, as the
+        // system and Google's apps do. Earlier versions keep the scheme in the theme.
+        com.google.android.material.color.DynamicColors.applyToActivitiesIfAvailable(this)
         // Load the PDF engine's native library now, off the main thread, so the first
         // document opens without that delay.
         Executors.newSingleThreadExecutor().execute {

@@ -269,8 +269,30 @@ object ReaderActions {
         exported(a, uri, f, "$name.${f.ext}")
     }
 
+    /** Saves every page as a JPEG picture (150 dpi) in Pictures/N PDF, as Adobe Scan's "Save as JPEG". */
+    suspend fun savePictures(a: ReaderActivity) {
+        val s = a.session ?: return
+        val name = Files.stem(s.name)
+        val n = s.sizes.size
+        if (n > 1 && !Dialogs.confirm(a, "Save as pictures?", "Each of the $n pages is saved as a JPEG picture in ${if (android.os.Build.VERSION.SDK_INT >= 29) "Pictures/N PDF" else ScanStore.folderLabel(a)}.", "Save")) return
+        val saved = a.busy("Saving pictures…") {
+            var count = 0
+            for (i in 0 until n) {
+                val w = s.sizes[i].w; val h = s.sizes[i].h
+                val scale = 150f / 72f
+                val bmp = s.renderTile(i, scale, 0, 0, (w * scale).toInt().coerceAtLeast(1), (h * scale).toInt().coerceAtLeast(1), com.artifex.mupdf.fitz.Cookie()) ?: continue
+                val uri = ScanStore.create(a, if (n == 1) name else "$name ${i + 1}", "image/jpeg", "jpg", picture = true)
+                a.contentResolver.openOutputStream(uri)?.use { bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, it) }
+                ScanStore.publish(a, uri)
+                bmp.recycle(); count++
+            }
+            count
+        } ?: return
+        Kit.banner(a, "Saved $saved picture(s) in Pictures/N PDF")
+    }
+
     suspend fun exported(a: ReaderActivity, uri: Uri, f: npdf.engine.Export.Format, name: String) {
-        Ios.banner(a, "Saved $name in ${ScanStore.folderLabel(a)}", R.drawable.ic_check)
+        Kit.banner(a, "Saved $name in ${ScanStore.folderLabel(a)}", R.drawable.ic_check)
         when (Dialogs.choose(a, name, listOf("Open", "Share", "Done"))) {
             0 -> runCatching { a.startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(uri, f.mime).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)) }
                 .onFailure { Dialogs.message(a, "No app to open it", "No app on this phone opens ${f.label} files. You can share the file instead.") }

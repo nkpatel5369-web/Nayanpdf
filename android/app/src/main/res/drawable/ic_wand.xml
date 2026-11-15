@@ -1,56 +1,11 @@
-<?xml version="1.0" encoding="utf-8"?>
+<!-- Material Symbols "auto_fix_high" (Outlined, 400, 24 px), Apache License 2.0, Google. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:tint="?attr/colorControlNormal"
     android:viewportWidth="24"
-    android:viewportHeight="24">
-    <path
-        android:pathData="M4,20 L14.5,9.5"
-        android:strokeColor="@android:color/white"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:strokeWidth="1.6" />
-    <path
-        android:pathData="M12.8,8 L16,11.2"
-        android:strokeColor="@android:color/white"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:strokeWidth="1.6" />
-    <path
-        android:pathData="M17.5,2.5 L17.5,6.5"
-        android:strokeColor="@android:color/white"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:strokeWidth="1.6" />
-    <path
-        android:pathData="M15.5,4.5 L19.5,4.5"
-        android:strokeColor="@android:color/white"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:strokeWidth="1.6" />
-    <path
-        android:pathData="M20.5,10 L20.5,13"
-        android:strokeColor="@android:color/white"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:strokeWidth="1.6" />
-    <path
-        android:pathData="M19,11.5 L22,11.5"
-        android:strokeColor="@android:color/white"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:strokeWidth="1.6" />
-    <path
-        android:pathData="M7.5,3.5 L7.5,6"
-        android:strokeColor="@android:color/white"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:strokeWidth="1.6" />
-    <path
-        android:pathData="M6.25,4.75 L8.75,4.75"
-        android:strokeColor="@android:color/white"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:strokeWidth="1.6" />
+    android:viewportHeight="24"
+    android:tint="?attr/colorControlNormal">
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M20,7 L19.05,4.95 17,4 19.05,3.05 20,1 20.95,3.05 23,4 20.95,4.95ZM8.5,7 L7.55,4.95 5.5,4 7.55,3.05 8.5,1 9.45,3.05 11.5,4 9.45,4.95ZM20,18.5 L19.05,16.45 17,15.5 19.05,14.55 20,12.5 20.95,14.55 23,15.5 20.95,16.45ZM5.1,21.7 L2.3,18.9Q2,18.6 2,18.175Q2,17.75 2.3,17.45L13.45,6.3Q13.75,6 14.175,6Q14.6,6 14.9,6.3L17.7,9.1Q18,9.4 18,9.825Q18,10.25 17.7,10.55L6.55,21.7Q6.25,22 5.825,22Q5.4,22 5.1,21.7ZM5.85,19.6 L13,12.4 11.6,11 4.4,18.15Z"/>
 </vector>

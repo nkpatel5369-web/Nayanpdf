@@ -1,26 +1,12 @@
-<?xml version="1.0" encoding="utf-8"?>
+<!-- Material Symbols "call_merge" (Outlined, 400, 24 px), Apache License 2.0, Google. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960"
     android:tint="?attr/colorControlNormal"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
-    <path
-        android:pathData="M6,3.5 L6,8.5 C6,12.5 12,12.5 12,16.5 L12,21"
-        android:strokeColor="@android:color/white"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:strokeWidth="1.6" />
-    <path
-        android:pathData="M18,3.5 L18,8.5 C18,12.5 12,12.5 12,16.5"
-        android:strokeColor="@android:color/white"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:strokeWidth="1.6" />
-    <path
-        android:pathData="M9,18 L12,21 L15,18"
-        android:strokeColor="@android:color/white"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:strokeWidth="1.6" />
+    android:autoMirrored="true">
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M296,800L240,744L440,544L440,275L337,378L280,321L480,121L681,322L624,379L520,275L520,576L296,800ZM664,801L536,674L593,617L720,745L664,801Z"/>
 </vector>

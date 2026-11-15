@@ -155,13 +155,13 @@ class ScanActivity : AppCompatActivity() {
 
     // ------------------------------------------------------------------ layout
 
-    private fun pill(text: String, onClick: (TextView) -> Unit) = Ios.text(this, text, 13f, 600).apply {
+    private fun pill(text: String, onClick: (TextView) -> Unit) = Kit.text(this, text, 13f, 600).apply {
         setTextColor(Color.WHITE)
-        background = Ios.rounded(this@ScanActivity, 0x66000000, 14f)
-        setPadding(Ios.dpi(context, 12), Ios.dpi(context, 6), Ios.dpi(context, 12), Ios.dpi(context, 6))
+        background = Kit.rounded(this@ScanActivity, 0x66000000, 14f)
+        setPadding(Kit.dpi(context, 12), Kit.dpi(context, 6), Kit.dpi(context, 12), Kit.dpi(context, 6))
         isClickable = true
         contentDescription = text
-        setOnClickListener { Ios.tick(it); onClick(this) }
+        setOnClickListener { Kit.tick(it); onClick(this) }
     }
 
     private fun buildUi() {
@@ -171,25 +171,25 @@ class ScanActivity : AppCompatActivity() {
         root.addView(column, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
 
         // Top bar: close, flash, auto/manual, batch.
-        val top = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(Ios.dpi(ctx, 8), 0, Ios.dpi(ctx, 8), 0) }
+        val top = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(Kit.dpi(ctx, 8), 0, Kit.dpi(ctx, 8), 0) }
         top.addView(ImageView(this).apply {
             setImageResource(R.drawable.ic_close); imageTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
-            setPadding(Ios.dpi(ctx, 10), Ios.dpi(ctx, 10), Ios.dpi(ctx, 10), Ios.dpi(ctx, 10))
+            setPadding(Kit.dpi(ctx, 10), Kit.dpi(ctx, 10), Kit.dpi(ctx, 10), Kit.dpi(ctx, 10))
             contentDescription = "Close"; isClickable = true; setOnClickListener { close() }
-        }, LinearLayout.LayoutParams(Ios.dpi(ctx, 48), Ios.dpi(ctx, 48)))
+        }, LinearLayout.LayoutParams(Kit.dpi(ctx, 48), Kit.dpi(ctx, 48)))
         top.addView(View(this), LinearLayout.LayoutParams(0, 1, 1f))
         flashBtn = ImageView(this).apply {
             imageTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
-            setPadding(Ios.dpi(ctx, 11), Ios.dpi(ctx, 11), Ios.dpi(ctx, 11), Ios.dpi(ctx, 11))
+            setPadding(Kit.dpi(ctx, 11), Kit.dpi(ctx, 11), Kit.dpi(ctx, 11), Kit.dpi(ctx, 11))
             isClickable = true
-            setOnClickListener { Ios.tick(it); prefs.flashMode = (prefs.flashMode + 1) % 3; applyFlash() }
+            setOnClickListener { Kit.tick(it); prefs.flashMode = (prefs.flashMode + 1) % 3; applyFlash() }
         }
-        top.addView(flashBtn, LinearLayout.LayoutParams(Ios.dpi(ctx, 48), Ios.dpi(ctx, 48)))
-        batchBtn = pill("Batch") { batch = !batch; updatePills(); Ios.banner(this, if (batch) "Batch scanning: turn the pages, N PDF captures each one." else "Batch scanning off") }
-        top.addView(batchBtn, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginStart = Ios.dpi(ctx, 6) })
+        top.addView(flashBtn, LinearLayout.LayoutParams(Kit.dpi(ctx, 48), Kit.dpi(ctx, 48)))
+        batchBtn = pill("Batch") { batch = !batch; updatePills(); Kit.banner(this, if (batch) "Batch scanning: turn the pages, N PDF captures each one." else "Batch scanning off") }
+        top.addView(batchBtn, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginStart = Kit.dpi(ctx, 6) })
         autoBtn = pill("Auto") { auto = !auto; prefs.autoCapture = auto; steadySince = 0; updatePills() }
-        top.addView(autoBtn, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginStart = Ios.dpi(ctx, 8) })
-        column.addView(top, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ios.dpi(ctx, 56)))
+        top.addView(autoBtn, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginStart = Kit.dpi(ctx, 8) })
+        column.addView(top, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Kit.dpi(ctx, 56)))
 
         // Camera picture with the outline overlay.
         val stage = FrameLayout(this)
@@ -199,59 +199,59 @@ class ScanActivity : AppCompatActivity() {
         overlay = ScanOverlay(this)
         stage.addView(overlay, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         qrChip = pill("QR code") { showQr() }.apply { visibility = View.GONE; setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, 0, 0) }
-        stage.addView(qrChip, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply { topMargin = Ios.dpi(ctx, 10) })
-        status = Ios.text(this, "Looking for document", 14f, 600).apply {
+        stage.addView(qrChip, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply { topMargin = Kit.dpi(ctx, 10) })
+        status = Kit.text(this, "Looking for document", 14f, 600).apply {
             setTextColor(Color.WHITE)
-            background = Ios.rounded(ctx, 0x8C000000.toInt(), 16f)
-            setPadding(Ios.dpi(ctx, 14), Ios.dpi(ctx, 7), Ios.dpi(ctx, 14), Ios.dpi(ctx, 7))
+            background = Kit.rounded(ctx, 0x8C000000.toInt(), 16f)
+            setPadding(Kit.dpi(ctx, 14), Kit.dpi(ctx, 7), Kit.dpi(ctx, 14), Kit.dpi(ctx, 7))
             accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
         }
-        stage.addView(status, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = Ios.dpi(ctx, 14) })
+        stage.addView(status, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = Kit.dpi(ctx, 14) })
         preview.setOnTouchListener { v, e -> if (e.action == MotionEvent.ACTION_UP) focusAt(e.x, e.y); if (e.action == MotionEvent.ACTION_UP) v.performClick(); true }
         column.addView(stage, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
 
         // Modes.
         val modes = HorizontalScrollView(this).apply { isHorizontalScrollBarEnabled = false }
-        modeRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER; setPadding(Ios.dpi(ctx, 24), 0, Ios.dpi(ctx, 24), 0) }
+        modeRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER; setPadding(Kit.dpi(ctx, 24), 0, Kit.dpi(ctx, 24), 0) }
         for (k in ScanKind.values()) {
-            modeRow.addView(Ios.text(this, k.label.uppercase(), 13f, 600).apply {
+            modeRow.addView(Kit.text(this, k.label.uppercase(), 13f, 600).apply {
                 tag = k
                 setTextColor(0xB3FFFFFF.toInt())
                 letterSpacing = 0.06f
-                setPadding(Ios.dpi(ctx, 12), Ios.dpi(ctx, 12), Ios.dpi(ctx, 12), Ios.dpi(ctx, 12))
+                setPadding(Kit.dpi(ctx, 12), Kit.dpi(ctx, 12), Kit.dpi(ctx, 12), Kit.dpi(ctx, 12))
                 contentDescription = k.label
                 isClickable = true
-                setOnClickListener { Ios.tick(it); selectMode(k) }
+                setOnClickListener { Kit.tick(it); selectMode(k) }
             })
         }
         modes.addView(modeRow)
         column.addView(modes, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
         // Bottom: last page, shutter, import / done.
-        val bottom = FrameLayout(this).apply { setPadding(Ios.dpi(ctx, 24), Ios.dpi(ctx, 8), Ios.dpi(ctx, 24), Ios.dpi(ctx, 18)) }
+        val bottom = FrameLayout(this).apply { setPadding(Kit.dpi(ctx, 24), Kit.dpi(ctx, 8), Kit.dpi(ctx, 24), Kit.dpi(ctx, 18)) }
         val thumbBox = FrameLayout(this).apply { isClickable = true; contentDescription = "Review pages"; setOnClickListener { finishToReview() } }
-        thumb = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP; background = Ios.rounded(ctx, 0xFF2C2C2E.toInt(), 6f, Color.WHITE, 1.5f); clipToOutline = true }
-        thumbBox.addView(thumb, FrameLayout.LayoutParams(Ios.dpi(ctx, 52), Ios.dpi(ctx, 52), Gravity.CENTER))
-        count = Ios.text(this, "", 12f, 700).apply {
+        thumb = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP; background = Kit.rounded(ctx, 0xFF2C2C2E.toInt(), 6f, Color.WHITE, 1.5f); clipToOutline = true }
+        thumbBox.addView(thumb, FrameLayout.LayoutParams(Kit.dpi(ctx, 52), Kit.dpi(ctx, 52), Gravity.CENTER))
+        count = Kit.text(this, "", 12f, 700).apply {
             setTextColor(Color.WHITE); gravity = Gravity.CENTER
-            background = Ios.rounded(ctx, Ios.color(ctx, R.color.tint), 11f)
-            minWidth = Ios.dpi(ctx, 22); minHeight = Ios.dpi(ctx, 22)
-            setPadding(Ios.dpi(ctx, 5), 0, Ios.dpi(ctx, 5), 0)
+            background = Kit.rounded(ctx, Kit.color(ctx, R.color.tint), 11f)
+            minWidth = Kit.dpi(ctx, 22); minHeight = Kit.dpi(ctx, 22)
+            setPadding(Kit.dpi(ctx, 5), 0, Kit.dpi(ctx, 5), 0)
         }
         thumbBox.addView(count, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.END))
-        bottom.addView(thumbBox, FrameLayout.LayoutParams(Ios.dpi(ctx, 64), Ios.dpi(ctx, 64), Gravity.START or Gravity.CENTER_VERTICAL))
+        bottom.addView(thumbBox, FrameLayout.LayoutParams(Kit.dpi(ctx, 64), Kit.dpi(ctx, 64), Gravity.START or Gravity.CENTER_VERTICAL))
         shutter = ShutterButton(this).apply { setOnClickListener { capture() } }
-        bottom.addView(shutter, FrameLayout.LayoutParams(Ios.dpi(ctx, 78), Ios.dpi(ctx, 78), Gravity.CENTER))
+        bottom.addView(shutter, FrameLayout.LayoutParams(Kit.dpi(ctx, 78), Kit.dpi(ctx, 78), Gravity.CENTER))
         val right = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER }
         right.addView(ImageView(this).apply {
             setImageResource(R.drawable.ic_gallery); imageTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
-            setPadding(Ios.dpi(ctx, 10), Ios.dpi(ctx, 10), Ios.dpi(ctx, 10), Ios.dpi(ctx, 10))
+            setPadding(Kit.dpi(ctx, 10), Kit.dpi(ctx, 10), Kit.dpi(ctx, 10), Kit.dpi(ctx, 10))
             contentDescription = "Import photos"; isClickable = true
             setOnClickListener { importPhotos.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
-        }, LinearLayout.LayoutParams(Ios.dpi(ctx, 46), Ios.dpi(ctx, 46)))
-        done = Ios.text(this, "Done", 17f, 600).apply {
-            setTextColor(Ios.color(ctx, R.color.yellow)); contentDescription = "Done"; isClickable = true
-            setPadding(Ios.dpi(ctx, 8), Ios.dpi(ctx, 4), Ios.dpi(ctx, 8), Ios.dpi(ctx, 4))
+        }, LinearLayout.LayoutParams(Kit.dpi(ctx, 46), Kit.dpi(ctx, 46)))
+        done = Kit.text(this, "Done", 17f, 600).apply {
+            setTextColor(Kit.color(ctx, R.color.yellow)); contentDescription = "Done"; isClickable = true
+            setPadding(Kit.dpi(ctx, 8), Kit.dpi(ctx, 4), Kit.dpi(ctx, 8), Kit.dpi(ctx, 4))
             setOnClickListener { finishToReview() }
         }
         right.addView(done)
@@ -269,7 +269,7 @@ class ScanActivity : AppCompatActivity() {
     private fun updatePills() {
         autoBtn.text = if (auto) "Auto" else "Manual"
         autoBtn.contentDescription = if (auto) "Auto-capture on" else "Auto-capture off"
-        batchBtn.background = Ios.rounded(this, if (batch) Ios.color(this, R.color.yellow) else 0x66000000, 14f)
+        batchBtn.background = Kit.rounded(this, if (batch) Kit.color(this, R.color.yellow) else 0x66000000, 14f)
         batchBtn.setTextColor(if (batch) Color.BLACK else Color.WHITE)
         if (!auto) shutter.progress = 0f
     }
@@ -285,7 +285,7 @@ class ScanActivity : AppCompatActivity() {
         kind = k
         for (i in 0 until modeRow.childCount) {
             val v = modeRow.getChildAt(i) as TextView
-            v.setTextColor(if (v.tag == k) Ios.color(this, R.color.yellow) else 0xB3FFFFFF.toInt())
+            v.setTextColor(if (v.tag == k) Kit.color(this, R.color.yellow) else 0xB3FFFFFF.toInt())
         }
         overlay.bookDivider = k == ScanKind.BOOK
         overlay.cardGuide = k == ScanKind.IDCARD
@@ -316,16 +316,16 @@ class ScanActivity : AppCompatActivity() {
         val ctx = this
         val box = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER
-            setBackgroundColor(Color.BLACK); setPadding(Ios.dpi(ctx, 32), 0, Ios.dpi(ctx, 32), 0)
-            addView(Ios.text(ctx, "Camera access is off", 22f, 700).apply { setTextColor(Color.WHITE); gravity = Gravity.CENTER })
-            addView(Ios.text(ctx, "N PDF uses the camera only to photograph documents. Pictures stay on this phone.", 15f).apply {
-                setTextColor(0xCCFFFFFF.toInt()); gravity = Gravity.CENTER; setPadding(0, Ios.dpi(ctx, 8), 0, Ios.dpi(ctx, 20))
+            setBackgroundColor(Color.BLACK); setPadding(Kit.dpi(ctx, 32), 0, Kit.dpi(ctx, 32), 0)
+            addView(Kit.text(ctx, "Camera access is off", 22f, 700).apply { setTextColor(Color.WHITE); gravity = Gravity.CENTER })
+            addView(Kit.text(ctx, "N PDF uses the camera only to photograph documents. Pictures stay on this phone.", 15f).apply {
+                setTextColor(0xCCFFFFFF.toInt()); gravity = Gravity.CENTER; setPadding(0, Kit.dpi(ctx, 8), 0, Kit.dpi(ctx, 20))
             })
             addView(com.google.android.material.button.MaterialButton(ctx).apply {
                 text = "Allow camera"
                 setOnClickListener { startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", packageName, null))) }
             })
-            addView(Ios.textButton(ctx, "Import photos instead") { importPhotos.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) })
+            addView(Kit.textButton(ctx, "Import photos instead") { importPhotos.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) })
         }
         (window.decorView.findViewById<ViewGroup>(android.R.id.content)).addView(box)
         blocked = box
@@ -444,12 +444,12 @@ class ScanActivity : AppCompatActivity() {
     private fun capture() {
         val ic = imageCapture
         if (capturing) return
-        if (ic == null) { Ios.banner(this, "The camera is not ready yet."); return }
+        if (ic == null) { Kit.banner(this, "The camera is not ready yet."); return }
         capturing = true
         armed = false
         shutter.progress = 0f
         status.text = "Capturing…"
-        Ios.tick(shutter)
+        Kit.tick(shutter)
         flashCover.alpha = 0.7f
         flashCover.animate().alpha(0f).setDuration(250).start()
         val previewQuad = lastQuad
@@ -480,7 +480,7 @@ class ScanActivity : AppCompatActivity() {
 
             override fun onError(e: ImageCaptureException) {
                 capturing = false
-                Ios.banner(this@ScanActivity, "The picture could not be taken (${e.message ?: "camera error"}).")
+                Kit.banner(this@ScanActivity, "The picture could not be taken (${e.message ?: "camera error"}).")
             }
         })
     }
@@ -516,7 +516,7 @@ class ScanActivity : AppCompatActivity() {
                 if (front == null) {
                     idFront = part
                     status.text = "Now the back of the card"
-                    Ios.banner(this, "Front captured. Turn the card over, or tap Done for the front only.")
+                    Kit.banner(this, "Front captured. Turn the card over, or tap Done for the front only.")
                 } else {
                     val p = ScanPage(java.util.UUID.randomUUID().toString(), kind, mutableListOf(front, part), filter = filter)
                     session.pages.add(p); idFront = null; newPage = p
@@ -561,7 +561,7 @@ class ScanActivity : AppCompatActivity() {
         val v = lastQr ?: return@launch
         val items = if (Qr.isWebLink(v)) listOf("Copy", "Open in browser", "Share") else listOf("Copy", "Share")
         when (items.getOrNull(Dialogs.choose(this@ScanActivity, v, items) ?: return@launch)) {
-            "Copy" -> { (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("QR code", v)); Ios.banner(this@ScanActivity, "Copied") }
+            "Copy" -> { (getSystemService(CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("QR code", v)); Kit.banner(this@ScanActivity, "Copied") }
             "Open in browser" -> runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(v))) }
             "Share" -> startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, v), "Share"))
         }
@@ -573,7 +573,7 @@ class ScanActivity : AppCompatActivity() {
             session.pages.add(ScanPage(java.util.UUID.randomUUID().toString(), ScanKind.IDCARD, mutableListOf(f), filter = filter))
             idFront = null
         }
-        if (session.pages.isEmpty()) { Ios.banner(this, "Capture a page first."); return }
+        if (session.pages.isEmpty()) { Kit.banner(this, "Capture a page first."); return }
         session.save()
         if (!intent.getBooleanExtra(EXTRA_APPEND, false)) {
             startActivity(Intent(this, ScanReviewActivity::class.java).putExtra(ScanReviewActivity.EXTRA_SESSION, session.dir.absolutePath))

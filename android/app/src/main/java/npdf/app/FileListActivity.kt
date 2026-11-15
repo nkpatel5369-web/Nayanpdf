@@ -44,7 +44,13 @@ abstract class FileListActivity : AppCompatActivity() {
         b.list.layoutManager = LinearLayoutManager(this)
         b.list.adapter = adapter
         drag.attachToRecyclerView(b.list)
+        // Files passed in by the caller (for example "Combine with other files" on a recent file).
+        if (savedInstanceState == null) androidx.core.content.IntentCompat.getParcelableArrayListExtra(intent, EXTRA_URIS, Uri::class.java)?.let { addUris(it) }
         refresh()
+    }
+
+    companion object {
+        const val EXTRA_URIS = "npdf.uris"
     }
 
     fun refresh() {

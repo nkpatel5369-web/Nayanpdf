@@ -1,20 +1,11 @@
-<?xml version="1.0" encoding="utf-8"?>
+<!-- Material Symbols "colorize" (Outlined, 400, 24 px), Apache License 2.0, Google. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:tint="?attr/colorControlNormal"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
-    <path
-        android:pathData="M15.4,4.6 A2.1,2.1 0 0 1 19.4,8.6 L17,11 L13,7 Z"
-        android:strokeColor="@android:color/white"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:strokeWidth="1.6" />
-    <path
-        android:pathData="M14,8 L5.5,16.5 L5,19 L7.5,18.5 L16,10"
-        android:strokeColor="@android:color/white"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:strokeWidth="1.6" />
+    android:viewportWidth="960"
+    android:viewportHeight="960"
+    android:tint="?attr/colorControlNormal">
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M120,840L120,650L478,292L420,236L478,180L554,256L678,132Q683,127 690.5,124Q698,121 706,121Q714,121 721,124Q728,127 734,132L828,226Q833,232 836,239Q839,246 839,254Q839,262 836,269.5Q833,277 828,282L705,405L781,483L724,540L668,482L310,840L120,840ZM200,760L278,760L610,426L534,350L200,682L200,760ZM647,350L743,254L706,217L610,313L647,350ZM647,350L610,313L610,313L647,350L647,350Z"/>
 </vector>

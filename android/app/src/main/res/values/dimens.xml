@@ -6,6 +6,6 @@
     <dimen name="group_radius">12dp</dimen>
     <dimen name="bar_height">48dp</dimen>
     <dimen name="tab_bar_height">52dp</dimen>
-    <!-- A tab-bar height for the reader's mode bar (Material's default is 80 dp). -->
-    <dimen name="m3_bottom_nav_min_height">58dp</dimen>
+    <!-- The navigation bar at 64 dp, as in Android 16's Material 3 Expressive (80 dp before). -->
+    <dimen name="m3_bottom_nav_min_height">64dp</dimen>
 </resources>

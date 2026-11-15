@@ -42,7 +42,7 @@ object Ui {
             iconPadding = Dialogs.dp(a, 2)
             iconSize = Dialogs.dp(a, 24)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
-            typeface = Ios.font(a, 500)
+            typeface = Kit.font(a, 500)
             isAllCaps = false
             maxLines = 1
             minWidth = Dialogs.dp(a, 62)
@@ -52,21 +52,21 @@ object Ui {
             setPadding(Dialogs.dp(a, 6), Dialogs.dp(a, 6), Dialogs.dp(a, 6), Dialogs.dp(a, 4))
             contentDescription = label
             markSelected(this, false)
-            setOnClickListener { Ios.tick(it); onClick(this) }
+            setOnClickListener { Kit.tick(it); onClick(this) }
         }
 
     /** The chosen tool: tinted glyph and label on a soft tinted background. */
     fun markSelected(btn: MaterialButton?, on: Boolean) {
         btn ?: return
         val ctx = btn.context
-        val fg = Ios.color(ctx, if (on) R.color.tint else R.color.label)
+        val fg = Kit.color(ctx, if (on) R.color.tint else R.color.label)
         btn.iconTint = ColorStateList.valueOf(fg)
-        btn.setTextColor(if (on) fg else Ios.color(ctx, R.color.label2))
-        btn.backgroundTintList = ColorStateList.valueOf(if (on) Ios.color(ctx, R.color.tint_soft) else Color.TRANSPARENT)
+        btn.setTextColor(if (on) fg else Kit.color(ctx, R.color.label2))
+        btn.backgroundTintList = ColorStateList.valueOf(if (on) Kit.color(ctx, R.color.tint_soft) else Color.TRANSPARENT)
     }
 
     /** A short status message that disappears by itself. */
-    fun toast(a: Activity, msg: String) = Ios.banner(a, msg)
+    fun toast(a: Activity, msg: String) = Kit.banner(a, msg)
 
     /** A message for any failure: the engine's own wording, or a plain fallback. */
     fun describe(e: Throwable): String = when (e) {

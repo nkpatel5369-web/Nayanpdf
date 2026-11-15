@@ -1,32 +1,11 @@
-<?xml version="1.0" encoding="utf-8"?>
+<!-- Material Symbols "format_size" (Outlined, 400, 24 px), Apache License 2.0, Google. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:tint="?attr/colorControlNormal"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
-    <path
-        android:pathData="M3.5,18.5 L8,7 L12.5,18.5"
-        android:strokeColor="@android:color/white"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:strokeWidth="1.6" />
-    <path
-        android:pathData="M5.3,14.5 L10.7,14.5"
-        android:strokeColor="@android:color/white"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:strokeWidth="1.6" />
-    <path
-        android:pathData="M13.5,18.5 L16.8,10.5 L20.5,18.5"
-        android:strokeColor="@android:color/white"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:strokeWidth="1.6" />
-    <path
-        android:pathData="M14.8,15.8 L19.2,15.8"
-        android:strokeColor="@android:color/white"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:strokeWidth="1.6" />
+    android:viewportWidth="960"
+    android:viewportHeight="960"
+    android:tint="?attr/colorControlNormal">
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M560,800L560,280L360,280L360,160L880,160L880,280L680,280L680,800L560,800ZM200,800L200,480L80,480L80,360L440,360L440,480L320,480L320,800L200,800Z"/>
 </vector>

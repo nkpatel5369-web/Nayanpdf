@@ -107,6 +107,8 @@ class ReaderActivity : AppCompatActivity(), PdfView.Listener {
         const val ACTION_UNPROTECT = "unprotect"
         const val ACTION_OCR = "ocr"
         const val ACTION_EXPORT = "export"
+        const val ACTION_PRINT = "print"
+        const val ACTION_PICTURES = "pictures"
         const val EXTRA_FORMAT = "npdf.format"
         const val TAG = "NPDF"
     }
@@ -212,6 +214,8 @@ class ReaderActivity : AppCompatActivity(), PdfView.Listener {
             ACTION_PROTECT -> ReaderActions.protect(this)
             ACTION_UNPROTECT -> ReaderActions.unprotect(this)
             ACTION_OCR -> ReaderActions.ocr(this)
+            ACTION_PRINT -> ReaderActions.print(this)
+            ACTION_PICTURES -> ReaderActions.savePictures(this)
             ACTION_EXPORT -> intent.getStringExtra(EXTRA_FORMAT)?.let { f -> runCatching { npdf.engine.Export.Format.valueOf(f) }.getOrNull() }?.let { ReaderActions.export(this, it) }
         }
     }

@@ -35,10 +35,25 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("scanAuto", true)
         set(v) = sp.edit().putBoolean("scanAuto", v).apply()
 
-    /** Show the border adjustment after each automatic capture. */
+    /** Open the page for review (crop, filters, arrange) after each capture, as Adobe Scan does by default. */
     var adjustAfterCapture: Boolean
-        get() = sp.getBoolean("scanAdjust", false)
-        set(v) = sp.edit().putBoolean("scanAdjust", v).apply()
+        get() = sp.getBoolean("scanReview", true)
+        set(v) = sp.edit().putBoolean("scanReview", v).apply()
+
+    /** The start of a new scan's file name; the date and time follow it ("Scan 2026-11-15 10.32"). */
+    var scanName: String
+        get() = (sp.getString("scanName", "Scan") ?: "Scan").ifBlank { "Scan" }
+        set(v) = sp.edit().putString("scanName", v.trim()).apply()
+
+    /** Also save the camera's original photos in Pictures/N PDF/Originals. */
+    var saveOriginals: Boolean
+        get() = sp.getBoolean("scanOriginals", false)
+        set(v) = sp.edit().putBoolean("scanOriginals", v).apply()
+
+    /** Keep a saved scan's pages on the phone so it can be modified later (Modify scan). */
+    var keepEditable: Boolean
+        get() = sp.getBoolean("scanEditable", true)
+        set(v) = sp.edit().putBoolean("scanEditable", v).apply()
 
     var defaultFilter: String
         get() = sp.getString("scanFilter", "AUTO") ?: "AUTO"
@@ -95,6 +110,9 @@ class Prefs(context: Context) {
     fun lastPage(uri: Uri): Int = recents().firstOrNull { it.uri == uri }?.page ?: 1
 
     fun forget(uri: Uri) = save(recents().filter { it.uri != uri })
+
+    /** After a rename: the entry for [old] now points at [new] with [name]. */
+    fun renamed(old: Uri, new: Uri, name: String) = save(recents().map { if (it.uri == old) Recent(new, name, it.page, it.time, it.thumb) else it })
 
     fun clearRecents() = save(emptyList())
 

@@ -36,11 +36,11 @@ class CropView(ctx: Context, private val photo: Bitmap, photoW: Int, photoH: Int
         set(v) { field = v; if (!v) quad = quad.copy(bulge = FloatArray(4)); invalidate() }
 
     private val dim = Paint().apply { color = 0x99000000.toInt() }
-    private val line = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Ios.color(ctx, R.color.scan_outline); style = Paint.Style.STROKE; strokeWidth = Ios.dp(ctx, 2.5f) }
+    private val line = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Kit.color(ctx, R.color.scan_outline); style = Paint.Style.STROKE; strokeWidth = Kit.dp(ctx, 2.5f) }
     private val knob = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE }
-    private val knobRing = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Ios.color(ctx, R.color.scan_outline); style = Paint.Style.STROKE; strokeWidth = Ios.dp(ctx, 2.5f) }
-    private val loupeRing = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE; style = Paint.Style.STROKE; strokeWidth = Ios.dp(ctx, 3f) }
-    private val cross = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Ios.color(ctx, R.color.scan_outline); strokeWidth = Ios.dp(ctx, 1.5f) }
+    private val knobRing = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Kit.color(ctx, R.color.scan_outline); style = Paint.Style.STROKE; strokeWidth = Kit.dp(ctx, 2.5f) }
+    private val loupeRing = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE; style = Paint.Style.STROKE; strokeWidth = Kit.dp(ctx, 3f) }
+    private val cross = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Kit.color(ctx, R.color.scan_outline); strokeWidth = Kit.dp(ctx, 1.5f) }
     private val img = RectF()
     private var drag = -1 // 0..3 corners, 4..7 edge middles
     private var touch: Pt? = null
@@ -52,7 +52,7 @@ class CropView(ctx: Context, private val photo: Bitmap, photoW: Int, photoH: Int
     fun set(q: Quad?) { quad = q ?: Quad.full(pw.toInt(), ph.toInt()); invalidate() }
 
     override fun onSizeChanged(w: Int, h: Int, ow: Int, oh: Int) {
-        val pad = Ios.dp(context, 24f)
+        val pad = Kit.dp(context, 24f)
         val s = min((w - 2 * pad) / photo.width, (h - 2 * pad) / photo.height)
         val iw = photo.width * s; val ih = photo.height * s
         img.set((w - iw) / 2, (h - ih) / 2, (w + iw) / 2, (h + ih) / 2)
@@ -75,7 +75,7 @@ class CropView(ctx: Context, private val photo: Bitmap, photoW: Int, photoH: Int
         val outside = Path().apply { addRect(img, Path.Direction.CW); addPath(path); fillType = Path.FillType.EVEN_ODD }
         canvas.drawPath(outside, dim)
         canvas.drawPath(path, line)
-        val r = Ios.dp(context, 11f)
+        val r = Kit.dp(context, 11f)
         handles().forEachIndexed { i, p ->
             if (i < 4) { canvas.drawCircle(p.x, p.y, r, knob); canvas.drawCircle(p.x, p.y, r, knobRing) }
             else { canvas.drawCircle(p.x, p.y, r * 0.7f, knob); canvas.drawCircle(p.x, p.y, r * 0.7f, knobRing) }
@@ -105,7 +105,7 @@ class CropView(ctx: Context, private val photo: Bitmap, photoW: Int, photoH: Int
     }
 
     private fun drawLoupe(canvas: Canvas, t: Pt) {
-        val size = Ios.dp(context, 96f)
+        val size = Kit.dp(context, 96f)
         val zoom = 2.5f
         // Keep the loupe away from the finger: top-left, or top-right when the finger is there.
         val cx = if (t.x < width / 2f) width - size * 0.75f else size * 0.75f
@@ -126,13 +126,13 @@ class CropView(ctx: Context, private val photo: Bitmap, photoW: Int, photoH: Int
         when (e.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 val h = handles()
-                var best = -1; var bd = Ios.dp(context, 36f)
+                var best = -1; var bd = Kit.dp(context, 36f)
                 h.forEachIndexed { i, p -> val d = hypot(p.x - e.x, p.y - e.y); if (d < bd) { bd = d; best = i } }
                 drag = best
                 if (drag < 0) return false
                 parent?.requestDisallowInterceptTouchEvent(true)
                 touch = Pt(e.x, e.y)
-                Ios.tick(this)
+                Kit.tick(this)
             }
             MotionEvent.ACTION_MOVE -> {
                 if (drag < 0) return false

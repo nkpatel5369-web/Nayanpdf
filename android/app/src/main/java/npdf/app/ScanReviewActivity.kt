@@ -129,21 +129,21 @@ class ScanReviewActivity : AppCompatActivity() {
     private fun buildUi() {
         val ctx = this
         // The bar colour shows under the status and navigation bars; the pages sit on the viewer grey.
-        val root = FrameLayout(this).apply { setBackgroundColor(Ios.color(ctx, R.color.bar)) }
-        val column = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(Ios.color(ctx, R.color.viewer_bg)) }
+        val root = FrameLayout(this).apply { setBackgroundColor(Kit.color(ctx, R.color.bar)) }
+        val column = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(Kit.color(ctx, R.color.viewer_bg)) }
         root.addView(column)
         // Top bar: close, title (tap to rename), save.
-        val bar = FrameLayout(this).apply { setBackgroundColor(Ios.color(ctx, R.color.bar)); minimumHeight = Ios.dpi(ctx, 52) }
-        bar.addView(Ios.textButton(this, "Close") { close() }, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, Ios.dpi(ctx, 52), Gravity.START or Gravity.CENTER_VERTICAL).apply { marginStart = Ios.dpi(ctx, 6) })
-        title = Ios.text(this, "Scan", 17f, 600).apply {
+        val bar = FrameLayout(this).apply { setBackgroundColor(Kit.color(ctx, R.color.bar)); minimumHeight = Kit.dpi(ctx, 52) }
+        bar.addView(Kit.textButton(this, "Close") { close() }, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, Kit.dpi(ctx, 52), Gravity.START or Gravity.CENTER_VERTICAL).apply { marginStart = Kit.dpi(ctx, 6) })
+        title = Kit.text(this, "Scan", 17f, 600).apply {
             gravity = Gravity.CENTER; maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.MIDDLE
             isClickable = true; contentDescription = "Rename"
             setOnClickListener { rename() }
         }
-        bar.addView(title, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ios.dpi(ctx, 52), Gravity.CENTER).apply { marginStart = Ios.dpi(ctx, 90); marginEnd = Ios.dpi(ctx, 90) })
-        bar.addView(Ios.textButton(this, "Save", bold = true) { save() }, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, Ios.dpi(ctx, 52), Gravity.END or Gravity.CENTER_VERTICAL).apply { marginEnd = Ios.dpi(ctx, 6) })
+        bar.addView(title, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Kit.dpi(ctx, 52), Gravity.CENTER).apply { marginStart = Kit.dpi(ctx, 90); marginEnd = Kit.dpi(ctx, 90) })
+        bar.addView(Kit.textButton(this, "Save", bold = true) { save() }, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, Kit.dpi(ctx, 52), Gravity.END or Gravity.CENTER_VERTICAL).apply { marginEnd = Kit.dpi(ctx, 6) })
         column.addView(bar)
-        column.addView(Ios.hairline(this))
+        column.addView(Kit.hairline(this))
 
         pager = RecyclerView(this).apply {
             layoutManager = LinearLayoutManager(ctx, RecyclerView.HORIZONTAL, false)
@@ -160,12 +160,12 @@ class ScanReviewActivity : AppCompatActivity() {
         adapter = PageAdapter()
         pager.adapter = adapter
         column.addView(pager, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
-        indicator = Ios.text(this, "", 13f, 500, R.color.label2).apply { gravity = Gravity.CENTER; setPadding(0, Ios.dpi(ctx, 6), 0, Ios.dpi(ctx, 6)) }
+        indicator = Kit.text(this, "", 13f, 500, R.color.label2).apply { gravity = Gravity.CENTER; setPadding(0, Kit.dpi(ctx, 6), 0, Kit.dpi(ctx, 6)) }
         column.addView(indicator)
-        panel = FrameLayout(this).apply { setBackgroundColor(Ios.color(ctx, R.color.bar)) }
+        panel = FrameLayout(this).apply { setBackgroundColor(Kit.color(ctx, R.color.bar)) }
         column.addView(panel)
-        val tools = HorizontalScrollView(this).apply { isHorizontalScrollBarEnabled = false; setBackgroundColor(Ios.color(ctx, R.color.bar)) }
-        val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(Ios.dpi(ctx, 6), Ios.dpi(ctx, 4), Ios.dpi(ctx, 6), Ios.dpi(ctx, 4)) }
+        val tools = HorizontalScrollView(this).apply { isHorizontalScrollBarEnabled = false; setBackgroundColor(Kit.color(ctx, R.color.bar)) }
+        val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(Kit.dpi(ctx, 6), Kit.dpi(ctx, 4), Kit.dpi(ctx, 6), Kit.dpi(ctx, 4)) }
         fun tool(label: String, icon: Int, run: () -> Unit) = row.addView(Ui.toolButton(this, label, icon) { run() })
         tool("Add", R.drawable.ic_camera) { addPages() }
         tool("Retake", R.drawable.ic_rotate_left) { retake() }
@@ -179,9 +179,9 @@ class ScanReviewActivity : AppCompatActivity() {
         tool("Reorder", R.drawable.ic_reorder) { reorder() }
         tool("Delete", R.drawable.ic_delete) { deletePage() }
         tools.addView(row)
-        column.addView(Ios.hairline(this))
+        column.addView(Kit.hairline(this))
         column.addView(tools)
-        overlay = FrameLayout(this).apply { visibility = View.GONE; setBackgroundColor(Ios.color(ctx, R.color.bg)); isClickable = true }
+        overlay = FrameLayout(this).apply { visibility = View.GONE; setBackgroundColor(Kit.color(ctx, R.color.bg)); isClickable = true }
         root.addView(overlay, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         setContentView(root)
         Ui.fitSystemBars(root)
@@ -224,10 +224,10 @@ class ScanReviewActivity : AppCompatActivity() {
             val ctx = parent.context
             // Full width of the pager (a horizontal list measures MATCH_PARENT children at its own width).
             val box = FrameLayout(ctx).apply { layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT) }
-            val img = ImageView(ctx).apply { scaleType = ImageView.ScaleType.FIT_CENTER; setPadding(Ios.dpi(ctx, 18), Ios.dpi(ctx, 18), Ios.dpi(ctx, 18), Ios.dpi(ctx, 18)); elevation = Ios.dp(ctx, 4f) }
+            val img = ImageView(ctx).apply { scaleType = ImageView.ScaleType.FIT_CENTER; setPadding(Kit.dpi(ctx, 18), Kit.dpi(ctx, 18), Kit.dpi(ctx, 18), Kit.dpi(ctx, 18)); elevation = Kit.dp(ctx, 4f) }
             box.addView(img, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
             val spin = ProgressBar(ctx)
-            box.addView(spin, FrameLayout.LayoutParams(Ios.dpi(ctx, 36), Ios.dpi(ctx, 36), Gravity.CENTER))
+            box.addView(spin, FrameLayout.LayoutParams(Kit.dpi(ctx, 36), Kit.dpi(ctx, 36), Gravity.CENTER))
             return H(box, img, spin)
         }
 
@@ -290,28 +290,28 @@ class ScanReviewActivity : AppCompatActivity() {
         val p = page() ?: return
         if (panel.tag == "filters" && panel.childCount > 0 && panel.getTag(R.id.tab_files) == p.id) { closePanel(); return }
         val ctx = this
-        val strip = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(Ios.dpi(ctx, 10), Ios.dpi(ctx, 10), Ios.dpi(ctx, 10), Ios.dpi(ctx, 6)) }
+        val strip = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(Kit.dpi(ctx, 10), Kit.dpi(ctx, 10), Kit.dpi(ctx, 10), Kit.dpi(ctx, 6)) }
         val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         col.addView(HorizontalScrollView(this).apply { isHorizontalScrollBarEnabled = false; addView(strip) })
-        col.addView(Ios.textButton(this, "Apply to all pages") {
+        col.addView(Kit.textButton(this, "Apply to all pages") {
             session.pages.forEach { it.filter = p.filter }
-            session.save(); adapter.notifyDataSetChanged(); Ios.banner(this, "${p.filter.label} applied to all pages")
+            session.save(); adapter.notifyDataSetChanged(); Kit.banner(this, "${p.filter.label} applied to all pages")
         })
         for (f in Filter.values()) {
             val item = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_HORIZONTAL
-                setPadding(Ios.dpi(ctx, 5), 0, Ios.dpi(ctx, 5), 0)
+                setPadding(Kit.dpi(ctx, 5), 0, Kit.dpi(ctx, 5), 0)
                 isClickable = true; contentDescription = f.label
             }
             val img = ImageView(this).apply {
                 scaleType = ImageView.ScaleType.CENTER_CROP
-                background = Ios.rounded(ctx, Ios.color(ctx, R.color.bg_cell), 8f, if (f == p.filter) Ios.color(ctx, R.color.tint) else Ios.color(ctx, R.color.separator), if (f == p.filter) 2.5f else 0.5f)
+                background = Kit.rounded(ctx, Kit.color(ctx, R.color.bg_cell), 8f, if (f == p.filter) Kit.color(ctx, R.color.tint) else Kit.color(ctx, R.color.separator), if (f == p.filter) 2.5f else 0.5f)
                 clipToOutline = true
-                val pad = Ios.dpi(ctx, 2); setPadding(pad, pad, pad, pad)
+                val pad = Kit.dpi(ctx, 2); setPadding(pad, pad, pad, pad)
             }
-            item.addView(img, LinearLayout.LayoutParams(Ios.dpi(ctx, 68), Ios.dpi(ctx, 88)))
-            item.addView(Ios.text(this, f.label, 11f, if (f == p.filter) 600 else 400, if (f == p.filter) R.color.tint else R.color.label).apply { setPadding(0, Ios.dpi(ctx, 4), 0, 0) })
-            item.setOnClickListener { Ios.tick(it); p.filter = f; changed(p); filters() }
+            item.addView(img, LinearLayout.LayoutParams(Kit.dpi(ctx, 68), Kit.dpi(ctx, 88)))
+            item.addView(Kit.text(this, f.label, 11f, if (f == p.filter) 600 else 400, if (f == p.filter) R.color.tint else R.color.label).apply { setPadding(0, Kit.dpi(ctx, 4), 0, 0) })
+            item.setOnClickListener { Kit.tick(it); p.filter = f; changed(p); filters() }
             strip.addView(item)
             lifecycleScope.launch {
                 val bmp = withContext(Dispatchers.Default) { runCatching { ScanProcessor.preview(session, p, f) }.getOrNull() }
@@ -324,13 +324,13 @@ class ScanReviewActivity : AppCompatActivity() {
 
     private fun slider(label: String, value: Float, min: Float, max: Float, onChange: (Float) -> Unit): View {
         val ctx = this
-        val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(Ios.dpi(ctx, 16), 0, Ios.dpi(ctx, 12), 0) }
-        row.addView(Ios.text(this, label, 15f), LinearLayout.LayoutParams(Ios.dpi(ctx, 92), ViewGroup.LayoutParams.WRAP_CONTENT))
+        val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(Kit.dpi(ctx, 16), 0, Kit.dpi(ctx, 12), 0) }
+        row.addView(Kit.text(this, label, 15f), LinearLayout.LayoutParams(Kit.dpi(ctx, 92), ViewGroup.LayoutParams.WRAP_CONTENT))
         val sb = SeekBar(this).apply {
             this.max = 100
             progress = (((value - min) / (max - min)) * 100).toInt()
             contentDescription = label
-            progressTintList = android.content.res.ColorStateList.valueOf(Ios.color(ctx, R.color.tint))
+            progressTintList = android.content.res.ColorStateList.valueOf(Kit.color(ctx, R.color.tint))
             thumbTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(s: SeekBar, p: Int, fromUser: Boolean) {}
@@ -338,18 +338,18 @@ class ScanReviewActivity : AppCompatActivity() {
                 override fun onStopTrackingTouch(s: SeekBar) = onChange(min + (max - min) * s.progress / 100f)
             })
         }
-        row.addView(sb, LinearLayout.LayoutParams(0, Ios.dpi(ctx, 44), 1f))
+        row.addView(sb, LinearLayout.LayoutParams(0, Kit.dpi(ctx, 44), 1f))
         return row
     }
 
     private fun adjust() {
         val p = page() ?: return
-        val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, Ios.dpi(context, 6), 0, 0) }
+        val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, Kit.dpi(context, 6), 0, 0) }
         col.addView(slider("Brightness", p.brightness, -80f, 80f) { p.brightness = it; changed(p) })
         col.addView(slider("Contrast", p.contrast, 0.5f, 2f) { p.contrast = it; changed(p) })
         val buttons = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
-        buttons.addView(Ios.textButton(this, "Reset") { p.brightness = 0f; p.contrast = 1f; changed(p); adjust() })
-        buttons.addView(Ios.textButton(this, "Apply to all pages") {
+        buttons.addView(Kit.textButton(this, "Reset") { p.brightness = 0f; p.contrast = 1f; changed(p); adjust() })
+        buttons.addView(Kit.textButton(this, "Apply to all pages") {
             session.pages.forEach { it.brightness = p.brightness; it.contrast = p.contrast }
             session.save(); adapter.notifyDataSetChanged()
         })
@@ -366,7 +366,7 @@ class ScanReviewActivity : AppCompatActivity() {
             session.pages.forEach { it.size = keys[i] }
         } else p.size = keys[i]
         session.save()
-        Ios.banner(this@ScanReviewActivity, "Page size: ${labels[i]}")
+        Kit.banner(this@ScanReviewActivity, "Page size: ${labels[i]}")
     }
 
     private fun deletePage() = lifecycleScope.launch {
@@ -390,7 +390,7 @@ class ScanReviewActivity : AppCompatActivity() {
         overlay.removeAllViews()
         val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         col.addView(content, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
-        if (bottom != null) { col.addView(Ios.hairline(this)); col.addView(bottom) }
+        if (bottom != null) { col.addView(Kit.hairline(this)); col.addView(bottom) }
         overlay.addView(col)
         overlay.visibility = View.VISIBLE
         overlayBack = onBack
@@ -405,8 +405,8 @@ class ScanReviewActivity : AppCompatActivity() {
 
     private fun barButtons(vararg items: View) = LinearLayout(this).apply {
         orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
-        setBackgroundColor(Ios.color(context, R.color.bar))
-        setPadding(Ios.dpi(context, 6), Ios.dpi(context, 4), Ios.dpi(context, 6), Ios.dpi(context, 4))
+        setBackgroundColor(Kit.color(context, R.color.bar))
+        setPadding(Kit.dpi(context, 6), Kit.dpi(context, 4), Kit.dpi(context, 6), Kit.dpi(context, 4))
         items.forEach { addView(it, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)) }
     }
 
@@ -421,20 +421,20 @@ class ScanReviewActivity : AppCompatActivity() {
         val straighten = Ui.toolButton(this@ScanReviewActivity, "Straighten", R.drawable.ic_book) { b -> cv.curved = !cv.curved; Ui.markSelected(b, cv.curved) }
         Ui.markSelected(straighten, cv.curved)
         val bottom = barButtons(
-            Ios.textButton(this@ScanReviewActivity, "Cancel") { closeOverlay() },
+            Kit.textButton(this@ScanReviewActivity, "Cancel") { closeOverlay() },
             Ui.toolButton(this@ScanReviewActivity, "Auto-detect", R.drawable.ic_scan) {
                 lifecycleScope.launch {
                     val q = withContext(Dispatchers.Default) {
                         val full = ScanProcessor.photo(session, part, ScanProcessor.PHOTO_MAX)
                         ScanProcessor.findOutline(full, p.kind)?.scaled(part.w.toFloat() / full.width)
                     }
-                    if (q == null) Ios.banner(this@ScanReviewActivity, "No document outline found. Drag the corners.") else { cv.set(q); cv.curved = q.bulge.any { it != 0f } }
+                    if (q == null) Kit.banner(this@ScanReviewActivity, "No document outline found. Drag the corners.") else { cv.set(q); cv.curved = q.bulge.any { it != 0f } }
                 }
             },
             Ui.toolButton(this@ScanReviewActivity, "No crop", R.drawable.ic_resize) { cv.set(null) },
             straighten,
-            Ios.textButton(this@ScanReviewActivity, "Done", bold = true) {
-                if (!cv.valid()) { Ios.banner(this@ScanReviewActivity, "The outline is too small or crossed. Adjust the corners."); return@textButton }
+            Kit.textButton(this@ScanReviewActivity, "Done", bold = true) {
+                if (!cv.valid()) { Kit.banner(this@ScanReviewActivity, "The outline is too small or crossed. Adjust the corners."); return@textButton }
                 val full = npdf.scan.Quad.full(part.w, part.h)
                 part.quad = if (cv.quad.maxCornerDistance(full) < 1f && cv.quad.bulge.all { it == 0f }) null else cv.quad
                 changed(p)
@@ -447,60 +447,60 @@ class ScanReviewActivity : AppCompatActivity() {
     private fun paint(cleanup: Boolean) = lifecycleScope.launch {
         val p = page() ?: return@launch
         val bmp = withContext(Dispatchers.Default) { ScanProcessor.display(session, p) }
-        val pv = PaintView(this@ScanReviewActivity, bmp).apply { setBackgroundColor(Ios.color(context, R.color.viewer_bg)) }
+        val pv = PaintView(this@ScanReviewActivity, bmp).apply { setBackgroundColor(Kit.color(context, R.color.viewer_bg)) }
         val ctx = this@ScanReviewActivity
-        val controls = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(Ios.color(ctx, R.color.bar)) }
+        val controls = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(Kit.color(ctx, R.color.bar)) }
         if (cleanup) {
             pv.tool = PaintView.Tool.ERASE
-            val swatch = View(ctx).apply { background = Ios.rounded(ctx, Color.WHITE, 12f, Ios.color(ctx, R.color.separator), 1f); contentDescription = "Eraser colour" }
-            val mode = Ios.segmented(ctx, listOf("Surroundings", "Colour"), 0)
+            val swatch = View(ctx).apply { background = Kit.rounded(ctx, Color.WHITE, 12f, Kit.color(ctx, R.color.separator), 1f); contentDescription = "Eraser colour" }
+            val mode = Kit.segmented(ctx, listOf("Surroundings", "Colour"), 0)
             mode.setOnCheckedChangeListener { g, _ ->
                 pv.eraseColor = if (g.selectedIndex() == 1) (pv.eraseColor ?: Color.WHITE) else null
                 swatch.visibility = if (g.selectedIndex() == 1) View.VISIBLE else View.GONE
             }
             swatch.visibility = View.GONE
-            pv.onPicked = { c -> pv.eraseColor = c; swatch.background = Ios.rounded(ctx, c, 12f, Ios.color(ctx, R.color.separator), 1f); pv.tool = PaintView.Tool.ERASE; Ios.banner(ctx, "Colour picked") }
-            val top = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(Ios.dpi(ctx, 16), Ios.dpi(ctx, 8), Ios.dpi(ctx, 16), 0) }
+            pv.onPicked = { c -> pv.eraseColor = c; swatch.background = Kit.rounded(ctx, c, 12f, Kit.color(ctx, R.color.separator), 1f); pv.tool = PaintView.Tool.ERASE; Kit.banner(ctx, "Colour picked") }
+            val top = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(Kit.dpi(ctx, 16), Kit.dpi(ctx, 8), Kit.dpi(ctx, 16), 0) }
             top.addView(mode, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-            top.addView(swatch, LinearLayout.LayoutParams(Ios.dpi(ctx, 24), Ios.dpi(ctx, 24)).apply { marginStart = Ios.dpi(ctx, 10) })
-            top.addView(Ui.toolButton(this@ScanReviewActivity, "Pick", R.drawable.ic_eyedropper) { pv.tool = PaintView.Tool.PICK; Ios.banner(ctx, "Tap the colour to use") })
+            top.addView(swatch, LinearLayout.LayoutParams(Kit.dpi(ctx, 24), Kit.dpi(ctx, 24)).apply { marginStart = Kit.dpi(ctx, 10) })
+            top.addView(Ui.toolButton(this@ScanReviewActivity, "Pick", R.drawable.ic_eyedropper) { pv.tool = PaintView.Tool.PICK; Kit.banner(ctx, "Tap the colour to use") })
             controls.addView(top)
             controls.addView(slider("Brush", 0.5f, 0f, 1f) { pv.size = 0.006f + it * 0.05f })
             pv.size = 0.006f + 0.5f * 0.05f
         } else {
             pv.tool = PaintView.Tool.INK
-            val tools = Ios.segmented(ctx, listOf("Pen", "Box", "Oval", "Line", "Arrow"), 0)
+            val tools = Kit.segmented(ctx, listOf("Pen", "Box", "Oval", "Line", "Arrow"), 0)
             tools.setOnCheckedChangeListener { g, _ -> pv.tool = listOf(PaintView.Tool.INK, PaintView.Tool.RECT, PaintView.Tool.ELLIPSE, PaintView.Tool.LINE, PaintView.Tool.ARROW)[g.selectedIndex().coerceAtLeast(0)] }
-            controls.addView(FrameLayout(ctx).apply { setPadding(Ios.dpi(ctx, 16), Ios.dpi(ctx, 8), Ios.dpi(ctx, 16), 0); addView(tools) })
-            val colours = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER; setPadding(0, Ios.dpi(ctx, 8), 0, 0) }
+            controls.addView(FrameLayout(ctx).apply { setPadding(Kit.dpi(ctx, 16), Kit.dpi(ctx, 8), Kit.dpi(ctx, 16), 0); addView(tools) })
+            val colours = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER; setPadding(0, Kit.dpi(ctx, 8), 0, 0) }
             val choices = listOf(Color.BLACK, 0xFFE53935.toInt(), 0xFF1E88E5.toInt(), 0xFF43A047.toInt(), 0xFFFDD835.toInt())
             pv.color = choices[1]
             for (c in choices) colours.addView(View(ctx).apply {
-                background = Ios.rounded(ctx, c, 14f, Ios.color(ctx, R.color.separator), 1f)
+                background = Kit.rounded(ctx, c, 14f, Kit.color(ctx, R.color.separator), 1f)
                 contentDescription = "Colour"
-                setOnClickListener { Ios.tick(it); pv.color = c }
-            }, LinearLayout.LayoutParams(Ios.dpi(ctx, 28), Ios.dpi(ctx, 28)).apply { marginStart = Ios.dpi(ctx, 8); marginEnd = Ios.dpi(ctx, 8) })
+                setOnClickListener { Kit.tick(it); pv.color = c }
+            }, LinearLayout.LayoutParams(Kit.dpi(ctx, 28), Kit.dpi(ctx, 28)).apply { marginStart = Kit.dpi(ctx, 8); marginEnd = Kit.dpi(ctx, 8) })
             controls.addView(colours)
             controls.addView(slider("Width", 0.3f, 0f, 1f) { pv.size = 0.004f + it * 0.04f })
             pv.size = 0.004f + 0.3f * 0.04f
         }
         val bottom = barButtons(
-            Ios.textButton(ctx, "Cancel") { closeOverlay() },
+            Kit.textButton(ctx, "Cancel") { closeOverlay() },
             Ui.toolButton(this@ScanReviewActivity, "Undo", R.drawable.ic_undo) { pv.undo() },
             Ui.toolButton(this@ScanReviewActivity, "Redo", R.drawable.ic_redo) { pv.redo() },
             if (cleanup) Ui.toolButton(this@ScanReviewActivity, "Fingers", R.drawable.ic_wand) {
                 lifecycleScope.launch {
                     val found = withContext(Dispatchers.Default) { Cleanup.fingerMask(ScanProcessor.toRaster(bmp)) != null }
-                    if (found) { p.edits.add(Edit.Fingers); changed(p); Ios.banner(ctx, "Fingers removed"); closeOverlay() }
-                    else Ios.banner(ctx, "No fingers found at the edges of this page.")
+                    if (found) { p.edits.add(Edit.Fingers); changed(p); Kit.banner(ctx, "Fingers removed"); closeOverlay() }
+                    else Kit.banner(ctx, "No fingers found at the edges of this page.")
                 }
             } else View(ctx),
-            Ios.textButton(ctx, "Done", bold = true) {
+            Kit.textButton(ctx, "Done", bold = true) {
                 if (pv.edits.isNotEmpty()) { p.edits.addAll(pv.edits); changed(p) }
                 closeOverlay()
             },
         )
-        controls.addView(Ios.hairline(ctx))
+        controls.addView(Kit.hairline(ctx))
         controls.addView(bottom)
         openOverlay(pv, controls) { closeOverlay() }
     }
@@ -508,17 +508,17 @@ class ScanReviewActivity : AppCompatActivity() {
     private fun reorder() {
         val ctx = this
         val selected = HashSet<String>()
-        val grid = RecyclerView(this).apply { layoutManager = GridLayoutManager(ctx, 3); setPadding(Ios.dpi(ctx, 8), Ios.dpi(ctx, 8), Ios.dpi(ctx, 8), Ios.dpi(ctx, 8)); clipToPadding = false }
+        val grid = RecyclerView(this).apply { layoutManager = GridLayoutManager(ctx, 3); setPadding(Kit.dpi(ctx, 8), Kit.dpi(ctx, 8), Kit.dpi(ctx, 8), Kit.dpi(ctx, 8)); clipToPadding = false }
         val adapter = object : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
             override fun getItemCount() = session.pages.size
             override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
-                val box = FrameLayout(ctx).apply { setPadding(Ios.dpi(ctx, 6), Ios.dpi(ctx, 6), Ios.dpi(ctx, 6), Ios.dpi(ctx, 6)) }
+                val box = FrameLayout(ctx).apply { setPadding(Kit.dpi(ctx, 6), Kit.dpi(ctx, 6), Kit.dpi(ctx, 6), Kit.dpi(ctx, 6)) }
                 val img = ImageView(ctx).apply { scaleType = ImageView.ScaleType.FIT_CENTER; id = View.generateViewId(); tag = "img" }
-                box.addView(img, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ios.dpi(ctx, 150)))
-                box.addView(Ios.text(ctx, "", 13f, 600).apply { tag = "num"; gravity = Gravity.CENTER; setTextColor(Color.WHITE); background = Ios.rounded(ctx, 0x99000000.toInt(), 10f); setPadding(Ios.dpi(ctx, 8), Ios.dpi(ctx, 2), Ios.dpi(ctx, 8), Ios.dpi(ctx, 2)) },
-                    FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = Ios.dpi(ctx, 6) })
-                box.addView(ImageView(ctx).apply { tag = "check"; setImageResource(R.drawable.ic_select); imageTintList = android.content.res.ColorStateList.valueOf(Ios.color(ctx, R.color.tint)); background = Ios.rounded(ctx, Color.WHITE, 12f) },
-                    FrameLayout.LayoutParams(Ios.dpi(ctx, 24), Ios.dpi(ctx, 24), Gravity.TOP or Gravity.END).apply { setMargins(0, Ios.dpi(ctx, 4), Ios.dpi(ctx, 4), 0) })
+                box.addView(img, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Kit.dpi(ctx, 150)))
+                box.addView(Kit.text(ctx, "", 13f, 600).apply { tag = "num"; gravity = Gravity.CENTER; setTextColor(Color.WHITE); background = Kit.rounded(ctx, 0x99000000.toInt(), 10f); setPadding(Kit.dpi(ctx, 8), Kit.dpi(ctx, 2), Kit.dpi(ctx, 8), Kit.dpi(ctx, 2)) },
+                    FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = Kit.dpi(ctx, 6) })
+                box.addView(ImageView(ctx).apply { tag = "check"; setImageResource(R.drawable.ic_select); imageTintList = android.content.res.ColorStateList.valueOf(Kit.color(ctx, R.color.tint)); background = Kit.rounded(ctx, Color.WHITE, 12f) },
+                    FrameLayout.LayoutParams(Kit.dpi(ctx, 24), Kit.dpi(ctx, 24), Gravity.TOP or Gravity.END).apply { setMargins(0, Kit.dpi(ctx, 4), Kit.dpi(ctx, 4), 0) })
                 return object : RecyclerView.ViewHolder(box) {}
             }
             override fun onBindViewHolder(h: RecyclerView.ViewHolder, position: Int) {
@@ -526,7 +526,7 @@ class ScanReviewActivity : AppCompatActivity() {
                 val img = h.itemView.findViewWithTag<ImageView>("img")
                 h.itemView.findViewWithTag<TextView>("num").text = (position + 1).toString()
                 h.itemView.findViewWithTag<View>("check").visibility = if (p.id in selected) View.VISIBLE else View.GONE
-                img.background = if (p.id in selected) Ios.rounded(ctx, Ios.color(ctx, R.color.tint_soft), 8f, Ios.color(ctx, R.color.tint), 2.5f) else null
+                img.background = if (p.id in selected) Kit.rounded(ctx, Kit.color(ctx, R.color.tint_soft), 8f, Kit.color(ctx, R.color.tint), 2.5f) else null
                 h.itemView.contentDescription = "Page ${position + 1}"
                 h.itemView.setOnClickListener { if (!selected.remove(p.id)) selected.add(p.id); notifyItemChanged(h.bindingAdapterPosition) }
                 lifecycleScope.launch {
@@ -547,18 +547,18 @@ class ScanReviewActivity : AppCompatActivity() {
             override fun clearView(rv: RecyclerView, vh: RecyclerView.ViewHolder) { super.clearView(rv, vh); adapter.notifyDataSetChanged() }
         }).attachToRecyclerView(grid)
         val content = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        val head = FrameLayout(this).apply { setBackgroundColor(Ios.color(ctx, R.color.bar)); minimumHeight = Ios.dpi(ctx, 52) }
-        head.addView(Ios.text(this, "Reorder pages", 17f, 600).apply { gravity = Gravity.CENTER }, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ios.dpi(ctx, 52)))
-        head.addView(Ios.textButton(this, "Done", bold = true) { session.save(); closeOverlay(); refresh() }, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, Ios.dpi(ctx, 52), Gravity.END).apply { marginEnd = Ios.dpi(ctx, 6) })
+        val head = FrameLayout(this).apply { setBackgroundColor(Kit.color(ctx, R.color.bar)); minimumHeight = Kit.dpi(ctx, 52) }
+        head.addView(Kit.text(this, "Reorder pages", 17f, 600).apply { gravity = Gravity.CENTER }, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Kit.dpi(ctx, 52)))
+        head.addView(Kit.textButton(this, "Done", bold = true) { session.save(); closeOverlay(); refresh() }, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, Kit.dpi(ctx, 52), Gravity.END).apply { marginEnd = Kit.dpi(ctx, 6) })
         content.addView(head)
-        content.addView(Ios.text(this, "Drag a page to move it. Tap pages to select them, then rotate, filter or delete them together.", 13f, 400, R.color.label2).apply { setPadding(Ios.dpi(ctx, 16), Ios.dpi(ctx, 8), Ios.dpi(ctx, 16), 0) })
+        content.addView(Kit.text(this, "Drag a page to move it. Tap pages to select them, then rotate, filter or delete them together.", 13f, 400, R.color.label2).apply { setPadding(Kit.dpi(ctx, 16), Kit.dpi(ctx, 8), Kit.dpi(ctx, 16), 0) })
         content.addView(grid, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
         fun sel() = session.pages.filter { it.id in selected }
         val bottom = barButtons(
             Ui.toolButton(this, "Rotate", R.drawable.ic_rotate) { sel().forEach { it.rot = (it.rot + 1) % 4 }; session.save(); adapter.notifyDataSetChanged() },
             Ui.toolButton(this, "Filter", R.drawable.ic_filter) {
                 lifecycleScope.launch {
-                    if (sel().isEmpty()) { Ios.banner(ctx, "Select pages first."); return@launch }
+                    if (sel().isEmpty()) { Kit.banner(ctx, "Select pages first."); return@launch }
                     val f = Dialogs.choose(ctx, "Filter for ${sel().size} page(s)", Filter.values().map { it.label }) ?: return@launch
                     sel().forEach { it.filter = Filter.values()[f] }; session.save(); adapter.notifyDataSetChanged()
                 }
@@ -566,8 +566,8 @@ class ScanReviewActivity : AppCompatActivity() {
             Ui.toolButton(this, "Delete", R.drawable.ic_delete) {
                 lifecycleScope.launch {
                     val s = sel()
-                    if (s.isEmpty()) { Ios.banner(ctx, "Select pages first."); return@launch }
-                    if (s.size == session.pages.size) { Ios.banner(ctx, "A scan needs at least one page."); return@launch }
+                    if (s.isEmpty()) { Kit.banner(ctx, "Select pages first."); return@launch }
+                    if (s.size == session.pages.size) { Kit.banner(ctx, "A scan needs at least one page."); return@launch }
                     if (!Dialogs.confirm(ctx, "Delete ${s.size} page(s)?", "They are removed from the scan.", "Delete")) return@launch
                     session.pages.removeAll(s); selected.clear(); session.save(); adapter.notifyDataSetChanged()
                 }
@@ -600,20 +600,17 @@ class ScanReviewActivity : AppCompatActivity() {
         }
     }
 
-    /** A small progress card that blocks the screen while work runs. */
+    /** A Material progress dialog (circular indicator and a status line) that blocks the screen while work runs. */
     private fun progress(text: String): Pair<Dialog, TextView> {
         val ctx = this
-        val label = Ios.text(this, text, 15f, 500).apply { gravity = Gravity.CENTER; setPadding(0, Ios.dpi(ctx, 12), 0, 0) }
-        val card = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER
-            background = Ios.rounded(ctx, Ios.color(ctx, R.color.bg_alert), 16f)
-            setPadding(Ios.dpi(ctx, 24), Ios.dpi(ctx, 24), Ios.dpi(ctx, 24), Ios.dpi(ctx, 20))
-            addView(ProgressBar(ctx), LinearLayout.LayoutParams(Ios.dpi(ctx, 40), Ios.dpi(ctx, 40)))
-            addView(label)
+        val label = Kit.text(this, text, 16f, 400).apply { setPadding(Kit.dpi(ctx, 16), 0, 0, 0) }
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
+            setPadding(Kit.dpi(ctx, 24), Kit.dpi(ctx, 24), Kit.dpi(ctx, 24), Kit.dpi(ctx, 24))
+            addView(com.google.android.material.progressindicator.CircularProgressIndicator(ctx).apply { isIndeterminate = true })
+            addView(label, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         }
-        val d = Dialog(this, R.style.Npdf_Dialog)
-        d.setContentView(card, ViewGroup.LayoutParams(Ios.dpi(ctx, 240), ViewGroup.LayoutParams.WRAP_CONTENT))
-        d.setCancelable(false)
+        val d = com.google.android.material.dialog.MaterialAlertDialogBuilder(this).setView(row).setCancelable(false).create()
         d.show()
         return d to label
     }
@@ -623,14 +620,14 @@ class ScanReviewActivity : AppCompatActivity() {
         val (nameBox, nameEt) = Dialogs.field(ctx, "File name", session.name ?: defaultName())
         val chips = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
         val chipScroll = HorizontalScrollView(ctx).apply { isHorizontalScrollBarEnabled = false; addView(chips) }
-        val format = Ios.segmented(ctx, listOf("PDF", "JPEG"), 0)
+        val format = Kit.segmented(ctx, listOf("PDF", "JPEG"), 0)
         val ocr = Dialogs.check(ctx, "Recognise text (searchable PDF)", prefs.ocrOnSave)
         val protect = Dialogs.check(ctx, "Protect with a password", false)
         val (pw1Box, pw1) = Dialogs.field(ctx, "Password", "", InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD)
         val (pw2Box, pw2) = Dialogs.field(ctx, "Repeat password", "", InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD)
         pw1Box.visibility = View.GONE; pw2Box.visibility = View.GONE
-        protect.setOnCheckedChangeListener { b, on -> Ios.tick(b); pw1Box.visibility = if (on) View.VISIBLE else View.GONE; pw2Box.visibility = pw1Box.visibility }
-        val quality = Ios.segmented(ctx, listOf("Best", "Balanced", "Small"), 0)
+        protect.setOnCheckedChangeListener { b, on -> Kit.tick(b); pw1Box.visibility = if (on) View.VISIBLE else View.GONE; pw2Box.visibility = pw1Box.visibility }
+        val quality = Kit.segmented(ctx, listOf("Best", "Balanced", "Small"), 0)
         val pdfOnly = listOf<View>(ocr, protect, quality)
         format.setOnCheckedChangeListener { g, _ -> val pdf = g.selectedIndex() == 0; pdfOnly.forEach { it.isEnabled = pdf; it.alpha = if (pdf) 1f else 0.4f } }
         val where = Dialogs.label(ctx, "${session.pages.size} page(s), saved on this phone in ${ScanStore.folderLabel(ctx)}.")
@@ -639,12 +636,12 @@ class ScanReviewActivity : AppCompatActivity() {
         val suggest = lifecycleScope.launch {
             val ls = lines ?: withContext(Dispatchers.Default) { runCatching { ScanStore.firstPageLines(ctx, session, prefs.ocrLanguages) }.getOrNull() }.also { lines = it }
             val names = TextInfo.nameSuggestions(ls ?: emptyList(), defaultName()).filter { it != nameEt.text.toString() }
-            for (n in names.take(3)) chips.addView(Ios.text(ctx, n, 13f, 500, R.color.tint).apply {
-                background = Ios.rounded(ctx, Ios.color(ctx, R.color.tint_soft), 14f)
-                setPadding(Ios.dpi(ctx, 12), Ios.dpi(ctx, 6), Ios.dpi(ctx, 12), Ios.dpi(ctx, 6))
+            for (n in names.take(3)) chips.addView(Kit.text(ctx, n, 13f, 500, R.color.tint).apply {
+                background = Kit.rounded(ctx, Kit.color(ctx, R.color.tint_soft), 14f)
+                setPadding(Kit.dpi(ctx, 12), Kit.dpi(ctx, 6), Kit.dpi(ctx, 12), Kit.dpi(ctx, 6))
                 isClickable = true; contentDescription = "Use the name $n"
                 setOnClickListener { nameEt.setText(n); nameEt.setSelection(n.length) }
-            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginEnd = Ios.dpi(ctx, 8) })
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginEnd = Kit.dpi(ctx, 8) })
         }
         if (!Dialogs.custom(ctx, "Save scan", view, "Save")) { suggest.cancel(); return@launch }
         suggest.cancel()
@@ -682,7 +679,7 @@ class ScanReviewActivity : AppCompatActivity() {
             }
             val contact = if (card) withContext(Dispatchers.Default) { runCatching { TextInfo.parseCard(lines ?: ScanStore.firstPageLines(ctx, session, prefs.ocrLanguages)) }.getOrNull() } else null
             session.discard()
-            Ios.banner(ctx, if (asPdf) "Saved $name.pdf" else "Saved ${uris.size} picture(s)", R.drawable.ic_check)
+            Kit.banner(ctx, if (asPdf) "Saved $name.pdf" else "Saved ${uris.size} picture(s)", R.drawable.ic_check)
             afterSave(uris, asPdf, name, contact)
         } catch (e: Throwable) {
             hud.first.dismiss()
@@ -706,7 +703,7 @@ class ScanReviewActivity : AppCompatActivity() {
                     startActivity(Intent.createChooser(i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), "Share $name"))
                     finish(); return
                 }
-                "Save contact" -> runCatching { startActivity(ScanStore.contactIntent(contact!!)) }.onFailure { Ios.banner(this, "No contacts app is available.") }
+                "Save contact" -> runCatching { startActivity(ScanStore.contactIntent(contact!!)) }.onFailure { Kit.banner(this, "No contacts app is available.") }
                 else -> { finish(); return }
             }
         }

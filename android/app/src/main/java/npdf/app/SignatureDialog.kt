@@ -23,23 +23,23 @@ object SignatureDialog {
         val store = SignatureStore(a)
         val saved = store.list()
         val root = LinearLayout(a).apply { orientation = LinearLayout.VERTICAL }
-        val tabs = Ios.segmented(a, if (saved.isNotEmpty()) listOf("Draw", "Type", "Saved") else listOf("Draw", "Type"), 0)
+        val tabs = Kit.segmented(a, if (saved.isNotEmpty()) listOf("Draw", "Type", "Saved") else listOf("Draw", "Type"), 0)
         root.addView(tabs)
 
         // Drawing area: white card with a signing line, like paper.
         val pad = SignaturePad(a)
         val padBox = FrameLayout(a).apply {
-            background = Ios.rounded(a, 0xFFFFFFFF.toInt(), 12f, Ios.color(a, R.color.separator), 1f)
+            background = Kit.rounded(a, 0xFFFFFFFF.toInt(), 12f, Kit.color(a, R.color.separator), 1f)
             addView(View(a).apply { setBackgroundColor(0x33000000) }, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Dialogs.dp(a, 1), Gravity.BOTTOM).apply {
                 setMargins(Dialogs.dp(a, 20), 0, Dialogs.dp(a, 20), Dialogs.dp(a, 44))
             })
-            addView(Ios.text(a, "Sign above the line", 12f, 400, R.color.label3).apply { setTextColor(0x66000000) },
+            addView(Kit.text(a, "Sign above the line", 12f, 400, R.color.label3).apply { setTextColor(0x66000000) },
                 FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = Dialogs.dp(a, 22) })
             addView(pad, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Dialogs.dp(a, 190)))
-            addView(Ios.textButton(a, "Clear") { pad.clear() }, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, Dialogs.dp(a, 40), Gravity.TOP or Gravity.END))
+            addView(Kit.textButton(a, "Clear") { pad.clear() }, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, Dialogs.dp(a, 40), Gravity.TOP or Gravity.END))
         }
         val (typeTil, typeEt) = Dialogs.field(a, "Your name", Prefs(a).author)
-        val typePreview = ImageView(a).apply { minimumHeight = Dialogs.dp(a, 80); background = Ios.rounded(a, 0xFFFFFFFF.toInt(), 12f, Ios.color(a, R.color.separator), 1f) }
+        val typePreview = ImageView(a).apply { minimumHeight = Dialogs.dp(a, 80); background = Kit.rounded(a, 0xFFFFFFFF.toInt(), 12f, Kit.color(a, R.color.separator), 1f) }
         val typeBox = Dialogs.column(a, typeTil, typePreview).apply { visibility = View.GONE }
         fun preview() {
             val t = typeEt.text?.toString().orEmpty().trim()
@@ -64,14 +64,14 @@ object SignatureDialog {
                 adjustViewBounds = true
                 maxHeight = Dialogs.dp(a, 76)
                 setPadding(Dialogs.dp(a, 10), Dialogs.dp(a, 8), Dialogs.dp(a, 10), Dialogs.dp(a, 8))
-                background = Ios.rounded(a, 0xFFFFFFFF.toInt(), 10f, Ios.color(a, R.color.separator), 1f)
+                background = Kit.rounded(a, 0xFFFFFFFF.toInt(), 10f, Kit.color(a, R.color.separator), 1f)
                 contentDescription = "Saved signature (long-press to delete)"
                 setOnClickListener {
                     chosen = f
-                    views.forEach { v -> v.background = Ios.rounded(a, 0xFFFFFFFF.toInt(), 10f, Ios.color(a, R.color.separator), 1f) }
-                    background = Ios.rounded(a, 0xFFFFFFFF.toInt(), 10f, Ios.color(a, R.color.tint), 2.5f)
+                    views.forEach { v -> v.background = Kit.rounded(a, 0xFFFFFFFF.toInt(), 10f, Kit.color(a, R.color.separator), 1f) }
+                    background = Kit.rounded(a, 0xFFFFFFFF.toInt(), 10f, Kit.color(a, R.color.tint), 2.5f)
                 }
-                setOnLongClickListener { store.delete(f); visibility = View.GONE; Ios.banner(a, "Signature deleted from this phone"); true }
+                setOnLongClickListener { store.delete(f); visibility = View.GONE; Kit.banner(a, "Signature deleted from this phone"); true }
             }
             views.add(iv)
             savedBox.addView(iv, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = Dialogs.dp(a, 8) })
@@ -82,7 +82,7 @@ object SignatureDialog {
         root.addView(remember, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = Dialogs.dp(a, 8) })
         root.addView(Dialogs.label(a, "A signature placed this way is a picture of your signature, not a certificate-based digital signature."))
         tabs.setOnCheckedChangeListener { g, _ ->
-            Ios.tick(g)
+            Kit.tick(g)
             val t = g.selectedIndex()
             padBox.visibility = if (t == 0) View.VISIBLE else View.GONE
             typeBox.visibility = if (t == 1) View.VISIBLE else View.GONE

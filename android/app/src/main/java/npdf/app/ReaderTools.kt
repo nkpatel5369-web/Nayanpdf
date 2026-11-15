@@ -122,7 +122,7 @@ class ReaderTools(private val a: ReaderActivity) {
             "Date" -> "Tap where the date goes."
             else -> return
         }
-        Ios.banner(a, msg)
+        Kit.banner(a, msg)
     }
 
     // ------------------------------------------------------------ edit helper
@@ -196,7 +196,7 @@ class ReaderTools(private val a: ReaderActivity) {
         items.add(if (resizable) "Move or resize" else "Move"); acts.add { b.pdf.tool = AdjustTool(page, info.rect, resizable) { r ->
             if (resizable) edit("Move", setOf(page)) { Annotations.setRect(it, page + 1, info.id, r) }
             else edit("Move", setOf(page)) { Annotations.move(it, page + 1, info.id, r.x0 - info.rect.x0, r.y0 - info.rect.y0) }
-        }; Ios.banner(a, "Drag to move; drag the corner dot to resize.") }
+        }; Kit.banner(a, "Drag to move; drag the corner dot to resize.") }
         items.add("Delete"); acts.add { edit("Delete comment", setOf(page)) { Annotations.delete(it, page + 1, info.id) } }
         if (info.contents.isNotBlank() && !canText) { items.add(0, "Show text"); acts.add(0) { Dialogs.message(a, info.typeName, info.contents) } }
         val i = Dialogs.choose(a, title + if (info.contents.isNotBlank()) ": " + info.contents.take(60) else "", items) ?: return@launch
@@ -238,7 +238,7 @@ class ReaderTools(private val a: ReaderActivity) {
             else TextEdit.editText(d, page + 1, line.bbox, text, fontSize = fs, fit = fitMode)
         } ?: return@launch
         val msg = (listOf("Edited in ${res.font}" + if (res.fontKind == "original") " (the original font)." else ".") + res.warnings).joinToString("\n")
-        if (res.warnings.isEmpty()) Ios.banner(a, msg) else Dialogs.message(a, "Text edited", msg)
+        if (res.warnings.isEmpty()) Kit.banner(a, msg) else Dialogs.message(a, "Text edited", msg)
     }
 
     /** Scanned text (recognised by OCR): edit the words under the finger; size and colour follow the scan. */
@@ -249,7 +249,7 @@ class ReaderTools(private val a: ReaderActivity) {
         if (!Dialogs.custom(a, "Edit scanned text", Dialogs.column(a, til, note), "Apply")) return
         val text = et.text?.toString() ?: ""
         val res = edit("Edit scanned text", setOf(page)) { d -> TextEdit.editText(d, page + 1, rect, text) } ?: return
-        Ios.banner(a, "Edited in ${res.font}", R.drawable.ic_check)
+        Kit.banner(a, "Edited in ${res.font}", R.drawable.ic_check)
     }
 
     private fun addTextAt(page: Int, r: Rect) = a.lifecycleScope.launch {
@@ -264,7 +264,7 @@ class ReaderTools(private val a: ReaderActivity) {
         val family = listOf("helvetica", "times", "courier")[font.selectedIndex().coerceAtLeast(0)]
         val box = Rect(r.x0, r.y0, max(r.x1, r.x0 + 40f), r.y1)
         val label = edit("Add text", setOf(page)) { TextEdit.insertText(it, page + 1, box, text, size, 0xFF000000.toInt(), family) }
-        if (label != null) Ios.banner(a, "Text added ($label).")
+        if (label != null) Kit.banner(a, "Text added ($label).")
     }
 
     private fun pickImageThenPlace() {
@@ -276,7 +276,7 @@ class ReaderTools(private val a: ReaderActivity) {
                     b.pdf.tool = null
                 }
             }
-            Ios.banner(a, "Drag where the picture goes, or tap.")
+            Kit.banner(a, "Drag where the picture goes, or tap.")
         }
         a.imageLauncher.launch("image/*")
     }
@@ -289,7 +289,7 @@ class ReaderTools(private val a: ReaderActivity) {
         when (i) {
             0 -> {
                 b.pdf.tool = AdjustTool(page, pl.rect, true) { r -> edit("Move picture", setOf(page)) { ImageEdit.edit(it, page + 1, pl.rect, "transform", newRect = r) } }
-                Ios.banner(a, "Drag to move; drag the corner dot to resize.")
+                Kit.banner(a, "Drag to move; drag the corner dot to resize.")
             }
             1 -> {
                 a.pendingImageAction = { bytes -> a.lifecycleScope.launch { edit("Replace picture", setOf(page)) { ImageEdit.edit(it, page + 1, pl.rect, "replace", replacement = bytes) } } }
@@ -365,10 +365,10 @@ class ReaderTools(private val a: ReaderActivity) {
             a.lifecycleScope.launch {
                 edit("Signature", setOf(p)) { Annotations.addSignatureImage(it, p + 1, r, png, author) }
                 b.pdf.tool = null
-                Ios.banner(a, "Signature placed. Tap it to move or resize.")
+                Kit.banner(a, "Signature placed. Tap it to move or resize.")
             }
         }
-        Ios.banner(a, "Tap where the signature goes, or drag its box.")
+        Kit.banner(a, "Tap where the signature goes, or drag its box.")
     }
 
     // --------------------------------------------------------------- redact

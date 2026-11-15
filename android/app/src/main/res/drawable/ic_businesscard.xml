@@ -1,32 +1,11 @@
-<?xml version="1.0" encoding="utf-8"?>
+<!-- Material Symbols "contact_page" (Outlined, 400, 24 px), Apache License 2.0, Google. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:tint="?attr/colorControlNormal"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
-    <path
-        android:pathData="M4.5,6 L19.5,6 A2,2 0 0 1 21.5,8 L21.5,16 A2,2 0 0 1 19.5,18 L4.5,18 A2,2 0 0 1 2.5,16 L2.5,8 A2,2 0 0 1 4.5,6 Z"
-        android:strokeColor="@android:color/white"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:strokeWidth="1.6" />
-    <path
-        android:pathData="M6,10.5 L13,10.5"
-        android:strokeColor="@android:color/white"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:strokeWidth="1.6" />
-    <path
-        android:pathData="M6,13.5 L11,13.5"
-        android:strokeColor="@android:color/white"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:strokeWidth="1.6" />
-    <path
-        android:pathData="M16.3,9.5 L17.7,9.5 A0.8,0.8 0 0 1 18.5,10.3 L18.5,11.7 A0.8,0.8 0 0 1 17.7,12.5 L16.3,12.5 A0.8,0.8 0 0 1 15.5,11.7 L15.5,10.3 A0.8,0.8 0 0 1 16.3,9.5 Z"
-        android:strokeColor="@android:color/white"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:strokeWidth="1.6" />
+    android:viewportWidth="960"
+    android:viewportHeight="960"
+    android:tint="?attr/colorControlNormal">
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M480,560Q513,560 536.5,536.5Q560,513 560,480Q560,447 536.5,423.5Q513,400 480,400Q447,400 423.5,423.5Q400,447 400,480Q400,513 423.5,536.5Q447,560 480,560ZM320,720L640,720L640,697Q640,673 627,653Q614,633 591,623Q565,612 537.5,606Q510,600 480,600Q450,600 422.5,606Q395,612 369,623Q346,633 333,653Q320,673 320,697L320,720ZM720,880L240,880Q207,880 183.5,856.5Q160,833 160,800L160,160Q160,127 183.5,103.5Q207,80 240,80L560,80L800,320L800,800Q800,833 776.5,856.5Q753,880 720,880ZM720,800Q720,800 720,800Q720,800 720,800L720,354L526,160L240,160Q240,160 240,160Q240,160 240,160L240,800Q240,800 240,800Q240,800 240,800L720,800ZM240,800L240,800Q240,800 240,800Q240,800 240,800L240,160Q240,160 240,160Q240,160 240,160L240,160L240,354L240,800Q240,800 240,800Q240,800 240,800Z"/>
 </vector>

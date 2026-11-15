@@ -1,185 +1,40 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Type scale (sp): 34 / 28 / 22 / 20 / 17 / 16 / 15 / 13 / 12 / 11. -->
-    <style name="Npdf.Text" parent="TextAppearance.Material3.BodyLarge">
-        <item name="android:fontFamily">@font/inter</item>
-        <item name="fontFamily">@font/inter</item>
-        <item name="android:textColor">@color/label</item>
-        <item name="android:letterSpacing">-0.005</item>
-    </style>
-    <style name="Npdf.Text.LargeTitle">
-        <item name="android:textSize">32sp</item>
-        <item name="android:fontFamily">@font/inter_bold</item>
-        <item name="fontFamily">@font/inter_bold</item>
-        <item name="android:letterSpacing">-0.02</item>
-        <item name="lineHeight">40sp</item>
-    </style>
-    <style name="Npdf.Text.Title1">
-        <item name="android:textSize">28sp</item>
-        <item name="android:fontFamily">@font/inter_bold</item>
-        <item name="fontFamily">@font/inter_bold</item>
-        <item name="android:letterSpacing">-0.015</item>
-    </style>
-    <style name="Npdf.Text.Title2">
-        <item name="android:textSize">22sp</item>
-        <item name="android:fontFamily">@font/inter_bold</item>
-        <item name="fontFamily">@font/inter_bold</item>
-    </style>
-    <style name="Npdf.Text.Title3">
-        <item name="android:textSize">20sp</item>
-        <item name="android:fontFamily">@font/inter_semibold</item>
-        <item name="fontFamily">@font/inter_semibold</item>
-    </style>
-    <style name="Npdf.Text.Headline">
-        <item name="android:textSize">17sp</item>
-        <item name="android:fontFamily">@font/inter_semibold</item>
-        <item name="fontFamily">@font/inter_semibold</item>
-    </style>
-    <style name="Npdf.Text.Body">
-        <item name="android:textSize">17sp</item>
-    </style>
-    <style name="Npdf.Text.Callout">
-        <item name="android:textSize">16sp</item>
-    </style>
-    <style name="Npdf.Text.Subhead">
-        <item name="android:textSize">15sp</item>
-    </style>
-    <style name="Npdf.Text.SubheadStrong">
-        <item name="android:textSize">15sp</item>
-        <item name="android:fontFamily">@font/inter_semibold</item>
-        <item name="fontFamily">@font/inter_semibold</item>
-    </style>
-    <style name="Npdf.Text.Footnote">
-        <item name="android:textSize">13sp</item>
-        <item name="android:textColor">@color/label2</item>
-    </style>
-    <style name="Npdf.Text.Caption">
-        <item name="android:textSize">12sp</item>
-        <item name="android:textColor">@color/label2</item>
-    </style>
-    <style name="Npdf.Text.Caption2">
-        <item name="android:textSize">11sp</item>
-        <item name="android:fontFamily">@font/inter_medium</item>
-        <item name="fontFamily">@font/inter_medium</item>
-        <item name="android:textColor">@color/label2</item>
-    </style>
-    <style name="Npdf.Text.Button">
-        <item name="android:textSize">17sp</item>
-        <item name="android:fontFamily">@font/inter_semibold</item>
-        <item name="fontFamily">@font/inter_semibold</item>
+    <!-- Small top app bar: title at the start, on the surface container (as when content scrolls under it). -->
+    <style name="Npdf.Toolbar" parent="Widget.Material3.Toolbar.Surface">
+        <item name="android:background">?attr/colorSurfaceContainer</item>
+        <item name="titleTextAppearance">@style/TextAppearance.Material3.TitleLarge</item>
+        <item name="subtitleTextAppearance">@style/TextAppearance.Material3.BodyMedium</item>
+        <item name="subtitleTextColor">?attr/colorOnSurfaceVariant</item>
+        <item name="navigationIconTint">?attr/colorOnSurface</item>
     </style>
 
-    <style name="Npdf.Toolbar" parent="Widget.Material3.Toolbar">
-        <item name="titleCentered">true</item>
-        <item name="titleTextAppearance">@style/Npdf.Text.Headline</item>
-        <item name="subtitleTextAppearance">@style/Npdf.Text.Caption</item>
-        <item name="subtitleCentered">true</item>
-        <item name="android:background">@color/bar</item>
-        <item name="navigationIconTint">@color/tint</item>
-        <item name="android:theme">@style/Npdf.ToolbarTheme</item>
-        <item name="contentInsetStartWithNavigation">0dp</item>
-    </style>
-    <style name="Npdf.ToolbarTheme" parent="">
-        <item name="colorControlNormal">@color/tint</item>
-        <item name="actionMenuTextColor">@color/tint</item>
-        <item name="actionMenuTextAppearance">@style/Npdf.Text.Body</item>
-    </style>
-    <style name="Npdf.Overflow" parent="Widget.AppCompat.ActionButton.Overflow">
-        <item name="srcCompat">@drawable/ic_more</item>
-        <item name="android:src">@drawable/ic_more</item>
-        <item name="tint">@color/tint</item>
-    </style>
-
-    <style name="Npdf.Button.Filled" parent="Widget.Material3.Button">
-        <item name="android:minHeight">50dp</item>
-        <item name="android:insetTop">0dp</item>
-        <item name="android:insetBottom">0dp</item>
-        <item name="cornerRadius">12dp</item>
-        <item name="android:textAllCaps">false</item>
-        <item name="android:textAppearance">@style/Npdf.Text.Button</item>
-        <item name="backgroundTint">@color/tint</item>
-        <item name="android:textColor">@color/on_tint</item>
-        <item name="iconTint">@color/on_tint</item>
-        <item name="elevation">0dp</item>
-        <item name="android:stateListAnimator">@null</item>
-    </style>
-    <style name="Npdf.Button.Tinted" parent="Npdf.Button.Filled">
-        <item name="backgroundTint">@color/tint_soft</item>
-        <item name="android:textColor">@color/tint</item>
-        <item name="iconTint">@color/tint</item>
-    </style>
-    <style name="Npdf.Button.Gray" parent="Npdf.Button.Filled">
-        <item name="backgroundTint">@color/fill</item>
-        <item name="android:textColor">@color/label</item>
-        <item name="iconTint">@color/label</item>
-    </style>
-    <style name="Npdf.Button.Plain" parent="Widget.Material3.Button.TextButton">
-        <item name="android:textAllCaps">false</item>
-        <item name="android:textAppearance">@style/Npdf.Text.Body</item>
-        <item name="android:textColor">@color/tint</item>
-        <item name="iconTint">@color/tint</item>
-        <item name="rippleColor">@color/fill</item>
-        <item name="android:minHeight">44dp</item>
-        <item name="android:insetTop">0dp</item>
-        <item name="android:insetBottom">0dp</item>
-    </style>
-
-    <style name="Npdf.EditText" parent="Widget.AppCompat.EditText">
-        <item name="android:textAppearance">@style/Npdf.Text.Body</item>
-        <item name="android:textColor">@color/label</item>
-        <item name="android:textColorHint">@color/label3</item>
-        <item name="android:background">@drawable/bg_field</item>
-        <item name="android:paddingStart">12dp</item>
-        <item name="android:paddingEnd">12dp</item>
-        <item name="android:paddingTop">10dp</item>
-        <item name="android:paddingBottom">10dp</item>
-        <item name="android:minHeight">44dp</item>
-    </style>
-
-    <style name="Npdf.Switch" parent="Widget.AppCompat.CompoundButton.Switch">
-        <item name="android:thumb">@drawable/switch_thumb</item>
-        <item name="track">@drawable/switch_track</item>
-        <item name="android:track">@drawable/switch_track</item>
-        <item name="showText">false</item>
-        <item name="android:background">@null</item>
-    </style>
-    <style name="Npdf.Switch.Material" parent="Widget.Material3.CompoundButton.MaterialSwitch">
-        <item name="thumbTint">@color/white</item>
-        <item name="trackTint">@color/switch_track</item>
-        <item name="trackDecorationTint">@android:color/transparent</item>
-    </style>
-
-    <style name="Npdf.PopupMenu" parent="Widget.Material3.PopupMenu">
-        <item name="android:popupBackground">@drawable/bg_menu</item>
-        <item name="android:popupElevation">16dp</item>
-    </style>
-    <style name="Npdf.PopupMenu.Overflow" parent="Widget.Material3.PopupMenu.Overflow">
-        <item name="android:popupBackground">@drawable/bg_menu</item>
-        <item name="android:popupElevation">16dp</item>
-    </style>
-
-    <!-- Reader mode bar: tab-bar look (icon over a small label, tint for the chosen mode, no pill). -->
-    <style name="Npdf.ModeBar" parent="Widget.Material3.BottomNavigationView">
-        <item name="android:background">@color/bar</item>
-        <item name="backgroundTint">@color/bar</item>
-        <item name="elevation">0dp</item>
+    <!-- Navigation bar (home tabs and the reader's modes): Material 3 with the active indicator. -->
+    <style name="Npdf.NavigationBar" parent="Widget.Material3.BottomNavigationView">
         <item name="labelVisibilityMode">labeled</item>
-        <item name="itemIconTint">@color/tab_nav</item>
-        <item name="itemTextColor">@color/tab_nav</item>
-        <item name="itemIconSize">24dp</item>
-        <item name="itemTextAppearanceActive">@style/Npdf.Text.Tab</item>
-        <item name="itemTextAppearanceInactive">@style/Npdf.Text.Tab</item>
-        <item name="itemActiveIndicatorStyle">@style/Npdf.NoIndicator</item>
-        <item name="itemRippleColor">@android:color/transparent</item>
-        <item name="itemPaddingTop">6dp</item>
-        <item name="itemPaddingBottom">6dp</item>
     </style>
-    <style name="Npdf.NoIndicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
-        <item name="android:color">@android:color/transparent</item>
+    <style name="Npdf.ModeBar" parent="Npdf.NavigationBar" />
+
+    <!-- Buttons, by Material 3 emphasis. -->
+    <style name="Npdf.Button.Filled" parent="Widget.Material3.Button" />
+    <style name="Npdf.Button.Tinted" parent="Widget.Material3.Button.TonalButton" />
+    <style name="Npdf.Button.Gray" parent="Widget.Material3.Button.OutlinedButton" />
+    <style name="Npdf.Button.Plain" parent="Widget.Material3.Button.TextButton" />
+
+    <!-- Text styles used by layouts. -->
+    <style name="Npdf.Text.Footnote" parent="TextAppearance.Material3.BodyMedium">
+        <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
     </style>
-    <style name="Npdf.Text.Tab">
-        <item name="android:textSize">10.5sp</item>
-        <item name="android:fontFamily">@font/inter_medium</item>
-        <item name="fontFamily">@font/inter_medium</item>
+    <style name="Npdf.Text.Body" parent="TextAppearance.Material3.BodyLarge">
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+    <style name="Npdf.Text.Subhead" parent="TextAppearance.Material3.BodyMedium">
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+    <style name="Npdf.Text.Headline" parent="TextAppearance.Material3.TitleMedium">
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+    <style name="Npdf.Text.Caption" parent="TextAppearance.Material3.LabelMedium">
+        <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
     </style>
 </resources>

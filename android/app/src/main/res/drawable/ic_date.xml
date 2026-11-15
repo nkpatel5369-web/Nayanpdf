@@ -1,41 +1,11 @@
-<?xml version="1.0" encoding="utf-8"?>
+<!-- Material Symbols "calendar_today" (Outlined, 400, 24 px), Apache License 2.0, Google. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:tint="?attr/colorControlNormal"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
-    <path
-        android:pathData="M6,5.5 L18,5.5 A2,2 0 0 1 20,7.5 L20,18 A2,2 0 0 1 18,20 L6,20 A2,2 0 0 1 4,18 L4,7.5 A2,2 0 0 1 6,5.5 Z"
-        android:strokeColor="@android:color/white"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:strokeWidth="1.6" />
-    <path
-        android:pathData="M4,10 L20,10"
-        android:strokeColor="@android:color/white"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:strokeWidth="1.6" />
-    <path
-        android:pathData="M8,3.5 L8,7"
-        android:strokeColor="@android:color/white"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:strokeWidth="1.6" />
-    <path
-        android:pathData="M16,3.5 L16,7"
-        android:strokeColor="@android:color/white"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:strokeWidth="1.6" />
-    <path
-        android:fillColor="@android:color/white"
-        android:pathData="M9.5,14 A1,1 0 1 1 7.5,14 A1,1 0 1 1 9.5,14 Z" />
-    <path
-        android:fillColor="@android:color/white"
-        android:pathData="M13,14 A1,1 0 1 1 11,14 A1,1 0 1 1 13,14 Z" />
-    <path
-        android:fillColor="@android:color/white"
-        android:pathData="M16.5,14 A1,1 0 1 1 14.5,14 A1,1 0 1 1 16.5,14 Z" />
+    android:viewportWidth="960"
+    android:viewportHeight="960"
+    android:tint="?attr/colorControlNormal">
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M200,880Q167,880 143.5,856.5Q120,833 120,800L120,240Q120,207 143.5,183.5Q167,160 200,160L240,160L240,80L320,80L320,160L640,160L640,80L720,80L720,160L760,160Q793,160 816.5,183.5Q840,207 840,240L840,800Q840,833 816.5,856.5Q793,880 760,880L200,880ZM200,800L760,800Q760,800 760,800Q760,800 760,800L760,400L200,400L200,800Q200,800 200,800Q200,800 200,800ZM200,320L760,320L760,240Q760,240 760,240Q760,240 760,240L200,240Q200,240 200,240Q200,240 200,240L200,320ZM200,320L200,240Q200,240 200,240Q200,240 200,240L200,240Q200,240 200,240Q200,240 200,240L200,320L200,320Z"/>
 </vector>

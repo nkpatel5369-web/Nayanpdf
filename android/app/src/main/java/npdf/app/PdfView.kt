@@ -362,10 +362,10 @@ class PdfView @JvmOverloads constructor(context: Context, attrs: AttributeSet? =
     private var scrubUntil = 0L
     private var scrubbing = false
     private val scrubPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x99000000.toInt() }
-    private val bubblePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xE62C2C2E.toInt() }
+    private val bubblePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Kit.color(context, R.color.hud_bg) }
     private val bubbleText = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE; textSize = 15f * resources.displayMetrics.scaledDensity; textAlign = Paint.Align.CENTER
-        typeface = androidx.core.content.res.ResourcesCompat.getFont(context, R.font.inter_semibold)
+        color = Kit.color(context, R.color.hud_text); textSize = 14f * resources.displayMetrics.scaledDensity; textAlign = Paint.Align.CENTER
+        typeface = Kit.font(context, 500)
     }
     private fun dpx(v: Float) = v * resources.displayMetrics.density
 

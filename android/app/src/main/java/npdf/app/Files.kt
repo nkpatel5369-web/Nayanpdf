@@ -98,6 +98,28 @@ object Files {
 
     fun stem(name: String) = name.substringBeforeLast('.', name)
 
+    /** Renames a file the app can write: its new address, or null when its storage does not allow renaming. */
+    fun rename(ctx: Context, uri: Uri, newName: String): Uri? = try {
+        when {
+            uri.authority == android.provider.MediaStore.AUTHORITY -> {
+                val cv = android.content.ContentValues().apply { put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, newName) }
+                if (ctx.contentResolver.update(uri, cv, null, null) > 0) uri else null
+            }
+            android.provider.DocumentsContract.isDocumentUri(ctx, uri) -> android.provider.DocumentsContract.renameDocument(ctx.contentResolver, uri, newName)
+            else -> null
+        }
+    } catch (e: Exception) { null }
+
+    /** True for files N PDF itself saved through Android's media store (its scans and exports), which it may delete. */
+    fun isOwnMedia(ctx: Context, uri: Uri): Boolean {
+        if (uri.authority != android.provider.MediaStore.AUTHORITY || android.os.Build.VERSION.SDK_INT < 29) return false
+        return try {
+            ctx.contentResolver.query(uri, arrayOf(android.provider.MediaStore.MediaColumns.OWNER_PACKAGE_NAME), null, null, null)?.use { c ->
+                c.moveToFirst() && c.getString(0) == ctx.packageName
+            } ?: false
+        } catch (e: Exception) { false }
+    }
+
     fun formatSize(bytes: Long): String = when {
         bytes < 1024 -> "$bytes B"
         bytes < 1024 * 1024 -> String.format(java.util.Locale.ROOT, "%.0f KB", bytes / 1024.0)

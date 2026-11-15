@@ -1,26 +1,11 @@
-<?xml version="1.0" encoding="utf-8"?>
+<!-- Material Symbols "ink_highlighter" (Outlined, 400, 24 px), Apache License 2.0, Google. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:tint="?attr/colorControlNormal"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
-    <path
-        android:pathData="M8.5,15.5 L5,19 L9.5,19"
-        android:strokeColor="@android:color/white"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:strokeWidth="1.6" />
-    <path
-        android:pathData="M7.8,14.2 L15.3,6.7 A2,2 0 0 1 18.3,9.7 L10.8,17.2 Z"
-        android:strokeColor="@android:color/white"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:strokeWidth="1.6" />
-    <path
-        android:pathData="M4,21.3 L20,21.3"
-        android:strokeColor="@android:color/white"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:strokeWidth="1.6" />
+    android:viewportWidth="960"
+    android:viewportHeight="960"
+    android:tint="?attr/colorControlNormal">
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M544,560L440,456L240,656Q240,656 240,656Q240,656 240,656L344,760Q344,760 344,760Q344,760 344,760L544,560ZM497,399L601,503L800,304Q800,304 800,304Q800,304 800,304L696,200Q696,200 696,200Q696,200 696,200L497,399ZM413,371L629,587L400,816Q376,840 344,840Q312,840 288,816L286,814L260,840L60,840L186,714L184,712Q160,688 160,656Q160,624 184,600L413,371ZM413,371L640,144Q664,120 696,120Q728,120 752,144L856,248Q880,272 880,304Q880,336 856,360L629,587L413,371Z"/>
 </vector>

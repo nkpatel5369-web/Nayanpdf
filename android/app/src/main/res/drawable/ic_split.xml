@@ -1,32 +1,12 @@
-<?xml version="1.0" encoding="utf-8"?>
+<!-- Material Symbols "call_split" (Outlined, 400, 24 px), Apache License 2.0, Google. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960"
     android:tint="?attr/colorControlNormal"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
-    <path
-        android:pathData="M12,21 L12,13.5 C12,9.5 6,9.5 6,5.5 L6,3.5"
-        android:strokeColor="@android:color/white"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:strokeWidth="1.6" />
-    <path
-        android:pathData="M12,13.5 C12,9.5 18,9.5 18,5.5 L18,3.5"
-        android:strokeColor="@android:color/white"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:strokeWidth="1.6" />
-    <path
-        android:pathData="M3,6.5 L6,3.5 L9,6.5"
-        android:strokeColor="@android:color/white"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:strokeWidth="1.6" />
-    <path
-        android:pathData="M15,6.5 L18,3.5 L21,6.5"
-        android:strokeColor="@android:color/white"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:strokeWidth="1.6" />
+    android:autoMirrored="true">
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M440,800L440,496L240,296L240,400L160,400L160,160L400,160L400,240L296,240L520,464L520,800L440,800ZM594,424L536,366L664,240L560,240L560,160L800,160L800,400L720,400L720,296L594,424Z"/>
 </vector>
