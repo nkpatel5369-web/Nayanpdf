@@ -485,6 +485,28 @@ def place(lines: list[Line], bounds: list[float]) -> int:
     return ncols
 
 
+def _continues(a: Seg, b: Seg) -> bool:
+    """Whether ``b`` (the next line of a cell) can be the rest of ``a``: any text
+    continues text; under an amount only what completes it ("3,76,543.22" / "Cr"),
+    never a second value."""
+    if not a.numeric:
+        return True
+    return parse_number(a.text + " " + b.text) is not None
+
+
+def _joiner(a: Seg, b: Seg, keeps_wrap: bool = False) -> str:
+    """What goes between two pieces of one cell."""
+    if a.numeric:
+        return "" if a.text[-1:].isdigit() and b.text[:1].isdigit() else " "
+    if a.trailing_space:
+        return " "
+    if a.text.endswith(("-", "/")) or b.text.startswith(("-", "/")) or keeps_wrap or (a.text[-1:].isdigit() and b.text[:1].isdigit()):
+        # The break fell inside a word, a reference or a number: a PDF that keeps the
+        # space at ordinary line wraps has none here.
+        return ""
+    return " "
+
+
 def join_wrapped_cells(lines: list[Line]) -> list[Line]:
     """Join the continuation lines of a wrapped cell (a long narration) to its row.
 
@@ -517,7 +539,7 @@ def join_wrapped_cells(lines: list[Line]) -> list[Line]:
             pitch = ((ln.y0 + ln.y1) - (last.y0 + last.y1)) / 2
             # Text continuing text cells of the row above (a narration; a reference
             # cut as "00098765432" / "1"), never an amount column or an empty one.
-            fits = all(c in anchor.cells and not anchor.cells[c].numeric for c in ln.cells)
+            fits = all(c in anchor.cells and _continues(anchor.cells[c], s) for c, s in ln.cells.items())
             # A date under the row's own date is a new row (a transaction), not
             # the rest of one; under a heading ("Year ended" / "31 March 2026") it
             # is the heading's second line.
@@ -560,7 +582,10 @@ def join_wrapped_cells(lines: list[Line]) -> list[Line]:
             hard = fixed is not None and len(a.text) == fixed * (n + 1)
             indented = s.x0 - a.x0 > 0.18 * max(s.size, 4.0)
             digits = a.text[-1:].isdigit() and s.text[:1].isdigit()  # a number or reference cut in two
-            sep = "" if (hard and not indented) or digits or a.text.endswith(("-", "/")) else " "
+            if a.numeric:
+                sep = _joiner(a, s)
+            else:
+                sep = "" if (hard and not indented) or digits or a.text.endswith(("-", "/")) else " "
             target.cells[c] = Seg(a.x0, max(a.x1, s.x1), a.y0, s.y1, a.text + sep + s.text, a.bold and s.bold, a.size, a.forced_col)
             pieces[key] = n + 1
         target.y1 = max(target.y1, ln.y1)
@@ -579,25 +604,17 @@ def join_across_pages(pages: list[list[Line]]) -> None:
         a, b = prev[-1], cur[0]
         if len(a.cells) < 2 or not b.cells:
             continue
-        # The rest of a cut row: its first column is empty (no new date or number
-        # starts there), and it continues only cells the row above has as text
-        # (a narration, a reference cut as "00098765432" / "1"), never an amount
-        # column or a column the row above leaves empty.
+        # The rest of a cut row: its first column is empty (no new date starts
+        # there), and it only continues cells of the row above: a narration, a
+        # reference cut as "00098765432" / "1", an amount cut as "3,76,543.22" /
+        # "Cr"; never a second value, nor a column the row above leaves empty.
         if any(parse_date(s.text) for s in b.cells.values()):
             continue
-        if min(b.cells) <= min(a.cells) or any(c not in a.cells or a.cells[c].numeric for c in b.cells):
+        if min(b.cells) <= min(a.cells) or any(c not in a.cells or not _continues(a.cells[c], s) for c, s in b.cells.items()):
             continue
         for c, s in b.cells.items():
             t = a.cells[c]
-            if t.trailing_space:
-                sep = " "
-            elif t.text.endswith(("-", "/")) or s.text.startswith(("-", "/")) or a.keeps_wrap or \
-                    (t.text[-1:].isdigit() and s.text[:1].isdigit()):
-                # The break fell inside a word or a reference: a PDF that keeps the
-                # space at ordinary line wraps has none here.
-                sep = ""
-            else:
-                sep = " "
+            sep = _joiner(t, s, a.keeps_wrap)
             a.cells[c] = Seg(t.x0, max(t.x1, s.x1), t.y0, t.y1, t.text + sep + s.text, t.bold and s.bold, t.size, t.forced_col,
                              trailing_space=s.trailing_space)
         del cur[0]

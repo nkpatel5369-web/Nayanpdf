@@ -312,10 +312,12 @@ def test_excel_row_cut_by_a_page_break_is_one_row_again(ctx):
                         _draw(p, xs[j] + 3, y, part, bold=k == 0 and top == 60)
 
     p1 = d.new_page()
-    grid(p1, 60, [heads, ["03/04/2025", "Opening balance", "", "", "5,00,000.00"],
+    grid(p1, 60, [heads, ["03/04/2025", "Opening balance", "", "", "5,00,000.00 Cr"],
                   ["04/04/2025", "NEFT-HDFC0001234-\nACME", "00098765432", "1,23,456.78", "3,76,543.22"]])
     p2 = d.new_page()
-    grid(p2, 40, [["", "SUPPLIES", "1", "", ""], ["05/04/2025", "UPI/CR/412345678901/Client A", "412345678901", "", "4,21,543.22"]])
+    # The rest of the cut row: narration, the last digit of the reference and the
+    # "Cr" of the balance, which wrapped in its narrow column.
+    grid(p2, 40, [["", "SUPPLIES", "1", "", "Cr"], ["05/04/2025", "UPI/CR/412345678901/Client A", "412345678901", "45,000.00", "4,21,543.22 Cr"]])
     src = out("cut_row.pdf")
     d.save(src)
     r = convert.to_excel(ctx, src, out("cut_row.xlsx"), layout="document")
@@ -324,6 +326,11 @@ def test_excel_row_cut_by_a_page_break_is_one_row_again(ctx):
     assert len(rows) == 3, rows
     cut = rows[1]
     assert "NEFT-HDFC0001234-ACME SUPPLIES" in cut and "000987654321" in cut and 123456.78 in cut, cut
+    ws = wb.worksheets[0]
+    bal = next(c for row in ws.iter_rows() for c in row if c.value == 376543.22)
+    assert '"Cr"' in bal.number_format, bal.number_format      # the balance kept its Cr
+    # A second amount under an amount is a value of its own, not the rest of one.
+    assert 45000.0 in [v for row in rows for v in row]
     # One worksheet per page keeps the page as printed.
     r = convert.to_excel(ctx, src, out("cut_row_pages.xlsx"))
     wb, flat = _xl_cells(r["output"])
