@@ -50,9 +50,7 @@ function FromPdf(props: { args?: any }) {
   const [langs, setLangs] = useState<string[]>(settings.ocrLanguages);
   const [wordMode, setWordMode] = useState(settings.wordMode);
   const [xlFormat, setXlFormat] = useState<"xlsx" | "csv">("xlsx");
-  const [strategy, setStrategy] = useState("auto");
-  const [layout, setLayout] = useState("sheetPerTable");
-  const [merge, setMerge] = useState(true);
+  const [layout, setLayout] = useState("sheetPerPage");
   const [numbers, setNumbers] = useState(true);
   const [dateOrder, setDateOrder] = useState(settings.excelDateOrder);
   const [csvMode, setCsvMode] = useState("combined");
@@ -75,7 +73,7 @@ function FromPdf(props: { args?: any }) {
     const ocrp = { ocr, languages: langs };
     switch (target) {
       case "docx": return run("convert.toWord", { ...base, ...ocrp, mode: wordMode, output: outPath(s, outDir, "", "docx") }, `To Word: ${s.name}`);
-      case "xlsx": return run("convert.toExcel", { ...base, ...ocrp, strategy, layout, mergeAcrossPages: merge, convertNumbers: numbers, dateOrder, csvMode, output: outPath(s, outDir, "", xlFormat) }, `To ${xlFormat.toUpperCase()}: ${s.name}`);
+      case "xlsx": return run("convert.toExcel", { ...base, ...ocrp, layout, convertNumbers: numbers, dateOrder, csvMode, output: outPath(s, outDir, "", xlFormat) }, `To ${xlFormat.toUpperCase()}: ${s.name}`);
       case "pptx": return run("convert.toPowerPoint", { ...base, mode: pptMode, dpi: 200, output: outPath(s, outDir, "", "pptx") }, `To PowerPoint: ${s.name}`);
       case "images": return run("convert.toImages", { ...base, format: imgFmt, dpi, quality, grayscale: gray, multiPageTiff: tiffMulti, nameTemplate: naming, outputDir: joinPath(outDirOf(s, outDir), stem(s.displayPath) + "_images") }, `To images: ${s.name}`);
       case "txt": return run("convert.toText", { ...base, ...ocrp, layout: txtLayout, output: outPath(s, outDir, "", "txt") }, `To text: ${s.name}`);
@@ -105,20 +103,13 @@ function FromPdf(props: { args?: any }) {
           )}
           {target === "xlsx" && (
             <>
-              <div className="grid2">
-                <Field label="Format"><Seg value={xlFormat} onChange={setXlFormat} options={[{ value: "xlsx", label: "Excel (.xlsx)" }, { value: "csv", label: "CSV" }]} /></Field>
-                <Field label="Table detection">
-                  <select className="input" value={strategy} onChange={(e) => setStrategy(e.target.value)}>
-                    <option value="auto">Automatic (ruled lines, then alignment)</option><option value="lines">Ruled tables only</option><option value="text">Borderless (by alignment)</option>
-                  </select>
-                </Field>
-              </div>
+              <Field label="Format"><Seg value={xlFormat} onChange={setXlFormat} options={[{ value: "xlsx", label: "Excel (.xlsx)" }, { value: "csv", label: "CSV" }]} /></Field>
               {xlFormat === "xlsx" ? (
                 <>
                   <div className="grid2">
-                    <Field label="Sheets">
+                    <Field label="Worksheets">
                       <select className="input" value={layout} onChange={(e) => setLayout(e.target.value)}>
-                        <option value="sheetPerTable">One sheet per table</option><option value="sheetPerPage">One sheet per page</option><option value="singleSheet">All tables on one sheet</option>
+                        <option value="sheetPerPage">One worksheet per page</option><option value="document">Whole document on one worksheet</option>
                       </select>
                     </Field>
                     <Field label="Dates are written as">
@@ -126,13 +117,17 @@ function FromPdf(props: { args?: any }) {
                     </Field>
                   </div>
                   <Check checked={numbers} onChange={setNumbers}>Convert numbers and dates into real Excel values</Check>
+                  <div className="hint">
+                    {layout === "document"
+                      ? "Pages follow one another on one worksheet. A table that runs over several pages becomes one table: its column headings, the page header and the page number appear once, and a row cut by a page break is joined again."
+                      : "Each page on its own worksheet, laid out as printed. Nothing is left out."}
+                  </div>
                 </>
               ) : (
-                <Field label="CSV files"><Seg value={csvMode} onChange={setCsvMode} options={[{ value: "combined", label: "One CSV" }, { value: "perTable", label: "One CSV per table" }]} /></Field>
+                <Field label="CSV files"><Seg value={csvMode} onChange={setCsvMode} options={[{ value: "combined", label: "One CSV" }, { value: "perPage", label: "One CSV per page" }]} /></Field>
               )}
-              <Check checked={merge} onChange={setMerge}>Join tables that continue across pages</Check>
               <Notice kind="info">
-                Numbers are converted only when the text is an exact number (Indian 1,23,456.78 and Western grouping, (negative) in brackets). Identifiers with leading zeros, long account/reference numbers and GSTIN/PAN stay as text. Dr/Cr markers are kept in the cell format; signs are never guessed. An "Extraction Report" sheet lists per page how many printed digits were captured and flags pages to review.
+                Every line of the page becomes a row, in the order it is printed, and the pieces set apart on the line (a description, a note number, an amount) go into separate cells; ruled tables keep their grid. Numbers become numbers only when the text is an exact number (Indian 1,23,456.78 and Western grouping, (negative) in brackets, Dr/Cr kept as written). References with leading zeros, long account numbers, GSTIN and PAN stay as text.
               </Notice>
             </>
           )}
@@ -175,8 +170,8 @@ function FromPdf(props: { args?: any }) {
         <JobView job={job}>
           {(r) => (
             <>
-              {r.report && <div className="subtle">{r.tables} table(s) on {r.sheets - 1} sheet(s); {r.numbersConverted} values converted to numbers/dates.</div>}
-              {r.reviewPages?.length > 0 && <Notice kind="warn">Review page(s) {r.reviewPages.join(", ")} against the PDF (see the Extraction Report sheet).</Notice>}
+              {typeof r.numbersConverted === "number" && <div className="subtle">{r.sheets} worksheet{r.sheets === 1 ? "" : "s"}, {r.rows} rows; {r.numbersConverted} values converted to numbers and dates.</div>}
+              {r.reviewPages?.length > 0 && <Notice kind="warn">Some printed digits on page(s) {r.reviewPages.join(", ")} could not be placed in cells. Check those pages against the PDF.</Notice>}
               {r.description && <div className="subtle">{r.description}</div>}
               {r.ocr && <Notice kind="warn">OCR was used on page(s) {r.ocr.ocrPages.join(", ")}. Verify recognised figures.</Notice>}
             </>

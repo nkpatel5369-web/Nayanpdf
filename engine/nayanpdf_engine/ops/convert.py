@@ -32,7 +32,7 @@ from ..util.io import (
     validate_pptx,
     validate_xlsx,
 )
-from ..util.numbers import digits_of, numeric_tokens, parse_date, parse_number
+from ..util.numbers import parse_date
 from ..util.pdf import int_to_rgb, open_pdf, parse_pages, rgb_to_hex
 
 
@@ -240,18 +240,12 @@ def _flow_docx(ctx, path, password, sel, target, include_images):
 # PDF -> Excel / CSV
 # ============================================================================
 
-def _clean_cell(v):
-    if v is None:
-        return None
-    return re.sub(r"[ \t]*\n[ \t]*", " ", str(v)).strip()
-
-
 class _PageChars:
     """Raw characters of a page grouped by text line, for exact cell rebuilding."""
 
     def __init__(self, page: pymupdf.Page):
         self.lines = []  # (line_bbox, [(char, bbox)])
-        raw = page.get_text("rawdict", flags=pymupdf.TEXTFLAGS_RAWDICT & ~pymupdf.TEXT_PRESERVE_IMAGES)
+        raw = page.get_text("rawdict", flags=pymupdf.TEXTFLAGS_RAWDICT & ~pymupdf.TEXT_PRESERVE_IMAGES & ~pymupdf.TEXT_PRESERVE_LIGATURES)
         wrap_trailing = 0
         for b in raw["blocks"]:
             blines = b.get("lines", [])
@@ -295,371 +289,200 @@ class _PageChars:
         return re.sub(r"[ \t]+", " ", out).strip(), ambiguous, parts[-1].endswith((" ", "\t"))
 
 
-def join_wrapped(prev: str, nxt: str, prev_trailing_space: bool, keeps_wrap_spaces: bool) -> tuple[str, bool]:
-    """Join two fragments of one cell that were split by a line or page break."""
-    if not prev:
-        return nxt, False
-    if not nxt:
-        return prev, False
-    if prev_trailing_space:
-        return prev + " " + nxt, False
-    if prev.endswith(("-", "/", "\\", "_")):
-        return prev + nxt, False
-    if keeps_wrap_spaces:
-        return prev + nxt, False
-    return prev + " " + nxt, prev[-1:].isalnum() and nxt[:1].isalnum()
-
-
-def _table_rows(page_chars: _PageChars, table) -> tuple[list[list], int, list[list]]:
-    """Rebuild table rows from raw characters; returns (rows, ambiguous_cells, trailing_space_flags)."""
-    rows = []
-    trail = []
-    amb = 0
-    for row in table.rows:
-        out_row = []
-        tr_row = []
-        for cb in row.cells:
-            if cb is None:
-                out_row.append(None)
-                tr_row.append(False)
-                continue
-            txt, a, tr = page_chars.cell_text(cb)
-            amb += int(a)
-            out_row.append(txt)
-            tr_row.append(tr)
-        rows.append(out_row)
-        trail.append(tr_row)
-    if not any(any(c for c in r) for r in rows):
-        fallback = [[_clean_cell(c) for c in r] for r in table.extract()]
-        return fallback, 0, [[False] * len(r) for r in fallback]
-    return rows, amb, trail
-
-
-def _extract_tables(page, strategy: str):
-    tried = []
-    order = {"auto": ["lines", "text"], "lines": ["lines"], "text": ["text"]}.get(strategy, ["lines", "text"])
-    for strat in order:
-        try:
-            tf = page.find_tables(strategy=strat) if strat != "lines" else page.find_tables()
-        except Exception:  # noqa: BLE001
-            continue
-        tabs = [t for t in tf.tables if t.row_count >= 2 and t.col_count >= 2]
-        tried.append(strat)
-        if tabs:
-            return tabs, strat
-    return [], "+".join(tried) or strategy
-
-
 @method("convert.toExcel")
-def to_excel(ctx, path: str, output: str, pages=None, strategy: str = "auto", layout: str = "sheetPerTable",
-             mergeAcrossPages: bool = True, convertNumbers: bool = True, dateOrder: str = "DMY",
-             ocr: str = "auto", languages: list | None = None, password: str | None = None,
-             overwrite: bool = False, csvMode: str = "combined"):
-    """Extract tables into XLSX (or CSV when output ends with .csv)."""
+def to_excel(ctx, path: str, output: str, pages=None, layout: str = "sheetPerPage", convertNumbers: bool = True,
+             dateOrder: str = "DMY", ocr: str = "auto", languages: list | None = None, password: str | None = None,
+             overwrite: bool = False, csvMode: str = "combined", strategy: str = "auto", mergeAcrossPages: bool = True):
+    """Export a PDF to Excel (or CSV when output ends with .csv), page layout preserved.
+
+    Every text line becomes a row, in reading order; pieces set apart on the page
+    go into separate cells; ruled tables keep their grid (see ``xlsx_layout``).
+    ``layout``: "sheetPerPage" (one worksheet per page, nothing left out) or
+    "document" (the whole document on one worksheet; a page header, footer or
+    repeated column heading appears once). ``strategy`` and ``mergeAcrossPages``
+    are accepted for saved actions from earlier versions and have no effect.
+    """
+    from . import xlsx_layout as xl
+
     is_csv = output.lower().endswith(".csv")
+    one_sheet = (csvMode != "perPage" and csvMode != "perTable") if is_csv else layout in ("document", "singleSheet")
     src, pw, ocr_info = _maybe_ocr(ctx, path, password, ocr, languages)
     doc = open_pdf(src, pw, require=["copy"])
     sel = parse_pages(pages, doc.page_count)
-    tables = []  # dicts: page, rows, strategy, bbox
-    report = []
-    other_text: list = []
+    per_page: list[list] = []
+    forced: list[list[float]] = []
+    heights: list[float] = []
+    page_digits: list = []
+    from collections import Counter
+
     for k, i in enumerate(sel):
-        ctx.progress(k, len(sel), f"Detecting tables on page {i + 1}")
+        ctx.progress(k, len(sel), f"Reading page {i + 1}")
         page = doc[i]
-        page_text = page.get_text("text")
-        tabs, strat = _extract_tables(page, strategy)
-        page_tables = []
-        pchars = _PageChars(page) if tabs else None
-        ambiguous_cells = 0
-        for t in tabs:
-            rows, amb, trail = _table_rows(pchars, t)
-            ambiguous_cells += amb
-            keep = [k for k, r in enumerate(rows) if any(c for c in r)]
-            rows = [rows[k] for k in keep]
-            trail = [trail[k] for k in keep]
-            if not rows:
-                continue
-            header_names = None
-            try:
-                if t.header and t.header.external and t.header.names:
-                    header_names = [_clean_cell(c) for c in t.header.names]
-            except Exception:  # noqa: BLE001
-                header_names = None
-            if header_names and any(header_names) and rows[0] != header_names:
-                rows.insert(0, header_names)
-                trail.insert(0, [False] * len(header_names))
-            page_tables.append({"page": i + 1, "rows": rows, "trail": trail, "strategy": strat,
-                                "ncols": max(len(r) for r in rows), "keepsWrap": pchars.keeps_wrap_spaces})
-        tokens_page = numeric_tokens(page_text)
-        captured_texts: list[str] = []
-        for t in page_tables:
-            for r in t["rows"]:
-                captured_texts.extend(c for c in r if c)
-        if not page_tables and page_text.strip():
-            # Keep the content: one row per text line, flagged for review.
-            lines = [[ln] for ln in page_text.splitlines() if ln.strip()]
-            page_tables.append({"page": i + 1, "rows": lines, "strategy": "lines-as-rows", "ncols": 1, "noTable": True})
-            captured_texts = [page_text]
-        # Text outside tables is kept on an "Other text" sheet so nothing is silently dropped.
-        tboxes = [pymupdf.Rect(t.bbox) for t in tabs]
-        other = []
-        if tabs:
-            for b in page.get_text("dict", sort=True)["blocks"]:
-                for ln in b.get("lines", []):
-                    lb = pymupdf.Rect(ln["bbox"])
-                    if any((lb & tb).get_area() > 0.5 * max(lb.get_area(), 1e-6) for tb in tboxes):
-                        continue
-                    lt = "".join(s_["text"] for s_ in ln["spans"]).strip()
-                    if lt:
-                        other.append(lt)
-                        captured_texts.append(lt)
-        if other:
-            other_text.append((i + 1, other))
-        # Coverage: every digit printed on the page must appear in the workbook
-        # (robust to line wrapping); plus a token-level sample of what is missing.
-        from collections import Counter
-
-        page_digits = Counter(ch for ch in page_text if ch.isdigit())
-        cap_digits = Counter(ch for txt in captured_texts for ch in txt if ch.isdigit())
-        total_digits = sum(page_digits.values())
-        missing_digits = sum((page_digits - cap_digits).values())
-        cov = round(100.0 * (1 - missing_digits / total_digits), 1) if total_digits else None
-        cap_strings = [digits_of(t) for t in captured_texts]
-        missing = [tok for tok in tokens_page if not any(tok in c for c in cap_strings)]
-        report.append({"page": i + 1, "tables": len([t for t in page_tables if not t.get("noTable")]),
-                       "ambiguousCells": ambiguous_cells,
-                       "strategy": page_tables[0]["strategy"] if page_tables else strat,
-                       "numbersOnPage": len(tokens_page), "numbersCaptured": len(tokens_page) - len(missing),
-                       "coverage": cov, "missingSample": missing[:8],
-                       "review": (cov is not None and cov < 100.0) or ambiguous_cells > 0
-                                 or any(t.get("noTable") for t in page_tables) or not page_tables})
-        tables.extend(page_tables)
+        lines, fx = xl.page_lines(page, i + 1, _PageChars)
+        per_page.append(lines)
+        forced.append(fx)
+        heights.append(page.rect.height)
+        page_digits.append(Counter(ch for ch in page.get_text("text") if ch.isdigit()))
     doc.close()
-    if not tables:
-        raise EngineError("NOT_SUPPORTED", "No text or tables were found. If the PDF is scanned, enable OCR.")
+    if not any(per_page):
+        raise EngineError("NOT_SUPPORTED", "No text was found. If the PDF is scanned, turn on text recognition (OCR).")
 
-    # Merge tables continuing across pages (same column count, consecutive pages).
-    if mergeAcrossPages:
-        merged = []
-        for t in tables:
-            if merged and not t.get("noTable") and not merged[-1].get("noTable") \
-                    and t["page"] == merged[-1]["lastPage"] + 1 and t["ncols"] == merged[-1]["ncols"]:
-                prev = merged[-1]
-                rows = list(t["rows"])
-                trail = list(t.get("trail") or [[False] * len(r) for r in rows])
-                if rows and prev["rows"] and rows[0] == prev["rows"][0]:
-                    rows, trail = rows[1:], trail[1:]  # repeated header
-                # A first row with an empty first column continues the previous row
-                # (the generator split one row across the page break).
-                if rows and prev["rows"] and not (rows[0][0] or "").strip() and any(c for c in rows[0][1:]):
-                    last = prev["rows"][-1]
-                    last_tr = prev.setdefault("trail", [[False] * len(r) for r in prev["rows"]])[-1]
-                    for ci, frag in enumerate(rows[0]):
-                        if not frag or ci >= len(last):
-                            continue
-                        joined, amb = join_wrapped(last[ci] or "", frag, last_tr[ci] if ci < len(last_tr) else False,
-                                                   prev.get("keepsWrap", False))
-                        last[ci] = joined
-                        prev["stitched"] = prev.get("stitched", 0) + 1
-                        if amb:
-                            prev["ambiguous"] = prev.get("ambiguous", 0) + 1
-                    rows, trail = rows[1:], trail[1:]
-                prev["rows"].extend(rows)
-                prev.setdefault("trail", []).extend(trail)
-                prev["lastPage"] = t["page"]
-                prev["pages"].append(t["page"])
-                continue
-            merged.append({**t, "lastPage": t["page"], "pages": [t["page"]]})
-        tables = merged
+    # Columns: per page, or shared by the whole document so its pages line up.
+    groups: list[tuple[str, list]] = []
+    if one_sheet:
+        for ri, run in enumerate(xl.layout_runs(per_page, forced)):
+            run_lines = [ln for k in run for ln in per_page[k]]
+            bounds = xl.column_bounds(run_lines, [xs for k in run for xs in forced[k]])
+            xl.place(run_lines, bounds)
+            for ln in run_lines:
+                ln.run = ri
     else:
-        tables = [{**t, "lastPage": t["page"], "pages": [t["page"]]} for t in tables]
+        for ls, fx in zip(per_page, forced):
+            xl.place(ls, xl.column_bounds(ls, fx))
+    per_page = [xl.join_wrapped_cells(ls) for ls in per_page]
+
+    # Every digit printed on a page must be in the workbook (checked before any
+    # repeated header or footer is left out on purpose).
+    review = []
+    for pno, ls, dig in zip(sel, per_page, page_digits):
+        got = Counter(ch for ln in ls for s_ in ln.cells.values() for ch in s_.text if ch.isdigit())
+        if sum((dig - got).values()):
+            review.append(pno + 1)
+
+    if one_sheet:
+        kept = xl.drop_repeats(per_page, heights)
+        xl.join_across_pages(kept)
+        for ls in kept:
+            xl.mark_blank_rows(ls)
+        name = re.sub(r"[\[\]:*?/\\]", "_", os.path.splitext(os.path.basename(path))[0]).strip() or "Sheet1"
+        groups.append((name[:31], [ln for ls in kept for ln in ls]))
+    else:
+        for pno, ls in zip(sel, per_page):
+            xl.mark_blank_rows(ls)
+            groups.append((f"Page {pno + 1}", ls))
+
+    def grid(lines):
+        """Rows of (column, Seg), columns renumbered from 0 with unused ones removed
+        (separately for each group of pages laid out alike)."""
+        remap = {}
+        for run in {ln.run for ln in lines}:
+            used = sorted({c for ln in lines if ln.run == run for c in ln.cells})
+            remap.update({(run, c): k for k, c in enumerate(used)})
+        rows = []
+        for ln in lines:
+            if ln.blank_before and rows:
+                rows.append([])
+            rows.append([(remap[(ln.run, c)], s_) for c, s_ in sorted(ln.cells.items())])
+        return rows
+
+    if review:
+        ctx.warn(f"Some printed digits on page(s) {', '.join(map(str, review[:20]))} could not be placed in cells; "
+                 "check those pages against the PDF.")
 
     if is_csv:
-        return _write_csv(ctx, path, output, overwrite, tables, report, csvMode, ocr_info)
+        outputs = []
+        targets = [(output, grid(lines)) for _, lines in groups] if one_sheet else \
+            [(f"{os.path.splitext(output)[0]}_page_{name.split()[-1]}.csv", grid(lines)) for name, lines in groups]
+        if len(targets) == 1:
+            targets = [(output, targets[0][1])]
+        for target, rows in targets:
+            out = OutputFile(ctx, target, overwrite, sources=[path])
+            with open(out.temp, "w", encoding="utf-8-sig", newline="") as fh:
+                w = csv.writer(fh)
+                for row in rows:
+                    width = (max(c for c, _ in row) + 1) if row else 0
+                    vals = [""] * width
+                    for c, s_ in row:
+                        vals[c] = xl.csv_safe(s_.text)
+                    w.writerow(vals)
+            outputs.append(out.commit(validate_nonempty))
+        res = {"output": outputs[0], "outputs": outputs, "sheets": len(outputs), "pages": len(sel), "reviewPages": review,
+               "note": "CSV values are written exactly as printed in the PDF."}
+        if ocr_info:
+            res["ocr"] = ocr_info
+        return res
+
+    import datetime as _dt
+    import math
 
     import openpyxl
-    from openpyxl.styles import Alignment, Font, PatternFill
+    from openpyxl.styles import Alignment, Font
     from openpyxl.utils import get_column_letter
 
     wb = openpyxl.Workbook()
     wb.remove(wb.active)
     converted = 0
-    kept_text = 0
-
-    def write_rows(ws, rows, start_row):
-        nonlocal converted, kept_text
-        r0 = start_row
-        for ri, row in enumerate(rows):
-            is_header = ri == 0 and len(rows) > 1 and any(
-                c and parse_number(c) is None and parse_date(c, dateOrder) is None for c in row)
-            for ci, val in enumerate(row):
-                if val is None or val == "":
-                    continue
-                cell = ws.cell(row=r0 + ri, column=ci + 1)
-                if convertNumbers and not is_header:
-                    num = parse_number(val)
-                    if num is not None:
-                        cell.value, cell.number_format = num
-                        converted += 1
-                        continue
-                    dt = parse_date(val, dateOrder)
-                    if dt is not None:
-                        cell.value, cell.number_format = dt
-                        converted += 1
-                        continue
-                cell.value = val
-                cell.number_format = "@"
-                if digits_of(val) and len(digits_of(val)) >= 2:
-                    kept_text += 1
-        # Header styling and merged header cells (a value followed by empty cells).
-        if rows and len(rows) > 1:
-            for ci in range(len(rows[0])):
-                c = ws.cell(row=r0, column=ci + 1)
-                c.font = Font(bold=True)
-                c.fill = PatternFill("solid", fgColor="E9ECEF")
-                c.alignment = Alignment(wrap_text=True, vertical="top")
-            hdr = rows[0]
-            ci = 0
-            while ci < len(hdr):
-                if hdr[ci] and ci + 1 < len(hdr) and hdr[ci + 1] is None:
-                    cj = ci + 1
-                    while cj < len(hdr) and hdr[cj] is None:
-                        cj += 1
-                    ws.merge_cells(start_row=r0, start_column=ci + 1, end_row=r0, end_column=cj)
-                    ci = cj
+    rows_total = 0
+    for name, lines in groups:
+        ws = wb.create_sheet(name)
+        rows = grid(lines)
+        # A column of dates (a bank statement's Date column) gets real dates; a lone
+        # date-like heading over amounts ("31 March 2026") stays as written.
+        date_cols = set()
+        counts: dict[int, list[int]] = {}
+        for row in rows:
+            for c, s_ in row:
+                t = counts.setdefault(c, [0, 0])
+                t[1] += 1
+                if parse_date(s_.text, dateOrder) is not None:
+                    t[0] += 1
+        for c, (dates, total) in counts.items():
+            if dates >= 2 and dates >= 0.5 * total:
+                date_cols.add(c)
+        sizes = sorted(s_.size for row in rows for _, s_ in row)
+        body = sizes[len(sizes) // 2] if sizes else 10.0
+        # Column widths come from the body of the table (rows with most of the
+        # columns filled); a title, an address line or a sentence above or below
+        # simply runs across the empty cells to its right.
+        widest = max((len(row) for row in rows), default=0)
+        body_cells = max(2, math.ceil(0.6 * widest))
+        widths: dict[int, int] = {}
+        texts: list[tuple] = []  # (cell, column, row, length) of text cells, to wrap if blocked
+        for ri, row in enumerate(rows, start=1):
+            for c, s_ in row:
+                value, fmt = xl.cell_value(s_.text, c in date_cols, convertNumbers, dateOrder)
+                cell = ws.cell(row=ri, column=c + 1, value=value)
+                if isinstance(value, str):
+                    cell.data_type = "s"  # text from the PDF is never a formula
+                cell.number_format = fmt
+                if fmt != "@":
+                    converted += 1
+                if isinstance(value, (_dt.date, _dt.datetime)):
+                    cell.alignment = Alignment(horizontal="left")  # as statements print them
+                big = s_.size >= 1.2 * body
+                if s_.bold or big:
+                    cell.font = Font(bold=s_.bold or big, size=13 if big else None)
+                if fmt == "@":
+                    texts.append((cell, c, row, len(s_.text) * (1.25 if big else 1.0)))
+                    if len(row) >= body_cells:
+                        widths[c] = max(widths.get(c, 0), min(80, len(s_.text) + 2))
                 else:
-                    ci += 1
-        return r0 + len(rows)
-
-    def autosize(ws):
-        widths = {}
-        for row in ws.iter_rows():
-            for c in row:
-                if c.value is None:
-                    continue
-                L = len(str(c.value)) if not isinstance(c.value, (int, float)) else len(f"{c.value:,.2f}")
-                widths[c.column] = max(widths.get(c.column, 0), min(60, L + 2))
-        for col, w in widths.items():
-            ws.column_dimensions[get_column_letter(col)].width = max(8, w)
-
-    used_names = set()
-
-    def sheet_name(base):
-        base = re.sub(r"[\[\]:*?/\\]", "_", base)[:28]
-        name = base
-        k = 2
-        while name in used_names:
-            name = f"{base[:25]}_{k}"
-            k += 1
-        used_names.add(name)
-        return name
-
-    if layout == "singleSheet":
-        ws = wb.create_sheet(sheet_name("Tables"))
-        r = 1
-        for ti, t in enumerate(tables):
-            ws.cell(row=r, column=1, value=f"Table {ti + 1} (page {t['page']}" + (f"-{t['lastPage']}" if t['lastPage'] != t['page'] else "") + ")").font = Font(bold=True, italic=True)
-            r = write_rows(ws, t["rows"], r + 1) + 1
-            t["sheet"] = ws.title
-        autosize(ws)
-    elif layout == "sheetPerPage":
-        by_page = {}
-        for t in tables:
-            by_page.setdefault(t["page"], []).append(t)
-        for pno, ts in by_page.items():
-            ws = wb.create_sheet(sheet_name(f"Page {pno}"))
-            r = 1
-            for t in ts:
-                r = write_rows(ws, t["rows"], r) + 1
-                t["sheet"] = ws.title
-            autosize(ws)
-    else:
-        for ti, t in enumerate(tables):
-            label = f"P{t['page']}" + (f"-{t['lastPage']}" if t["lastPage"] != t["page"] else "") + f" T{ti + 1}"
-            if t.get("noTable"):
-                label = f"P{t['page']} text"
-            ws = wb.create_sheet(sheet_name(label))
-            write_rows(ws, t["rows"], 1)
-            ws.freeze_panes = "A2" if len(t["rows"]) > 1 and not t.get("noTable") else None
-            autosize(ws)
-            t["sheet"] = ws.title
-
-    rs = wb.create_sheet("Extraction Report", 0)
-    rs.append(["N PDF table extraction report"])
-    rs["A1"].font = Font(bold=True, size=13)
-    rs.append(["Source", os.path.basename(path)])
-    rs.append(["Note", "Values were converted to numbers/dates only where the text matched an exact numeric or date pattern. "
-                        "Identifiers (leading zeros, long references) are kept as text. Review flagged pages against the source."])
-    rs.append([])
-    rs.append(["Page", "Tables", "Detection", "Numbers on page", "Numbers captured", "Coverage %",
-               "Wrapped cells to check", "Review", "Missing (sample)"])
-    for c in rs[5]:
-        c.font = Font(bold=True)
-    for r in report:
-        rs.append([r["page"], r["tables"], r["strategy"], r["numbersOnPage"], r["numbersCaptured"],
-                   r["coverage"], r.get("ambiguousCells", 0), "REVIEW" if r["review"] else "ok",
-                   ", ".join(r["missingSample"])])
-        if r["review"]:
-            rs.cell(row=rs.max_row, column=8).font = Font(bold=True, color="C92A2A")
-    rs.append([])
-    rs.append(["Sheets"])
-    for t in tables:
-        rs.append([t.get("sheet"), f"pages {', '.join(map(str, t['pages']))}", t["strategy"], f"{len(t['rows'])} rows",
-                   f"{t['ncols']} columns"])
-    autosize(rs)
-    if other_text:
-        ws = wb.create_sheet(sheet_name("Other text"))
-        ws.append(["Page", "Text outside tables"])
-        ws["A1"].font = Font(bold=True)
-        ws["B1"].font = Font(bold=True)
-        for pno, lines in other_text:
-            for lt in lines:
-                ws.append([pno, lt])
-                ws.cell(row=ws.max_row, column=2).number_format = "@"
-        ws.column_dimensions["B"].width = 100
+                    # Numbers and dates cannot run into the next cell: their column fits them.
+                    shown = f"{value:,.2f}" if isinstance(value, (int, float)) else "00/00/0000"
+                    widths[c] = max(widths.get(c, 0), min(30, len(shown) + 2))
+        for c, w in widths.items():
+            ws.column_dimensions[get_column_letter(c + 1)].width = max(6, w)
+        # Text longer than its column runs on over empty cells; where the next cell
+        # is taken, it wraps inside its own cell instead of being cut off.
+        for cell, c, row, length in texts:
+            later = [k for k, _ in row if k > c]
+            if not later:
+                continue
+            room = sum(widths.get(k, 8.43) for k in range(c, min(later)))
+            if length > room:
+                cell.alignment = Alignment(wrap_text=True, vertical="top")
+        ws.sheet_properties.pageSetUpPr.fitToPage = True
+        ws.page_setup.fitToWidth = 1
+        ws.page_setup.fitToHeight = 0
+        rows_total += len(rows)
     out = OutputFile(ctx, output, overwrite, sources=[path])
     wb.save(out.temp)
     final = out.commit(validate_xlsx)
-    review = [r["page"] for r in report if r["review"]]
-    if review:
-        ctx.warn(f"Review recommended for page(s) {', '.join(map(str, review[:20]))} (see the 'Extraction Report' sheet).")
-    res = {"output": final, "tables": len([t for t in tables if not t.get("noTable")]), "sheets": len(wb.sheetnames),
-           "numbersConverted": converted, "numericTextKept": kept_text, "reviewPages": review, "report": report}
+    res = {"output": final, "sheets": len(wb.sheetnames), "rows": rows_total, "pages": len(sel),
+           "numbersConverted": converted, "reviewPages": review}
     if ocr_info:
         res["ocr"] = ocr_info
     return res
-
-
-def _write_csv(ctx, path, output, overwrite, tables, report, mode, ocr_info):
-    outputs = []
-    real = [t for t in tables]
-    if mode == "perTable" and len(real) > 1:
-        base = os.path.splitext(output)[0]
-        for k, t in enumerate(real):
-            target = f"{base}_table{k + 1}.csv"
-            out = OutputFile(ctx, target, overwrite, sources=[path])
-            with open(out.temp, "w", encoding="utf-8-sig", newline="") as fh:
-                w = csv.writer(fh)
-                for r in t["rows"]:
-                    w.writerow(["" if c is None else c for c in r])
-            outputs.append(out.commit(validate_nonempty))
-    else:
-        out = OutputFile(ctx, output, overwrite, sources=[path])
-        with open(out.temp, "w", encoding="utf-8-sig", newline="") as fh:
-            w = csv.writer(fh)
-            for k, t in enumerate(real):
-                if len(real) > 1:
-                    w.writerow([f"# Table {k + 1} (page {t['page']})"])
-                for r in t["rows"]:
-                    w.writerow(["" if c is None else c for c in r])
-                if len(real) > 1:
-                    w.writerow([])
-        outputs.append(out.commit(validate_nonempty))
-    review = [r["page"] for r in report if r["review"]]
-    if review:
-        ctx.warn(f"Review recommended for page(s) {', '.join(map(str, review[:20]))}.")
-    return {"output": outputs[0], "outputs": outputs, "tables": len(real), "reviewPages": review, "report": report,
-            "note": "CSV values are written exactly as extracted (no number conversion)."}
 
 
 # ============================================================================

@@ -102,37 +102,59 @@ def test_pdf_to_word_flow(fx, ctx):
 
 # ---- PDF -> Excel ----------------------------------------------------------------
 
-@needs_soffice
-def test_pdf_to_excel_financial_values(fx, ctx):
+def _xl_cells(path):
+    """Every non-empty cell value of every worksheet, in reading order."""
     import openpyxl
 
+    wb = openpyxl.load_workbook(path)
+    return wb, [v for ws in wb.worksheets for row in ws.iter_rows(values_only=True) for v in row if v is not None]
+
+
+def _xl_rows(ws):
+    return [tuple(v for v in row) for row in ws.iter_rows(values_only=True)]
+
+
+def _row_with(ws, text):
+    return next(r for r in _xl_rows(ws) if text in r)
+
+
+@needs_soffice
+def test_pdf_to_excel_financial_values(fx, ctx):
     r = convert.to_excel(ctx, fx["financial"], out("fin.xlsx"))
-    wb = openpyxl.load_workbook(r["output"])
-    assert "Extraction Report" in wb.sheetnames
-    values = []
-    for ws in wb.worksheets[1:]:
-        for row in ws.iter_rows(values_only=True):
-            values.append(row)
-    flat = [v for row in values for v in row if v is not None]
+    wb, flat = _xl_cells(r["output"])
+    # One worksheet per page and nothing else: no report sheet, no "other text" sheet.
+    assert wb.sheetnames == [f"Page {k}" for k in range(1, len(wb.sheetnames) + 1)], wb.sheetnames
+    assert r["reviewPages"] == []                  # every printed digit is in a cell
     assert 123456.78 in flat
-    assert -45000.0 in flat           # parentheses -> negative, sign preserved
-    assert "000987654321" in flat      # reference with leading zeros stays text (and is not split by the cell wrap)
-    assert "412345678901" in flat      # long reference stays text
+    assert -45000.0 in flat                        # parentheses -> negative, sign preserved
+    assert "000987654321" in flat                  # reference with leading zeros stays text
+    assert "412345678901" in flat                  # long reference stays text
     assert "NEFT-HDFC0001234-ACME SUPPLIES" in flat  # wrapped cell rebuilt without inserting spaces
     assert "UPI/CR/412345678901/Client A" in flat
-    other = wb["Other text"]
-    assert any("000123456789" in str(c.value) for row in other.iter_rows() for c in row)
-    assert "27ABCDE1234F1Z5" in " ".join(str(v) for v in flat)
-    # Bank statement table spans pages and must be merged into one sheet with every row.
-    bank = [ws for ws in wb.worksheets if any(c.value == "Description" for c in ws[1])]
-    assert bank, wb.sheetnames
-    rows = list(bank[0].iter_rows(values_only=True))
-    assert len(rows) == 1 + 18 * len(BANK_ROWS), len(rows)
+    # Text around the tables stays on the page's sheet, where it is printed.
+    page1 = " ".join(str(v) for v in _xl_rows(wb["Page 1"]) for v in v if v)
+    assert "000123456789" in page1 and "27ABCDE1234F1Z5" in page1 and "Statement of Profit and Loss" in page1
+    rev = _row_with(wb["Page 1"], "Revenue from operations")
+    assert [v for v in rev if v is not None] == ["Revenue from operations", 123456.78, 98765.43]
+
+
+@needs_soffice
+def test_pdf_to_excel_whole_document_on_one_sheet(fx, ctx):
     import datetime as dt
 
-    assert any(isinstance(v, dt.datetime) and v.date() == dt.date(2025, 4, 15) for row in rows for v in row)
-    rep = r["report"]
-    assert all(p["coverage"] is None or p["coverage"] == 100 for p in rep), rep
+    r = convert.to_excel(ctx, fx["financial"], out("fin_doc.xlsx"), layout="document")
+    wb, flat = _xl_cells(r["output"])
+    assert len(wb.sheetnames) == 1
+    rows = _xl_rows(wb.worksheets[0])
+    head = next(k for k, row in enumerate(rows) if "Description" in row)
+    bank = [row for row in rows[head + 1:] if any(isinstance(v, dt.datetime) for v in row)]
+    # The bank table runs over several pages: every row once, the rows that a page
+    # break cut in two joined again.
+    assert len(bank) == 18 * len(BANK_ROWS), len(bank)
+    assert sum(1 for row in rows if "Description" in row) == 1
+    assert flat.count("NEFT-HDFC0001234-ACME SUPPLIES") == 18
+    assert flat.count("UPI/CR/412345678901/Client A") == 18
+    assert any(isinstance(v, dt.datetime) and v.date() == dt.date(2025, 4, 15) for row in bank for v in row)
 
 
 @needs_soffice
@@ -140,6 +162,213 @@ def test_pdf_to_csv(fx, ctx):
     r = convert.to_excel(ctx, fx["financial"], out("fin.csv"))
     text = open(r["output"], encoding="utf-8-sig").read()
     assert "1,23,456.78" in text and ",000987654321," in text and "NEFT-HDFC0001234-ACME SUPPLIES" in text
+
+
+# ---- PDF -> Excel: layouts made by other programs (synthetic, no client data) ----
+
+def _draw(page, x, y, text, bold=False, size=9, right=False):
+    """One separately placed run of text, as accounting software writes each cell."""
+    font = "hebo" if bold else "helv"
+    if right:
+        x -= pymupdf.get_text_length(text, fontname=font, fontsize=size)
+    page.insert_text((x, y), text, fontname=font, fontsize=size)
+
+
+def _borderless_pl(path):
+    d = pymupdf.open()
+    p = d.new_page()
+    _draw(p, 200, 50, "ACME TRADERS PRIVATE LIMITED", bold=True, size=13)
+    _draw(p, 160, 70, "Statement of Profit and Loss for the year ended 31 March 2026", bold=True, size=10)
+    _draw(p, 50, 110, "Particulars", bold=True)
+    _draw(p, 300, 110, "Note", bold=True)
+    _draw(p, 440, 110, "31 March 2026", bold=True, right=True)
+    _draw(p, 540, 110, "31 March 2025", bold=True, right=True)
+    rows = [("I", "Revenue from operations", "21", "12,34,56,789.00", "9,87,65,432.50"),
+            ("II", "Other income", "22", "12,34,567.00", "9,87,654.00"),
+            ("", "Changes in inventories of finished goods", "25", "(12,34,567.00)", "8,76,543.00"),
+            ("VIII", "Earnings per equity share", "", "", ""),
+            ("", "Basic and diluted (in Rs.)", "31", "20.36", "11.96")]
+    y = 130
+    for rn, name, note, a, b in rows:
+        _draw(p, 50, y, rn, bold=rn == "VIII")
+        _draw(p, 75, y, name, bold=rn == "VIII")
+        _draw(p, 300, y, note)
+        _draw(p, 440, y, a, right=True)
+        _draw(p, 540, y, b, right=True)
+        y += 15
+    d.save(path)
+
+
+def test_excel_borderless_statement_keeps_phrases_and_columns(ctx):
+    src = out("pl_borderless.pdf")
+    _borderless_pl(src)
+    r = convert.to_excel(ctx, src, out("pl_borderless.xlsx"))
+    wb, flat = _xl_cells(r["output"])
+    assert wb.sheetnames == ["Page 1"]
+    ws = wb["Page 1"]
+    assert _row_with(ws, "Revenue from operations") == ("I", "Revenue from operations", 21, 123456789.0, 98765432.5)
+    assert _row_with(ws, "Changes in inventories of finished goods")[1:] == ("Changes in inventories of finished goods", 25, -1234567.0, 876543.0)
+    assert _row_with(ws, "Earnings per equity share")[:2] == ("VIII", "Earnings per equity share")
+    assert _row_with(ws, "Particulars") == ("Particulars", None, "Note", "31 March 2026", "31 March 2025")
+    # Headings are kept whole and in place; no word is cut between two cells.
+    assert "ACME TRADERS PRIVATE LIMITED" in flat and "Statement of Profit and Loss for the year ended 31 March 2026" in flat
+    assert not any(isinstance(v, str) and v in ("Partic", "ulars", "PRIVATE LIM") for v in flat)
+    # Amounts show as printed: grouped, two decimals, brackets for the negative.
+    cell = next(c for row in ws.iter_rows() for c in row if c.value == -1234567.0)
+    assert cell.number_format.startswith("#,##0.00") and "(" in cell.number_format
+
+
+def _bank_statement(path, pages=3, per_page=12):
+    """Borderless statement: header and column headings on every page, a page
+    number at the foot, narrations cut at a fixed width (even inside a word)."""
+    d = pymupdf.open()
+    narr = ["IMPS/P2A/602512345678/SURESH/Salary advance", "NEFT CR-SBIN0001234-GLOBAL EXPORTS LTD-INV 2026/045", "ATM WDL"]
+    n = 0
+    bal = 500000.0
+    for pg in range(pages):
+        p = d.new_page()
+        _draw(p, 40, 40, "STATEMENT OF ACCOUNT", bold=True, size=12)
+        _draw(p, 40, 56, "Account No: 50100123456789    Branch: NAVRANGPURA    Period: 01/03/2026 to 31/03/2026", size=8.5)
+        y = 84
+        for x, t, right in [(40, "Date", False), (95, "Narration", False), (290, "Ref No.", False), (420, "Withdrawal", True),
+                            (490, "Deposit", True), (560, "Balance", True)]:
+            _draw(p, x, y, t, bold=True, size=8.5, right=right)
+        y += 16
+        for _ in range(per_page):
+            n += 1
+            text = narr[n % 3]
+            parts = [text[i:i + 30] for i in range(0, len(text), 30)]
+            amt = 1000.0 + n
+            bal -= amt
+            _draw(p, 40, y, f"{(n % 28) + 1:02d}/03/2026", size=8)
+            _draw(p, 95, y, parts[0], size=8)
+            _draw(p, 290, y, f"{410000 + n:010d}", size=8)
+            _draw(p, 420, y, f"{amt:,.2f}", size=8, right=True)
+            _draw(p, 560, y, f"{bal:,.2f}", size=8, right=True)
+            for part in parts[1:]:
+                y += 10
+                _draw(p, 95, y, part, size=8)
+            y += 14
+        _draw(p, 280, 820, f"Page {pg + 1} of {pages}", size=7.5)
+    d.save(path)
+    return n
+
+
+def test_excel_bank_statement_wrapped_narrations_and_pages(ctx):
+    import datetime as dt
+
+    src = out("bank_statement.pdf")
+    n = _bank_statement(src)
+    r = convert.to_excel(ctx, src, out("bank_pages.xlsx"))
+    wb, flat = _xl_cells(r["output"])
+    assert wb.sheetnames == ["Page 1", "Page 2", "Page 3"]
+    first = _row_with(wb["Page 1"], "Narration")
+    assert first == ("Date", "Narration", "Ref No.", "Withdrawal", "Deposit", "Balance")
+    # A narration cut at 30 characters, inside "Salary", is one cell again.
+    assert "IMPS/P2A/602512345678/SURESH/Salary advance" in flat
+    assert "NEFT CR-SBIN0001234-GLOBAL EXPORTS LTD-INV 2026/045" in flat
+    assert "0000410001" in flat                         # reference keeps its leading zeros
+    assert "Page 2 of 3" in flat                        # one sheet per page keeps everything
+    row = _row_with(wb["Page 1"], "0000410001")
+    assert isinstance(row[0], dt.datetime) and row[3] == 1001.0 and row[4] is None
+
+    r = convert.to_excel(ctx, src, out("bank_doc.xlsx"), layout="document")
+    wb, flat = _xl_cells(r["output"])
+    assert len(wb.sheetnames) == 1
+    rows = _xl_rows(wb.worksheets[0])
+    data = [row for row in rows if isinstance(row[0], dt.datetime)]
+    assert len(data) == n                               # every transaction, once
+    assert sum(1 for row in rows if "Narration" in row) == 1
+    assert flat.count("STATEMENT OF ACCOUNT") == 1
+    assert not any(isinstance(v, str) and v.startswith("Page ") for v in flat)
+
+
+def test_excel_ruled_invoice_totals_follow_the_grid(ctx):
+    d = pymupdf.open()
+    p = d.new_page()
+    _draw(p, 250, 45, "TAX INVOICE", bold=True, size=13)
+    _draw(p, 40, 75, "Shree Ganesh Enterprises", bold=True, size=10)
+    _draw(p, 350, 75, "Invoice No: SGE/2025-26/0457")
+    xs = [40, 70, 250, 310, 420, 555]
+    top, rh = 100, 18
+    items = [("Sr.", "Description", "HSN", "Qty", "Amount"), ("1", "MS Flange 4 inch", "7307", "120", "54,000.00"),
+             ("2", "SS Ball Valve 2 inch", "8481", "35", "99,750.00")]
+    for k in range(len(items) + 1):
+        p.draw_line((xs[0], top + k * rh), (xs[-1], top + k * rh))
+    for x in xs:
+        p.draw_line((x, top), (x, top + len(items) * rh))
+    for k, row in enumerate(items):
+        for j, t in enumerate(row):
+            if j >= 3 and k > 0:
+                _draw(p, xs[j + 1] - 3, top + k * rh + 12, t, right=True)
+            else:
+                _draw(p, xs[j] + 3, top + k * rh + 12, t, bold=k == 0)
+    _draw(p, 330, 175, "Taxable value")
+    _draw(p, 552, 175, "1,53,750.00", right=True)
+    _draw(p, 330, 190, "Invoice total", bold=True)
+    _draw(p, 552, 190, "1,81,425.00", bold=True, right=True)
+    src = out("invoice.pdf")
+    d.save(src)
+    r = convert.to_excel(ctx, src, out("invoice.xlsx"))
+    wb, flat = _xl_cells(r["output"])
+    ws = wb["Page 1"]
+    head = _row_with(ws, "Description")
+    amount_col = head.index("Amount")
+    assert _row_with(ws, "MS Flange 4 inch") == ("1", "MS Flange 4 inch", 7307, 120, 54000.0) or \
+        _row_with(ws, "MS Flange 4 inch")[amount_col] == 54000.0
+    # The totals under the table land in the table's Amount column.
+    assert _row_with(ws, "Taxable value")[amount_col] == 153750.0
+    assert _row_with(ws, "Invoice total")[amount_col] == 181425.0
+    assert "TAX INVOICE" in flat and "Invoice No: SGE/2025-26/0457" in flat
+
+
+def test_excel_text_is_never_a_formula(ctx):
+    import zipfile
+
+    d = pymupdf.open()
+    p = d.new_page()
+    p.insert_text((50, 80), '=HYPERLINK("http://x.example","click")', fontsize=10)
+    p.insert_text((50, 100), "Bell\x07 inside", fontsize=10)
+    _draw(p, 50, 120, "Total")
+    _draw(p, 300, 120, "-5.00", right=True)
+    src = out("hostile.pdf")
+    d.save(src)
+    r = convert.to_excel(ctx, src, out("hostile.xlsx"))
+    wb, flat = _xl_cells(r["output"])
+    assert '=HYPERLINK("http://x.example","click")' in flat and "Bell inside" in flat and -5.0 in flat
+    assert "<f>" not in zipfile.ZipFile(r["output"]).read("xl/worksheets/sheet1.xml").decode()
+    r = convert.to_excel(ctx, src, out("hostile.csv"))
+    text = open(r["output"], encoding="utf-8-sig").read()
+    assert "'=HYPERLINK" in text and "-5.00" in text and "'-5.00" not in text
+
+
+@needs_tesseract
+def test_excel_from_a_scan_keeps_phrases_and_amounts(ctx):
+    """A scanned statement read by OCR: recognised word sizes are estimates, so a
+    phrase must not be split at its spaces, and the amounts keep their columns."""
+    src = out("pl_vector.pdf")
+    _borderless_pl(src)
+    vec = pymupdf.open(src)
+    pix = vec[0].get_pixmap(dpi=200)
+    scan = pymupdf.open()
+    pg = scan.new_page(width=vec[0].rect.width, height=vec[0].rect.height)
+    pg.insert_image(pg.rect, stream=pix.tobytes("png"))
+    scanned = out("pl_scan.pdf")
+    scan.save(scanned)
+    r = convert.to_excel(ctx, scanned, out("pl_scan.xlsx"), ocr="auto")
+    assert r.get("ocr")
+    wb, flat = _xl_cells(r["output"])
+    ws = wb["Page 1"]
+    row = _row_with(ws, "Changes in inventories of finished goods")
+    assert [v for v in row if v is not None][-3:] == [25, -1234567.0, 876543.0]
+    assert _row_with(ws, "Revenue from operations")[-2:] == (123456789.0, 98765432.5)
+    assert "ACME TRADERS PRIVATE LIMITED" in flat
+
+
+def test_excel_large_document_keeps_every_line(fx, ctx):
+    r = convert.to_excel(ctx, fx["large"], out("large_doc.xlsx"), layout="document", ocr="off")
+    lines = sum(1 for pg in pymupdf.open(fx["large"]) for ln in pg.get_text("text").splitlines() if ln.strip())
+    assert r["rows"] >= lines and r["reviewPages"] == []
 
 
 # ---- PDF -> PowerPoint ------------------------------------------------------------
@@ -272,7 +501,7 @@ def test_scanned_to_excel_with_ocr(fx, ctx):
     r = convert.to_excel(ctx, fx["scanned"], out("scan.xlsx"), pages="1", ocr="auto")
     assert r.get("ocr")
     wb = openpyxl.load_workbook(r["output"])
-    flat = [str(v) for ws in wb.worksheets[1:] for row in ws.iter_rows(values_only=True) for v in row if v is not None]
+    flat = [str(v) for ws in wb.worksheets for row in ws.iter_rows(values_only=True) for v in row if v is not None]
     assert any("Revenue" in v for v in flat)
 
 

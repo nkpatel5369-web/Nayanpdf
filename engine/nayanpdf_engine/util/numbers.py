@@ -137,7 +137,7 @@ def parse_date(text: str, order: str = "DMY"):
         if len(m.group(3)) == 2:
             y += 2000 if y < 70 else 1900
         try:
-            return _dt.date(y, mon, int(m.group(1))), "dd-mmm-yyyy"
+            return _dt.date(y, mon, int(m.group(1))), "dd-mmm-yy" if len(m.group(3)) == 2 else "dd-mmm-yyyy"
         except ValueError:
             return None
     return None
