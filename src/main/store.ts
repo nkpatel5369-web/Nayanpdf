@@ -84,6 +84,28 @@ export function setDefaultOutputDir(dir: string): Settings {
   return settingsCache;
 }
 
+// ---------------------------------------------------------------- last save folder
+// The folder the user last saved into through a Save dialog (Save As, a saved
+// copy, an exported comment summary, a chosen output folder). The next Save
+// dialog opens there, as Windows programs do. Kept apart from the settings.
+export function lastSaveDir(): string | null {
+  const v = readJson<{ dir?: unknown }>(userDataFile("last-save-folder.json"), {}).dir;
+  if (typeof v !== "string" || !v || v.length > 1000) return null;
+  try {
+    return statSync(v).isDirectory() ? v : null;
+  } catch {
+    return null; // the folder was removed or the drive is not connected
+  }
+}
+
+export function rememberSaveDir(dir: string): void {
+  try {
+    writeJsonAtomic(userDataFile("last-save-folder.json"), { dir });
+  } catch {
+    // Not remembering a folder never stops a save.
+  }
+}
+
 // ---------------------------------------------------------------- recent files
 export function listRecent(): RecentFile[] {
   const list = readJson<RecentFile[]>(userDataFile("recent.json"), []);

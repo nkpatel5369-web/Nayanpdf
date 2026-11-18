@@ -220,6 +220,10 @@ function createWindow() {
   const url = process.env.NAYANPDF_DEV_URL || "app://nayan/index.html";
   mainWindow.loadURL(url);
   mainWindow.webContents.on("did-finish-load", () => {
+    // A touchpad pinch zooms the document (the viewer turns it into its own zoom),
+    // never the whole window. Set once the page has loaded: set earlier, it holds
+    // up the hand-over of files named on the command line.
+    Promise.resolve(mainWindow?.webContents.setVisualZoomLevelLimits(1, 1)).catch(() => undefined);
     if (pendingOpen.length && mainWindow) {
       mainWindow.webContents.send("app:openFiles", pendingOpen.splice(0));
     }

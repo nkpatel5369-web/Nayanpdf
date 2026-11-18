@@ -411,7 +411,15 @@ try {
     await page.waitForSelector('.result-box strong:has-text("Completed")', { timeout: 180000 });
     const xlsx = join(work, "financial.xlsx");
     await shot("10-convert-excel");
-    record("Convert PDF to Excel", existsSync(xlsx), xlsx);
+    // One worksheet per page, no report sheet; the statement's rows as cells with real numbers.
+    let wb = { sheets: [], revenue: null };
+    if (existsSync(xlsx)) {
+      wb = JSON.parse(execFileSync(PY, ["-c", "import openpyxl,sys,json; wb=openpyxl.load_workbook(sys.argv[1]); rows=[[v for v in r if v is not None] for ws in wb.worksheets for r in ws.iter_rows(values_only=True)]; print(json.dumps({'sheets': wb.sheetnames, 'revenue': next((r for r in rows if r and r[0] == 'Revenue from operations'), None)}))", xlsx]).toString());
+    }
+    const pagesOnly = wb.sheets.length > 0 && wb.sheets.every((n, k) => n === `Page ${k + 1}`);
+    const rev = JSON.stringify(wb.revenue) === JSON.stringify(["Revenue from operations", 123456.78, 98765.43]);
+    record("Convert PDF to Excel", existsSync(xlsx) && pagesOnly && rev,
+      `sheets ${JSON.stringify(wb.sheets)} (no report sheet: ${!wb.sheets.includes("Extraction Report")}); revenue row ${JSON.stringify(wb.revenue)}`);
   });
 
   await step("Batch: valid files succeed, invalid file fails, queue continues", async () => {
@@ -1292,6 +1300,150 @@ try {
     const failed = Object.entries(checks).filter(([, v]) => !v).map(([k]) => k);
     record("Explorer right-click: Convert to PDF and Combine files", failed.length === 0,
       `${failed.length ? "failed: " + failed.join(", ") + "; " : Object.keys(checks).length + " checks; "}second instances exited ${codes.join("/")}; listed ${JSON.stringify(listed.map((x) => x.slice(0, 30)))}; combined ${cPages} pages (a.pdf ${aPages} + image + text). Explorer's own menu is not driven by this test`);
+  });
+
+  // Open a file through the Open button, as a user would, and wait until it is shown.
+  const openViaButton = async (path) => {
+    setDialogs({ openFiles: [path] });
+    await page.click('button[title="Open PDF (Ctrl+O)"]');
+    const name = path.split(/[\\/]/).pop();
+    await page.waitForSelector(`.tab.active .name:has-text("${name}")`, { timeout: 60000 });
+    await page.waitForSelector(".doc-pane.active .pdfViewer .page canvas", { timeout: 60000 });
+    await page.waitForTimeout(800);
+  };
+  const viewState = () => page.evaluate(() => {
+    const c = document.querySelector(".doc-pane.active .viewer-container");
+    return { top: Math.round(c.scrollTop), h: c.clientHeight, focused: document.activeElement === c,
+      page: Number(document.querySelector(".doc-pane.active .page-input")?.value || 0) };
+  });
+  const closeActive = async () => {
+    await page.click(".tab.active .x");
+    await page.waitForTimeout(500);
+  };
+
+  await step("Arrow keys, Page Down and the mouse wheel scroll a document as soon as it opens", async () => {
+    const cont = join(work, "scroll continuous.pdf");
+    const single = join(work, "scroll single page.pdf");
+    copyFileSync(join(work, "twenty.pdf"), cont);
+    // Many PDFs (bank and accounting exports) ask to open one page at a time.
+    execFileSync(PY, ["-c", "import pymupdf,sys; d=pymupdf.open(sys.argv[1]); d.set_pagelayout('SinglePage'); d.save(sys.argv[2])", join(work, "twenty.pdf"), single]);
+    const checks = {};
+    await openViaButton(cont);
+    let s0 = await viewState();
+    checks.focused = s0.focused;
+    // No click into the document first.
+    for (let i = 0; i < 3; i++) await page.keyboard.press("ArrowDown");
+    await page.waitForTimeout(300);
+    let s1 = await viewState();
+    checks.arrows = s1.top - s0.top >= 100;
+    await page.keyboard.press("PageDown");
+    await page.waitForTimeout(300);
+    const s2 = await viewState();
+    checks.pageDown = s2.top - s1.top >= 0.6 * s1.h;
+    // After a toolbar button has taken the focus, the keys still scroll the document.
+    await page.locator('.doc-pane.active button[title="Zoom in (Ctrl+=)"]:visible').first().click();
+    await page.waitForTimeout(400);
+    const s2b = await viewState();
+    await page.keyboard.press("ArrowDown");
+    await page.waitForTimeout(300);
+    checks.afterToolbar = (await viewState()).top > s2b.top;
+    const box = await page.locator(".doc-pane.active .viewer-container").boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    const s3 = await viewState();
+    await page.mouse.wheel(0, 500);
+    await page.waitForTimeout(400);
+    checks.wheel = (await viewState()).top > s3.top;
+    await closeActive();
+    // One page at a time: the wheel scrolls the page, then turns to the next one.
+    await openViaButton(single);
+    s0 = await viewState();
+    checks.singleFocused = s0.focused;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    for (let i = 0; i < 12; i++) { await page.mouse.wheel(0, 120); await page.waitForTimeout(120); }
+    await page.waitForTimeout(400);
+    s1 = await viewState();
+    checks.wheelTurns = s1.page >= 2;
+    for (let i = 0; i < 40 && (await viewState()).top > 1; i++) await page.keyboard.press("ArrowUp");
+    await page.keyboard.press("ArrowUp");
+    await page.waitForTimeout(400);
+    checks.arrowBack = (await viewState()).page === s1.page - 1;
+    await shot("44-scroll-on-open");
+    await closeActive();
+    const failed = Object.entries(checks).filter(([, v]) => !v).map(([k]) => k);
+    record("Arrow keys, Page Down and the mouse wheel scroll a document as soon as it opens", failed.length === 0,
+      `${failed.length ? "failed: " + failed.join(", ") + "; " : ""}${Object.keys(checks).length} checks; single-page PDF reached page ${s1.page} by wheel`);
+  });
+
+  await step("Ctrl+wheel and a touchpad pinch zoom around the pointer", async () => {
+    const zdoc = join(work, "zoom check.pdf");
+    copyFileSync(src, zdoc);
+    await openViaButton(zdoc);
+    const box = await page.locator(".doc-pane.active .viewer-container").boundingBox();
+    const px = Math.round(box.x + box.width * 0.35), py = Math.round(box.y + box.height * 0.4);
+    // Where on the page the pointer is (as a fraction of the page), and the zoom shown.
+    const at = () => page.evaluate(([x, y]) => {
+      const c = document.querySelector(".doc-pane.active .viewer-container");
+      const pg = [...c.querySelectorAll(".page")].find((d) => { const r = d.getBoundingClientRect(); return r.top <= y && r.bottom >= y; });
+      const r = pg.getBoundingClientRect();
+      return { fx: (x - r.left) / r.width, fy: (y - r.top) / r.height, wide: r.width > c.clientWidth,
+        zoom: parseInt(document.querySelector(".doc-pane.active .page-ctrl .zoom-label")?.textContent || "0", 10) };
+    }, [px, py]);
+    await page.mouse.move(px, py);
+    const a0 = await at();
+    await page.keyboard.down("Control");
+    for (let i = 0; i < 3; i++) { await page.mouse.wheel(0, -100); await page.waitForTimeout(200); }
+    await page.waitForTimeout(700);
+    const a1 = await at();
+    for (let i = 0; i < 8; i++) { await page.mouse.wheel(0, 2.5); await page.waitForTimeout(40); }
+    await page.waitForTimeout(700);
+    const a2 = await at();
+    await page.keyboard.up("Control");
+    const checks = {};
+    checks.zoomedIn = a1.zoom > a0.zoom;
+    checks.anchoredIn = Math.abs(a1.fy - a0.fy) < 0.01 && (!a1.wide || Math.abs(a1.fx - a0.fx) < 0.01);
+    checks.pinchOut = a2.zoom < a1.zoom;
+    checks.anchoredOut = Math.abs(a2.fy - a0.fy) < 0.01 && (!a2.wide || Math.abs(a2.fx - a0.fx) < 0.01);
+    // Ctrl+wheel over the toolbar never zooms the whole window.
+    const dpr = await page.evaluate(() => window.devicePixelRatio);
+    await page.mouse.move(box.x + 40, 12);
+    await page.keyboard.down("Control");
+    await page.mouse.wheel(0, -300);
+    await page.keyboard.up("Control");
+    await page.waitForTimeout(300);
+    checks.windowNotZoomed = (await page.evaluate(() => window.devicePixelRatio)) === dpr;
+    await shot("45-zoom-at-pointer");
+    const failed = Object.entries(checks).filter(([, v]) => !v).map(([k]) => k);
+    record("Ctrl+wheel and a touchpad pinch zoom around the pointer", failed.length === 0,
+      `${failed.length ? "failed: " + failed.join(", ") + "; " : ""}zoom ${a0.zoom}% -> ${a1.zoom}% -> ${a2.zoom}%; point under the pointer moved ${(Math.abs(a1.fy - a0.fy) * 100).toFixed(2)}% / ${(Math.abs(a2.fy - a0.fy) * 100).toFixed(2)}% of the page height`);
+  });
+
+  await step("Save As opens in the folder last saved into", async () => {
+    // The active document is "zoom check.pdf", in the work folder.
+    const elsewhere = join(work, "Saved here");
+    mkdirSync(elsewhere, { recursive: true });
+    setDialogs({ saveAs: join(elsewhere, "zoom check copy.pdf") });
+    await page.click('.doc-pane.active button:has-text("Save As")');
+    await page.waitForTimeout(1500);
+    const saved = existsSync(join(elsewhere, "zoom check copy.pdf"));
+    await closeActive();
+    const other = join(work, "another statement.pdf");
+    copyFileSync(join(work, "a.pdf"), other);
+    await openViaButton(other);
+    const mark = hookLog.length;
+    setDialogs({ saveAs: join(elsewhere, "another statement.pdf") });
+    await page.click('.doc-pane.active button:has-text("Save As")');
+    await page.waitForTimeout(1500);
+    const sug = hookLog.slice(mark).map((l) => l.match(/^\[testhook\] saveAs suggested=(".*") -> /)).find(Boolean);
+    const suggested = sug ? JSON.parse(sug[1]) : "";
+    const norm = (p) => (IS_WIN ? p.toLowerCase() : p).replace(/\\/g, "/");
+    const inFolder = norm(suggested) === norm(join(elsewhere, "another statement.pdf"));
+    // The folder is remembered for the next start of the app too.
+    const remembered = (() => {
+      try { return norm(JSON.parse(readFileSync(join(out, "profile", "last-save-folder.json"), "utf8")).dir) === norm(elsewhere); } catch { return false; }
+    })();
+    await closeActive();
+    record("Save As opens in the folder last saved into", saved && inFolder && remembered,
+      `first copy saved: ${saved}; next Save As suggested ${JSON.stringify(suggested)}; remembered after restart: ${remembered}`);
   });
 
   await step("Settings and dark theme", async () => {

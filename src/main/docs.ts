@@ -13,7 +13,7 @@ import { DocState } from "../shared/ipc";
 import { access, checkParams } from "./access";
 import { EngineError, enginePool } from "./engine";
 import { appTempRoot } from "./paths";
-import { addRecent, getSettings } from "./store";
+import { addRecent, getSettings, lastSaveDir, rememberSaveDir } from "./store";
 import { cleanupDir } from "./jobs";
 import { testAnswer } from "./testhooks";
 
@@ -236,7 +236,9 @@ export async function saveAs(win: BrowserWindow, id: string): Promise<{ state: D
   // after the user confirms it.
   const base = s.savedPath || s.originalPath;
   const name = extname(base).toLowerCase() === ".pdf" ? basename(base) : `${basename(base, extname(base))}.pdf`;
-  const suggested = join(getSettings().defaultOutputDir || dirname(base), name);
+  // The folder last saved into, as Windows programs do; before any save, the
+  // default output folder from Settings, else the document's own folder.
+  const suggested = join(lastSaveDir() || getSettings().defaultOutputDir || dirname(base), name);
   const t = testAnswer("saveAs", suggested);
   const r = t.hit ? { canceled: !t.value, filePath: t.value as string } : await dialog.showSaveDialog(win, {
     title: "Save PDF as",
@@ -249,6 +251,7 @@ export async function saveAs(win: BrowserWindow, id: string): Promise<{ state: D
   if (sameFile(target, s.originalPath) && !(await confirmOverwriteOriginal(win, s))) return { state: state(s), cancelled: true };
   access.allowOutputDir(dirname(target));
   atomicCopy(s.revisions[s.index], target);
+  rememberSaveDir(dirname(target));
   s.savedPath = target;
   s.savedIndex = s.index;
   access.allowInput(target);

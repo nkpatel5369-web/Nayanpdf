@@ -280,6 +280,16 @@ export function DocumentView({ sessionId, active }: { sessionId: string; active:
       } else if (fs && ["arrowleft", "arrowup", "pageup", "backspace"].includes(key)) {
         e.preventDefault();
         v?.prev();
+      } else if (!e.ctrlKey && !e.altKey && !e.metaKey && mode !== "pages" && !selected && (key === "arrowdown" || key === "arrowup")
+        && !document.querySelector('[role="dialog"]')) {
+        // Up/Down scroll the document wherever the focus is (a toolbar button the
+        // user just clicked, or nothing yet after opening), as in Acrobat.
+        e.preventDefault();
+        v?.scroll(key === "arrowdown" ? 1 : -1, "line");
+      } else if (!e.ctrlKey && !e.altKey && !e.metaKey && mode !== "pages" && (display.layout === "continuous" || display.layout === "twoContinuous")
+        && (key === "pagedown" || key === "pageup") && !document.querySelector('[role="dialog"]')) {
+        e.preventDefault();
+        v?.scroll(key === "pagedown" ? 1 : -1, "screen");
       } else if (e.ctrlKey && e.shiftKey && (e.code === "Equal" || e.code === "NumpadAdd")) {
         e.preventDefault();
         v?.rotate(90);

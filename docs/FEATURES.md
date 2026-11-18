@@ -41,6 +41,9 @@ No processing feature needs a paid licence or a separately installed component: 
 | Page display: single page, single page continuous, two page, two page scrolling (View menu); the PDF's /PageLayout honoured | Fully implemented and tested | U29 (two page view, back to continuous), U30 (/TwoColumnLeft opens as two page scrolling) |
 | Show cover page in two page view | Implemented with limitations | Implemented (View menu); not covered by an automated test |
 | Zoom: Ctrl+1 actual size, Ctrl+0 fit page, Ctrl+2 fit width; default zoom "Automatic" | Fully implemented and tested | U29 |
+| Ctrl+mouse wheel and touchpad pinch zoom around the pointer; the window itself never zooms | Fully implemented and tested | UI scenario "Ctrl+wheel and a touchpad pinch zoom around the pointer" (point under the pointer held to within 1 % of the page) |
+| Up/Down arrows, Page Up/Down and the mouse wheel scroll as soon as a document opens; in single-page layouts the wheel and the arrows turn the page at its end | Fully implemented and tested | UI scenario "Arrow keys, Page Down and the mouse wheel scroll a document as soon as it opens" |
+| Save As and every other Save dialog open in the folder last saved into, remembered between sessions | Fully implemented and tested | UI scenario "Save As opens in the folder last saved into" |
 | Page navigation keys: Home, End, Left/Right arrow (spread-aware), Ctrl+Shift+N go to page | Fully implemented and tested | U29 |
 | Rotate view: Ctrl+Shift+Plus / Ctrl+Shift+Minus | Fully implemented and tested | U29 (the view turns and back; the file is unchanged) |
 | Read mode (Ctrl+H): toolbars and panels hidden, floating page bar | Fully implemented and tested | U29 |
@@ -169,10 +172,10 @@ N PDF edits the page content stream itself. It does not lay white boxes over the
 | PDF to Word, layout-preserving mode | Fully implemented and tested | E: `test_pdf_to_word_layout`; U23. Uses pdf2docx; complex multi-column layouts may need tidying in Word |
 | PDF to Word, easy-editing (flowing text) mode | Fully implemented and tested | E: `test_pdf_to_word_flow` |
 | PDF to Word for scanned PDFs (OCR first) | Implemented with limitations | Automatic OCR when pages have no text. Exercised for Excel (E: `test_scanned_to_excel_with_ocr`), not separately for Word |
-| PDF to Excel with tables, headings, numbers, dates, negatives | Fully implemented and tested | E: `test_pdf_to_excel_financial_values` (cell values compared with the source); U16 |
+| PDF to Excel with tables, headings, numbers, dates, negatives | Fully implemented and tested | Page layout kept: one row per text line, columns from where the text sits, ruled tables on their grid; one worksheet per page or the whole document on one. E: `test_pdf_to_excel_financial_values`, `test_pdf_to_excel_whole_document_on_one_sheet`, `test_excel_borderless_statement_keeps_phrases_and_columns`, `test_excel_bank_statement_wrapped_narrations_and_pages`, `test_excel_ruled_invoice_totals_follow_the_grid`, `test_excel_text_is_never_a_formula`, `test_excel_from_a_scan_keeps_phrases_and_amounts`, `test_excel_large_document_keeps_every_line` (cell values compared with the source); U16 |
 | Identifiers (account numbers, GSTIN, PAN, invoice numbers, leading zeros) kept as text | Fully implemented and tested | E: `test_parse_number_keeps_identifiers_as_text`, `test_pdf_to_excel_financial_values` |
 | Tables spanning pages merged; rows split by a page break stitched | Fully implemented and tested | E: `test_pdf_to_excel_financial_values` (bank table across pages) |
-| Review aid for uncertain pages | Fully implemented and tested | "Extraction Report" sheet: per page, how many printed digits reached cells; pages below threshold flagged |
+| Review aid for uncertain pages | Fully implemented and tested | Every printed digit of a page is checked to be in a cell; the result names any page where one is not (no report sheet in the workbook) |
 | Merged cells | Implemented with limitations | Spanning text is placed in the first cell of the span; cells are not merged in the XLSX |
 | Excel from scanned PDFs (OCR) | Fully implemented and tested | E: `test_scanned_to_excel_with_ocr`. Accuracy depends on scan quality |
 | CSV export | Fully implemented and tested | E: `test_pdf_to_csv` |
@@ -337,7 +340,7 @@ N PDF edits the page content stream itself. It does not lay white boxes over the
 | Figures and signs never altered; Indian and Western digit grouping; (negatives); Dr/Cr kept | Fully implemented and tested | E: `test_parse_number_converts`, `test_drcr_marker_preserved_in_format` |
 | Identifiers kept exactly | Fully implemented and tested | E: `test_parse_number_keeps_identifiers_as_text` |
 | Row order preserved; no silent drops (digit coverage report) | Fully implemented and tested | E: `test_pdf_to_excel_financial_values` |
-| Output not presented as a verified accounting record | Fully implemented and tested | Conversion screens and the Extraction Report say the output must be reviewed |
+| Output not presented as a verified accounting record | Fully implemented and tested | The conversion screen says the output must be reviewed |
 
 ## 19. File integrity (brief §25)
 

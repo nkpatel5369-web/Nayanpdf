@@ -78,7 +78,7 @@ Ctrl+P (or the printer button, or right-click → Print) opens N PDF's print dia
 - **Orientation** (auto/portrait/landscape), **paper size** (A4, A3, A5, Letter, Legal), **print on both sides** (long or short edge), **comments & forms** (document and markups, document only, form fields only) and **quality** (150/300/600 dpi).
 - A **preview** shows each sheet exactly as it will print. **Print** sends it straight to the chosen printer. For printer-specific options (paper tray, stapling, colour profiles) use **Printer settings (Windows dialog)…**, which opens the Windows dialog with the same layout.
 
-Every change creates a revision you can undo (Ctrl+Z) and redo (Ctrl+Y). **Nothing touches your original file until you save.** Save As (Ctrl+Shift+S) suggests the document's own name in its own folder, as Acrobat does; type a new name to keep the original. Replacing the original asks once per document; after you agree, Ctrl+S saves straight to it until you close the document. The Settings option *Allow "Save" to overwrite the original file without an extra warning* removes that question.
+Every change creates a revision you can undo (Ctrl+Z) and redo (Ctrl+Y). **Nothing touches your original file until you save.** Save As (Ctrl+Shift+S) suggests the document's own name in the folder you last saved into (remembered between sessions; before your first save, the default output folder from Settings or the document's own folder), and every other Save dialog opens there too; type a new name to keep the original. Replacing the original asks once per document; after you agree, Ctrl+S saves straight to it until you close the document. The Settings option *Allow "Save" to overwrite the original file without an extra warning* removes that question.
 
 **More tools** in the toolbar adds watermarks, headers/footers, page numbers, Bates numbers, backgrounds and borders (with a live preview), passwords and permissions, compression, OCR and properties.
 
@@ -104,7 +104,7 @@ Results go next to the source file unless you choose another folder (or set a de
 
 ### Reading conversion results professionally
 
-- **PDF to Excel** converts a cell to a number only when the printed text is an unambiguous number (Indian or Western grouping, negatives in brackets, Dr/Cr kept as a format). Account numbers, GSTIN/PAN, invoice references and anything with leading zeros stay as text. The **Extraction Report** sheet shows, page by page, how many printed digits reached the cells and flags pages to check. Treat the output as a working copy that must be reviewed, not as a verified accounting record.
+- **PDF to Excel** lays each page out as printed: every text line becomes a row in reading order, and the pieces set apart on a line (a description, a note number, an amount) go into separate cells. Columns come from where the text sits, ruled tables keep their grid, a wrapped bank narration is one cell again, and headings stay where they are. The workbook has one worksheet per page, or the whole document on one worksheet (page headers, footers and repeated column headings once; a row cut by a page break joined). There is no report sheet; N PDF checks that every printed digit reached a cell and names any page where one did not. A cell becomes a number only when the printed text is an unambiguous number (Indian or Western grouping, negatives in brackets, Dr/Cr kept as a format); account numbers, GSTIN/PAN, invoice references and anything with leading zeros stay as text. Text from a PDF is never written as a formula. Treat the output as a working copy that must be reviewed, not as a verified accounting record.
 - **OCR** reports a confidence figure per page and flags weak pages. OCR text is never guaranteed to be correct.
 - **PDF/A** output passes basic checks but is not formally validated; do not file it where certified compliance is required without validating it in a dedicated tool.
 - **Signature images** show intent only. Only the certificate-based **digital signature** protects the document against later changes; N PDF says which is which wherever signatures appear.
@@ -117,8 +117,8 @@ The assignments follow Acrobat on Windows. Shortcuts are ignored while you are t
 |---|---|
 | Files | Ctrl+O open, Ctrl+S save, Ctrl+Shift+S save as, Ctrl+P print, Ctrl+W or Ctrl+F4 close the document, Ctrl+Tab / Ctrl+Shift+Tab next / previous document, Ctrl+K settings, Ctrl+Shift+F search across files, Ctrl+Q exit |
 | Editing | Ctrl+Z undo, Ctrl+Y or Ctrl+Shift+Z redo, Ctrl+A select the page's text, Ctrl+C copy, Ctrl+F find |
-| Zoom | Ctrl+= / Ctrl+- zoom in / out, Ctrl+1 actual size, Ctrl+0 fit page, Ctrl+2 fit width |
-| Pages | Home / End first / last page, Left / Right arrow previous / next page, PageUp / PageDown (one page at a time in single-page layouts), Ctrl+Shift+N go to page, Ctrl+Shift+Plus / Ctrl+Shift+Minus rotate the view |
+| Zoom | Ctrl+mouse wheel or a touchpad pinch zooms around the pointer; Ctrl+= / Ctrl+- zoom in / out, Ctrl+1 actual size, Ctrl+0 fit page, Ctrl+2 fit width |
+| Pages | Up / Down arrow and the mouse wheel scroll as soon as a document opens; PageUp / PageDown a screen at a time (a page at a time in single-page layouts, where the wheel and the arrow keys also turn the page at its end); Home / End first / last page, Left / Right arrow previous / next page, Ctrl+Shift+N go to page, Ctrl+Shift+Plus / Ctrl+Shift+Minus rotate the view |
 | Panels and modes | F4 right-hand panel, Shift+F4 All tools pane, Ctrl+D document properties, Ctrl+H read mode, Ctrl+L full screen, Esc leave read mode or full screen, hold Space and drag to move the page |
 | Read Out Loud | Ctrl+Shift+V read this page, Ctrl+Shift+B read to the end, Ctrl+Shift+C pause or resume, Ctrl+Shift+E stop |
 
@@ -142,7 +142,7 @@ Use Windows Settings → Apps → Installed apps → N PDF → Uninstall (Window
 - **Editing existing text** depends on how the PDF was made. Text is edited in its original font when the embedded font contains the needed characters; otherwise a similar font is substituted and N PDF tells you. Rotated or vertical text, text drawn as outlines and scanned pages cannot be edited in place (OCR or Convert to Word are offered instead). Long replacements are not reflowed into following lines; use paragraph mode or convert to Word for heavy rewording. Resizing an existing paragraph box is not yet available in the editor.
 - **Bold/italic** on edited text uses a substitute font family, because PDFs rarely embed the bold variant.
 - **PDF to Word/PowerPoint** quality depends on the source layout; complex multi-column pages may need tidying.
-- **PDF to Excel** does not merge cells in the output; spanning headings go into the first cell of the span.
+- **PDF to Excel** does not merge cells in the output; a heading over several columns goes into the cell where it starts. A table drawn without lines whose columns overlap one another on the page may need a column moved by hand.
 - **Office to PDF** uses the bundled LibreOffice. Fonts not installed on your computer are substituted, which can change line breaks. Linked images and web data in Office files are deliberately not fetched.
 - **HTML to PDF** renders saved HTML without running scripts or loading internet resources.
 - **Digital signatures:** revocation (CRL/OCSP) is not checked and trusted timestamps are not added, because both require the internet. USB tokens / smart cards (PKCS#11) are supported in code but were not tested with real hardware; the token vendor's driver must be installed.

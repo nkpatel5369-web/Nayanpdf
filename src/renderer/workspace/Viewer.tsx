@@ -66,6 +66,9 @@ export interface ViewerHandle {
   display(): DisplayMode;
   /** Acrobat's Full Screen mode (Ctrl+L): one page at a time, fitted, nothing else on screen. */
   fullScreen(): void;
+  /** Scroll by a line (arrow keys) or a screen (Page Up/Down); in a one-page view, going
+   *  past the end of the page turns to the next or previous page, as in Acrobat. */
+  scroll(dir: 1 | -1, unit: "line" | "screen"): void;
 }
 
 interface Props {
@@ -101,6 +104,7 @@ export const Viewer = forwardRef<ViewerHandle, Props>(function Viewer(props, ref
   const displayRef = useRef<DisplayMode>({ layout: "continuous", cover: false });
   const openDestRef = useRef<any>(null);
   const fsRestoreRef = useRef<{ display: DisplayMode; scale: string } | null>(null);
+  const scrollRef = useRef<((dir: 1 | -1, unit: "line" | "screen") => void) | null>(null);
   const propsRef = useRef(props);
   propsRef.current = props;
   const [pagesVersion, setPagesVersion] = useState(0);
@@ -162,6 +166,12 @@ export const Viewer = forwardRef<ViewerHandle, Props>(function Viewer(props, ref
         const dest = openDestRef.current;
         openDestRef.current = null;
         if (dest) Promise.resolve(linkService.goToDestination(dest)).catch(() => undefined);
+        // The keyboard belongs to the document as soon as it is shown (arrow keys,
+        // Page Up/Down, Space to pan), unless the user is typing somewhere.
+        const c0 = containerRef.current;
+        const a = document.activeElement as HTMLElement | null;
+        const typingEl = !!a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA" || a.tagName === "SELECT" || a.isContentEditable);
+        if (c0 && !hidden && !typingEl && !a?.closest?.('[role="dialog"]')) c0.focus({ preventScroll: true });
       } else {
         const numeric = keep.scale && !isNaN(Number(keep.scale)) ? Number(keep.scale) : null;
         viewer.currentScaleValue = hidden || !keep.scale || (numeric !== null && numeric <= 0.05) ? "page-width" : keep.scale;
@@ -243,6 +253,78 @@ export const Viewer = forwardRef<ViewerHandle, Props>(function Viewer(props, ref
       c.classList.remove("panning");
     };
     const blur = () => { space = false; drag = null; c.classList.remove("pan-ready", "panning"); };
+    // Mouse wheel. Ctrl+wheel (and a touchpad pinch, which arrives as Ctrl+wheel)
+    // zooms the document around the pointer, as in Acrobat: a wheel notch is one
+    // zoom step, a pinch is continuous. In a one-page view the wheel scrolls the
+    // page and, pushed past its end, turns to the next or previous page.
+    let over = 0, overDir = 0, overAt = 0, flipAt = 0;
+    const wheel = (e: WheelEvent) => {
+      if (!pdfRef.current || !viewer.pagesCount) return;
+      const unit = e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? c.clientHeight : 1;
+      const dy = e.deltaY * unit;
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        if (!dy) return;
+        // pdf.js measures the anchor from the container's offset parent (the
+        // viewer frame), not from the window.
+        const r = c.getBoundingClientRect();
+        const origin = [e.clientX - r.left + c.offsetLeft, e.clientY - r.top + c.offsetTop];
+        // The spot of the page under the pointer, to keep it there.
+        const pageDiv = (e.target as HTMLElement | null)?.closest?.(".page") as HTMLElement | null;
+        const before = pageDiv?.getBoundingClientRect();
+        if (Math.abs(dy) >= 50 && Number.isInteger(e.deltaY)) {
+          const steps = Math.max(1, Math.round(Math.abs(dy) / 100));
+          viewer.updateScale({ steps: dy < 0 ? steps : -steps, origin, drawingDelay: 300 });
+        } else {
+          viewer.updateScale({ scaleFactor: Math.exp(-dy / 100), origin, drawingDelay: 300 });
+        }
+        if (pageDiv && before && before.width > 0 && pageDiv.isConnected) {
+          // pdf.js keeps the origin only while the page's centring margin stays the
+          // same; correct for the change (a page that grows wider than the window).
+          const after = pageDiv.getBoundingClientRect();
+          const fx = (e.clientX - before.left) / before.width;
+          const fy = (e.clientY - before.top) / before.height;
+          c.scrollLeft += after.left - (e.clientX - fx * after.width);
+          c.scrollTop += after.top - (e.clientY - fy * after.height);
+        }
+        return;
+      }
+      if (viewer.scrollMode !== ScrollMode.PAGE || !dy || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+      const dir = dy > 0 ? 1 : -1;
+      const atEnd = dir > 0 ? c.scrollTop + c.clientHeight >= c.scrollHeight - 2 : c.scrollTop <= 1;
+      if (!atEnd) {
+        over = 0;
+        return;
+      }
+      e.preventDefault();
+      const now = performance.now();
+      if (dir !== overDir || now - overAt > 500) over = 0;
+      overDir = dir;
+      overAt = now;
+      over += Math.abs(dy);
+      // One notch past the end turns the page; a touchpad's stream of small steps
+      // must add up to as much, and pages turn at most every 350 ms.
+      if (over < 90 || now - flipAt < 350) return;
+      over = 0;
+      flipAt = now;
+      turnPage(dir);
+    };
+    const turnPage = (dir: 1 | -1) => {
+      if (dir > 0) {
+        if (viewer.nextPage()) c.scrollTop = 0;
+      } else if (viewer.previousPage()) {
+        requestAnimationFrame(() => { c.scrollTop = c.scrollHeight; });
+      }
+    };
+    scrollRef.current = (dir, unit) => {
+      if (!viewer.pagesCount) return;
+      if (viewer.scrollMode === ScrollMode.PAGE) {
+        const atEnd = dir > 0 ? c.scrollTop + c.clientHeight >= c.scrollHeight - 2 : c.scrollTop <= 1;
+        if (atEnd) return turnPage(dir);
+      }
+      c.scrollTop += dir * (unit === "line" ? 40 : Math.max(40, c.clientHeight - 40));
+    };
+    c.addEventListener("wheel", wheel, { passive: false });
     window.addEventListener("keydown", kd, true);
     window.addEventListener("keyup", ku, true);
     window.addEventListener("blur", blur);
@@ -251,6 +333,8 @@ export const Viewer = forwardRef<ViewerHandle, Props>(function Viewer(props, ref
     window.addEventListener("mouseup", mu);
     return () => {
       document.removeEventListener("fullscreenchange", onFs);
+      c.removeEventListener("wheel", wheel);
+      scrollRef.current = null;
       window.removeEventListener("keydown", kd, true);
       window.removeEventListener("keyup", ku, true);
       window.removeEventListener("blur", blur);
@@ -374,6 +458,7 @@ export const Viewer = forwardRef<ViewerHandle, Props>(function Viewer(props, ref
         setTimeout(() => { v.currentScaleValue = "page-fit"; }, 50);
       }).catch(() => { fsRestoreRef.current = null; });
     },
+    scroll: (dir, unit) => scrollRef.current?.(dir, unit),
   }));
 
   const portals: React.ReactNode[] = [];

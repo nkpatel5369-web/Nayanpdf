@@ -141,9 +141,10 @@ const handlers: Record<string, Handler> = {
       if (p.setDefault) store.setDefaultOutputDir(t.value);
       return t.value;
     }
-    const r = await dialog.showOpenDialog(win(e), { title: "Choose output folder", properties: ["openDirectory", "createDirectory"] });
+    const r = await dialog.showOpenDialog(win(e), { title: "Choose output folder", defaultPath: store.lastSaveDir() || undefined, properties: ["openDirectory", "createDirectory"] });
     if (r.canceled || !r.filePaths[0]) return null;
     access.allowOutputDir(r.filePaths[0]);
+    store.rememberSaveDir(r.filePaths[0]);
     if (p.setDefault) store.setDefaultOutputDir(r.filePaths[0]);
     return r.filePaths[0];
   },
@@ -151,14 +152,21 @@ const handlers: Record<string, Handler> = {
     const p = obj(payload);
     const kind = typeof p.kind === "string" && FILTERS[p.kind] ? p.kind : undefined;
     const ext = typeof p.extension === "string" ? p.extension.replace(/^\./, "") : "pdf";
-    const t = testAnswer("saveFile");
+    // The suggested name, in the folder the user last saved into (when it still exists).
+    const last = store.lastSaveDir();
+    const asked = typeof p.defaultPath === "string" ? p.defaultPath : undefined;
+    const defaultPath = last ? join(last, asked ? basename(asked) : "") : asked;
+    const t = testAnswer("saveFile", defaultPath);
     if (t.hit) {
-      access.allowOutputDir(dirname(t.value));
+      if (t.value) {
+        access.allowOutputDir(dirname(t.value));
+        store.rememberSaveDir(dirname(t.value));
+      }
       return t.value;
     }
     const r = await dialog.showSaveDialog(win(e), {
       title: p.title || "Save as",
-      defaultPath: typeof p.defaultPath === "string" ? p.defaultPath : undefined,
+      defaultPath,
       filters: kind ? FILTERS[kind] : [{ name: ext.toUpperCase(), extensions: [ext] }],
       properties: ["showOverwriteConfirmation", "createDirectory"],
     });
@@ -166,6 +174,7 @@ const handlers: Record<string, Handler> = {
     let fp = r.filePath;
     if (!extname(fp)) fp += "." + ext;
     access.allowOutputDir(dirname(fp));
+    store.rememberSaveDir(dirname(fp));
     return fp;
   },
   "files:scanFolder": async (_e, payload) => {
