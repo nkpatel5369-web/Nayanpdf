@@ -150,10 +150,13 @@ def test_pdf_to_excel_whole_document_on_one_sheet(fx, ctx):
     bank = [row for row in rows[head + 1:] if any(isinstance(v, dt.datetime) for v in row)]
     # The bank table runs over several pages: every row once, the rows that a page
     # break cut in two joined again.
-    assert len(bank) == 18 * len(BANK_ROWS), len(bank)
+    odd = sorted({v for v in flat if isinstance(v, str) and v not in ("NEFT-HDFC0001234-ACME SUPPLIES", "UPI/CR/412345678901/Client A")
+                  and any(k in v for k in ("NEFT", "SUPPLIES", "UPI/", "Client A"))})
+    assert len(bank) == 18 * len(BANK_ROWS), (len(bank), odd)
     assert sum(1 for row in rows if "Description" in row) == 1
-    assert flat.count("NEFT-HDFC0001234-ACME SUPPLIES") == 18
-    assert flat.count("UPI/CR/412345678901/Client A") == 18
+    assert flat.count("NEFT-HDFC0001234-ACME SUPPLIES") == 18, odd
+    assert flat.count("UPI/CR/412345678901/Client A") == 18, odd
+    assert flat.count("000987654321") == 18, sorted({v for v in flat if isinstance(v, str) and v.startswith("0009")})
     assert any(isinstance(v, dt.datetime) and v.date() == dt.date(2025, 4, 15) for row in bank for v in row)
 
 
@@ -281,6 +284,50 @@ def test_excel_bank_statement_wrapped_narrations_and_pages(ctx):
     assert sum(1 for row in rows if "Narration" in row) == 1
     assert flat.count("STATEMENT OF ACCOUNT") == 1
     assert not any(isinstance(v, str) and v.startswith("Page ") for v in flat)
+
+
+def test_excel_row_cut_by_a_page_break_is_one_row_again(ctx):
+    """A ruled statement whose last row on page 1 is cut by the page break: page 2
+    starts with the rest of the narration and the last digit of the reference
+    (as a word processor lays out a long row). On one worksheet it is one row."""
+    import datetime as dt
+
+    d = pymupdf.open()
+    xs = [40, 110, 300, 400, 480, 560]
+    heads = ["Date", "Description", "Ref No", "Debit", "Balance"]
+
+    def grid(p, top, rows):
+        rh = 26
+        for k in range(len(rows) + 1):
+            p.draw_line((xs[0], top + k * rh), (xs[-1], top + k * rh))
+        for x in xs:
+            p.draw_line((x, top), (x, top + len(rows) * rh))
+        for k, row in enumerate(rows):
+            for j, cell in enumerate(row):
+                for li, part in enumerate(cell.split("\n") if cell else []):
+                    y = top + k * rh + 11 + li * 10
+                    if j >= 3:
+                        _draw(p, xs[j + 1] - 3, y, part, right=True)
+                    else:
+                        _draw(p, xs[j] + 3, y, part, bold=k == 0 and top == 60)
+
+    p1 = d.new_page()
+    grid(p1, 60, [heads, ["03/04/2025", "Opening balance", "", "", "5,00,000.00"],
+                  ["04/04/2025", "NEFT-HDFC0001234-\nACME", "00098765432", "1,23,456.78", "3,76,543.22"]])
+    p2 = d.new_page()
+    grid(p2, 40, [["", "SUPPLIES", "1", "", ""], ["05/04/2025", "UPI/CR/412345678901/Client A", "412345678901", "", "4,21,543.22"]])
+    src = out("cut_row.pdf")
+    d.save(src)
+    r = convert.to_excel(ctx, src, out("cut_row.xlsx"), layout="document")
+    wb, flat = _xl_cells(r["output"])
+    rows = [row for row in _xl_rows(wb.worksheets[0]) if any(isinstance(v, dt.datetime) for v in row)]
+    assert len(rows) == 3, rows
+    cut = rows[1]
+    assert "NEFT-HDFC0001234-ACME SUPPLIES" in cut and "000987654321" in cut and 123456.78 in cut, cut
+    # One worksheet per page keeps the page as printed.
+    r = convert.to_excel(ctx, src, out("cut_row_pages.xlsx"))
+    wb, flat = _xl_cells(r["output"])
+    assert wb.sheetnames == ["Page 1", "Page 2"] and "SUPPLIES" in flat
 
 
 def test_excel_ruled_invoice_totals_follow_the_grid(ctx):

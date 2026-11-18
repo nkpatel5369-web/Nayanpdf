@@ -149,6 +149,8 @@ jobs:
           path: |
             acceptance/**
             runtime/win/MANIFEST.json
+            engine/tests/_fixtures/financial.pdf
+            engine/tests/_out/*.xlsx
           if-no-files-found: warn
 
       - name: Publish pre-release with the installer

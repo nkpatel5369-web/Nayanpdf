@@ -515,9 +515,14 @@ def join_wrapped_cells(lines: list[Line]) -> list[Line]:
         target = None
         if anchor is not None and last is not None and ln.table is None and ln.page == anchor.page:
             pitch = ((ln.y0 + ln.y1) - (last.y0 + last.y1)) / 2
-            textual = all(not s.numeric for s in ln.cells.values())
+            # Text continuing text cells of the row above (a narration; a reference
+            # cut as "00098765432" / "1"), never an amount column or an empty one.
             fits = all(c in anchor.cells and not anchor.cells[c].numeric for c in ln.cells)
-            if textual and fits and pitch < 0.85 * row_pitch and pitch <= 1.45 * ln.size:
+            # A date under the row's own date is a new row (a transaction), not
+            # the rest of one; under a heading ("Year ended" / "31 March 2026") it
+            # is the heading's second line.
+            dated = any(parse_date(s.text) and parse_date(anchor.cells[c].text) for c, s in ln.cells.items() if c in anchor.cells)
+            if fits and not dated and pitch < 0.85 * row_pitch and pitch <= 1.45 * ln.size:
                 target = anchor
         plan.append((ln, target))
         last = ln
@@ -554,7 +559,8 @@ def join_wrapped_cells(lines: list[Line]) -> list[Line]:
             # cut fell on a space, the next piece starts one space further right.
             hard = fixed is not None and len(a.text) == fixed * (n + 1)
             indented = s.x0 - a.x0 > 0.18 * max(s.size, 4.0)
-            sep = "" if (hard and not indented) or a.text.endswith(("-", "/")) else " "
+            digits = a.text[-1:].isdigit() and s.text[:1].isdigit()  # a number or reference cut in two
+            sep = "" if (hard and not indented) or digits or a.text.endswith(("-", "/")) else " "
             target.cells[c] = Seg(a.x0, max(a.x1, s.x1), a.y0, s.y1, a.text + sep + s.text, a.bold and s.bold, a.size, a.forced_col)
             pieces[key] = n + 1
         target.y1 = max(target.y1, ln.y1)
@@ -573,7 +579,11 @@ def join_across_pages(pages: list[list[Line]]) -> None:
         a, b = prev[-1], cur[0]
         if len(a.cells) < 2 or not b.cells:
             continue
-        if any(s.numeric or parse_date(s.text) for s in b.cells.values()):
+        # The rest of a cut row: its first column is empty (no new date or number
+        # starts there), and it continues only cells the row above has as text
+        # (a narration, a reference cut as "00098765432" / "1"), never an amount
+        # column or a column the row above leaves empty.
+        if any(parse_date(s.text) for s in b.cells.values()):
             continue
         if min(b.cells) <= min(a.cells) or any(c not in a.cells or a.cells[c].numeric for c in b.cells):
             continue
@@ -581,7 +591,8 @@ def join_across_pages(pages: list[list[Line]]) -> None:
             t = a.cells[c]
             if t.trailing_space:
                 sep = " "
-            elif t.text.endswith(("-", "/")) or s.text.startswith(("-", "/")) or a.keeps_wrap:
+            elif t.text.endswith(("-", "/")) or s.text.startswith(("-", "/")) or a.keeps_wrap or \
+                    (t.text[-1:].isdigit() and s.text[:1].isdigit()):
                 # The break fell inside a word or a reference: a PDF that keeps the
                 # space at ordinary line wraps has none here.
                 sep = ""
